@@ -1,0 +1,13 @@
+{
+  "colors": {
+    "accent": "#ffc34d",
+    "panel": "#121a24e6"
+  },
+  "focus_ring": { "color": "#ffc34d", "width": 3, "offset": 4 },
+  "styles": {
+    "button": { "min_width": 360, "focus": { "background": "$accent", "text_color": "#1b1408" } },
+    "hud": { "background": "#00000080", "radius": 10, "padding": [10, 18], "gap": 4 },
+    "score": { "text_size": 34 },
+    "toast": { "background": "#000000b0", "radius": 10, "padding": [10, 18] }
+  }
+}

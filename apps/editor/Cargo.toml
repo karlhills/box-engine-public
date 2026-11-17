@@ -1,0 +1,19 @@
+[package]
+name = "box_editor_app"
+description = "The box-engine editor binary."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "box-editor"
+path = "src/main.rs"
+
+[dependencies]
+box_editor.workspace = true
+anyhow.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "entities": [
+    {
+      "uid": "20000000-0000-4000-8000-000000000001",
+      "name": "Ground",
+      "parent": null,
+      "components": {
+        "Transform": {
+          "translation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      }
+    }
+  ]
+}

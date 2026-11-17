@@ -1,0 +1,709 @@
+{
+  "generator": "Sweep",
+  "version": 1,
+  "cases": [
+    {
+      "name": "default",
+      "seed": 0,
+      "params": {
+        "spline": null,
+        "profile": {
+          "Circle": {
+            "radius": 0.15000000596046448,
+            "segments": 16
+          }
+        },
+        "tolerance": 0.009999999776482582,
+        "orientation": "RotationMinimizing",
+        "caps": true
+      },
+      "owner": "00000000-0000-0000-0000-000000005ee9",
+      "inputs": [
+        {
+          "uid": "00000000-0000-0000-0000-000000005ee9",
+          "component": "Spline",
+          "value": {
+            "points": [
+              {
+                "position": [
+                  -2.0,
+                  0.15000000596046448,
+                  0.5
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -0.699999988079071,
+                  0.15000000596046448,
+                  -0.6000000238418579
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  0.699999988079071,
+                  0.15000000596046448,
+                  0.6000000238418579
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  2.0,
+                  0.15000000596046448,
+                  -0.5
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              }
+            ],
+            "mode": "CatmullRom",
+            "closed": false
+          }
+        }
+      ],
+      "hash": "0xba983fb26872d8d8",
+      "vertices": 389,
+      "triangles": 668,
+      "warnings": []
+    },
+    {
+      "name": "tube_closed_spline",
+      "seed": 0,
+      "params": {
+        "spline": null,
+        "profile": {
+          "Circle": {
+            "radius": 0.25,
+            "segments": 12
+          }
+        },
+        "tolerance": 0.009999999776482582,
+        "orientation": "RotationMinimizing",
+        "caps": true
+      },
+      "owner": "00000000-0000-0000-0000-000000005ee9",
+      "inputs": [
+        {
+          "uid": "00000000-0000-0000-0000-000000005ee9",
+          "component": "Spline",
+          "value": {
+            "points": [
+              {
+                "position": [
+                  3.0,
+                  0.5,
+                  0.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  1.0,
+                  1.2000000476837158,
+                  -2.5
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -2.0,
+                  0.4000000059604645,
+                  -2.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -3.0,
+                  1.0,
+                  1.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  0.0,
+                  0.30000001192092896,
+                  2.5
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              }
+            ],
+            "mode": "CatmullRom",
+            "closed": true
+          }
+        }
+      ],
+      "hash": "0xd393a7944bfff2b5",
+      "vertices": 689,
+      "triangles": 1248,
+      "warnings": []
+    },
+    {
+      "name": "rect_polyline_mitred",
+      "seed": 0,
+      "params": {
+        "spline": null,
+        "profile": {
+          "Rect": {
+            "width": 0.30000001192092896,
+            "height": 1.2000000476837158
+          }
+        },
+        "tolerance": 0.009999999776482582,
+        "orientation": "Up",
+        "caps": true
+      },
+      "owner": "00000000-0000-0000-0000-000000005ee9",
+      "inputs": [
+        {
+          "uid": "00000000-0000-0000-0000-000000005ee9",
+          "component": "Spline",
+          "value": {
+            "points": [
+              {
+                "position": [
+                  -3.0,
+                  0.0,
+                  0.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -3.0,
+                  0.0,
+                  -3.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  2.0,
+                  0.0,
+                  -3.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  4.0,
+                  0.0,
+                  1.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              }
+            ],
+            "mode": "Polyline",
+            "closed": false
+          }
+        }
+      ],
+      "hash": "0xc249be6ae43e95fc",
+      "vertices": 56,
+      "triangles": 28,
+      "warnings": []
+    },
+    {
+      "name": "helix_up",
+      "seed": 0,
+      "params": {
+        "spline": null,
+        "profile": {
+          "Rect": {
+            "width": 0.5,
+            "height": 0.20000000298023224
+          }
+        },
+        "tolerance": 0.009999999776482582,
+        "orientation": "Up",
+        "caps": true
+      },
+      "owner": "00000000-0000-0000-0000-000000005ee9",
+      "inputs": [
+        {
+          "uid": "00000000-0000-0000-0000-000000005ee9",
+          "component": "Spline",
+          "value": {
+            "points": [
+              {
+                "position": [
+                  2.0,
+                  0.0,
+                  0.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  1.243219971656799,
+                  0.3499999940395355,
+                  1.566653847694397
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -0.4544040858745575,
+                  0.699999988079071,
+                  1.947695255279541
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -1.8081440925598145,
+                  1.0499999523162842,
+                  0.8547601103782654
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -1.7935168743133545,
+                  1.399999976158142,
+                  -0.8850407004356384
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -0.4215916097164154,
+                  1.75,
+                  -1.9550602436065672
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  1.2693852186203003,
+                  2.0999999046325684,
+                  -1.5455294847488403
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  1.9997172355651855,
+                  2.450000047683716,
+                  0.0336272306740284
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  1.216702938079834,
+                  2.799999952316284,
+                  1.587335467338562
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              }
+            ],
+            "mode": "CatmullRom",
+            "closed": false
+          }
+        }
+      ],
+      "hash": "0x9527be860638a7fb",
+      "vertices": 480,
+      "triangles": 468,
+      "warnings": []
+    },
+    {
+      "name": "helix_rotation_minimizing",
+      "seed": 0,
+      "params": {
+        "spline": null,
+        "profile": {
+          "Rect": {
+            "width": 0.5,
+            "height": 0.20000000298023224
+          }
+        },
+        "tolerance": 0.009999999776482582,
+        "orientation": "RotationMinimizing",
+        "caps": true
+      },
+      "owner": "00000000-0000-0000-0000-000000005ee9",
+      "inputs": [
+        {
+          "uid": "00000000-0000-0000-0000-000000005ee9",
+          "component": "Spline",
+          "value": {
+            "points": [
+              {
+                "position": [
+                  2.0,
+                  0.0,
+                  0.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  1.243219971656799,
+                  0.3499999940395355,
+                  1.566653847694397
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -0.4544040858745575,
+                  0.699999988079071,
+                  1.947695255279541
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -1.8081440925598145,
+                  1.0499999523162842,
+                  0.8547601103782654
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -1.7935168743133545,
+                  1.399999976158142,
+                  -0.8850407004356384
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -0.4215916097164154,
+                  1.75,
+                  -1.9550602436065672
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  1.2693852186203003,
+                  2.0999999046325684,
+                  -1.5455294847488403
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  1.9997172355651855,
+                  2.450000047683716,
+                  0.0336272306740284
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  1.216702938079834,
+                  2.799999952316284,
+                  1.587335467338562
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              }
+            ],
+            "mode": "CatmullRom",
+            "closed": false
+          }
+        }
+      ],
+      "hash": "0x2105b6f2afe4fde5",
+      "vertices": 480,
+      "triangles": 468,
+      "warnings": []
+    },
+    {
+      "name": "bezier_custom_open_profile",
+      "seed": 0,
+      "params": {
+        "spline": null,
+        "profile": {
+          "Custom": {
+            "points": [
+              [
+                -0.20000000298023224,
+                0.0
+              ],
+              [
+                0.0,
+                0.07999999821186066
+              ],
+              [
+                0.20000000298023224,
+                0.0
+              ]
+            ],
+            "closed": false
+          }
+        },
+        "tolerance": 0.004999999888241291,
+        "orientation": "RotationMinimizing",
+        "caps": false
+      },
+      "owner": "00000000-0000-0000-0000-000000005ee9",
+      "inputs": [
+        {
+          "uid": "00000000-0000-0000-0000-000000005ee9",
+          "component": "Spline",
+          "value": {
+            "points": [
+              {
+                "position": [
+                  -2.0,
+                  0.30000001192092896,
+                  0.0
+                ],
+                "in_tangent": [
+                  2.0,
+                  0.0,
+                  -3.0
+                ],
+                "out_tangent": [
+                  2.0,
+                  0.0,
+                  -3.0
+                ],
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  0.0,
+                  0.800000011920929,
+                  0.5
+                ],
+                "in_tangent": [
+                  3.0,
+                  0.0,
+                  0.0
+                ],
+                "out_tangent": [
+                  2.0,
+                  1.0,
+                  1.0
+                ],
+                "roll": 0.30000001192092896,
+                "scale": [
+                  1.5,
+                  0.75
+                ]
+              },
+              {
+                "position": [
+                  2.0,
+                  0.30000001192092896,
+                  0.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              }
+            ],
+            "mode": "Bezier",
+            "closed": false
+          }
+        }
+      ],
+      "hash": "0x1a2218797b9453af",
+      "vertices": 112,
+      "triangles": 108,
+      "warnings": []
+    }
+  ]
+}

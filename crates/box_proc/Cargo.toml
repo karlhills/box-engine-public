@@ -1,0 +1,29 @@
+[package]
+name = "box_proc"
+description = "box-engine procedural geometry: generators, mesh building, 2D polygon kernel, splines, sweep, lathe, extrude."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+box_core.workspace = true
+glam.workspace = true
+bevy_reflect.workspace = true
+profiling.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+i_overlay.workspace = true
+earcut.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+# The geometry gallery capture and the timing example (examples/).
+box_engine.workspace = true
+anyhow.workspace = true
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

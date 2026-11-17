@@ -1,0 +1,33 @@
+# Minimal native: a native box project built without the engine's `dynamics`
+# (rapier rigid bodies) and `script` (Luau) modules. A box project
+# (box.project.json, assets/) and the game crate around it: `src/lib.rs` is
+# the game plugin, `minimal-player` its player. No editor binary: the editor
+# always links every module.
+[package]
+name = "minimal_native"
+description = "box-engine sample: a native game built with only the physics and audio modules."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "minimal-player"
+path = "src/bin/minimal-player.rs"
+
+[dependencies]
+# Not `workspace = true`: the workspace dependency keeps the default
+# features. `physics` (colliders, queries, triggers, characters) and `audio`;
+# leaving out `dynamics` and `script` drops rapier3d and Luau (mlua).
+box_engine = { path = "../../crates/box_engine", default-features = false, features = ["physics", "audio"] }
+anyhow.workspace = true
+
+[dev-dependencies]
+image.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

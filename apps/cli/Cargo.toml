@@ -1,0 +1,33 @@
+[package]
+name = "box_cli"
+description = "The `box` command-line tool: create, check, inspect, edit and render box-engine projects without a window."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "box"
+path = "src/main.rs"
+
+[dependencies]
+box_engine.workspace = true
+box_export.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+image.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+# The M3 acceptance test drives a headless editor through `box mcp`.
+box_editor.workspace = true
+egui.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,124 @@
+---
+source: crates/box_assets/tests/import.rs
+expression: "summarize(&server, &world, \"models/crate.gltf\")"
+---
+{
+  "Material/Crate (StandardMaterial)": {
+    "base_color": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "roughness": 1.0,
+    "metallic": 1.0,
+    "emissive": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "base_color_texture": "models/crate_color.png",
+    "normal_texture": "none",
+    "orm_texture": "models/crate_mr.png",
+    "emissive_texture": "none",
+    "alpha_mode": "Opaque",
+    "double_sided": false
+  },
+  "Mesh/Crate (MeshData)": {
+    "vertices": 4,
+    "triangles": 2,
+    "uv_sets": 1,
+    "tangents": true,
+    "colors": true,
+    "groups": [
+      [
+        0,
+        6,
+        0
+      ]
+    ],
+    "bounds": {
+      "min": [
+        -0.5,
+        0.0,
+        0.0
+      ],
+      "max": [
+        0.5,
+        1.0,
+        0.0
+      ]
+    }
+  },
+  "Scene (SceneAsset)": {
+    "version": 1,
+    "entities": [
+      {
+        "uid": "7e9e4220-4253-4293-b909-16bad29da73c",
+        "name": "crate",
+        "parent": null,
+        "components": {
+          "Transform": {
+            "translation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      },
+      {
+        "uid": "40cad26c-1198-4519-83df-78c5b1bec6be",
+        "name": "Crate",
+        "parent": "7e9e4220-4253-4293-b909-16bad29da73c",
+        "components": {
+          "MeshAsset": {
+            "mesh": {
+              "id": "10000000-0000-4000-8000-000000000003",
+              "label": "Mesh/Crate",
+              "path": "models/crate.gltf"
+            },
+            "materials": [
+              {
+                "id": "10000000-0000-4000-8000-000000000003",
+                "label": "Material/Crate",
+                "path": "models/crate.gltf"
+              }
+            ],
+            "cast_shadows": true
+          },
+          "Transform": {
+            "translation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

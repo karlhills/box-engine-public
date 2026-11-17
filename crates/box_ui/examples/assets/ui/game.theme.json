@@ -1,0 +1,16 @@
+{
+  "fonts": { "mono": "fonts/SourceCodePro-Regular.ttf" },
+  "colors": {
+    "accent": "#7fd1b9",
+    "accent_dark": "#4fa58c",
+    "panel": "#10161fe8"
+  },
+  "focus_ring": { "color": "#ffffff", "width": 3, "offset": 4 },
+  "styles": {
+    "button": { "focus": { "background": "$accent", "text_color": "#0b1a15" } },
+    "counter": { "font": "mono", "text_size": 30 },
+    "dialogue": { "width": 1100, "padding": [24, 32], "gap": 10 },
+    "speaker": { "text_size": 24, "text_color": "$accent" },
+    "toast": { "background": "#000000b0", "radius": 10, "padding": [10, 18] }
+  }
+}

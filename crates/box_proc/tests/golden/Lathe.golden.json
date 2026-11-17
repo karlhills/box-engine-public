@@ -1,0 +1,172 @@
+{
+  "generator": "Lathe",
+  "version": 1,
+  "cases": [
+    {
+      "name": "vase",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Vase": {
+            "height": 1.0,
+            "radius": 0.3499999940395355
+          }
+        },
+        "segments": 32,
+        "start_angle": 0.0,
+        "sweep_angle": 6.2831854820251465,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0x2d334d64e5ae009e",
+      "vertices": 1615,
+      "triangles": 2624,
+      "warnings": []
+    },
+    {
+      "name": "column",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Column": {
+            "height": 2.0,
+            "radius": 0.20000000298023224
+          }
+        },
+        "segments": 32,
+        "start_angle": 0.0,
+        "sweep_angle": 6.2831854820251465,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0x4b34235118bd988f",
+      "vertices": 724,
+      "triangles": 768,
+      "warnings": []
+    },
+    {
+      "name": "dome",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Dome": {
+            "radius": 0.6000000238418579,
+            "rings": 12
+          }
+        },
+        "segments": 32,
+        "start_angle": 0.0,
+        "sweep_angle": 6.2831854820251465,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0xd96dfcb7bf9eb33f",
+      "vertices": 493,
+      "triangles": 768,
+      "warnings": []
+    },
+    {
+      "name": "half_vase_capped",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Vase": {
+            "height": 1.0,
+            "radius": 0.3499999940395355
+          }
+        },
+        "segments": 32,
+        "start_angle": -1.5707963705062866,
+        "sweep_angle": 3.9269909858703613,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0x9a13b7fe675274f2",
+      "vertices": 1701,
+      "triangles": 2706,
+      "warnings": []
+    },
+    {
+      "name": "faceted_column",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Column": {
+            "height": 3.0,
+            "radius": 0.25
+          }
+        },
+        "segments": 6,
+        "start_angle": 0.0,
+        "sweep_angle": 6.2831854820251465,
+        "caps": true,
+        "smooth_angle": 0.0
+      },
+      "hash": "0xe9c763a9a3e939bc",
+      "vertices": 300,
+      "triangles": 144,
+      "warnings": []
+    },
+    {
+      "name": "custom_ring",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Custom": {
+            "profile": [
+              [
+                0.30000001192092896,
+                0.0
+              ],
+              [
+                0.550000011920929,
+                0.0
+              ],
+              [
+                0.550000011920929,
+                0.25
+              ],
+              [
+                0.30000001192092896,
+                0.25
+              ]
+            ],
+            "closed": true
+          }
+        },
+        "segments": 48,
+        "start_angle": 0.0,
+        "sweep_angle": 6.2831854820251465,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0x36646be1ecd66192",
+      "vertices": 392,
+      "triangles": 384,
+      "warnings": []
+    },
+    {
+      "name": "empty_custom",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Custom": {
+            "profile": [],
+            "closed": false
+          }
+        },
+        "segments": 32,
+        "start_angle": 0.0,
+        "sweep_angle": 6.2831854820251465,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0x0000000000000000",
+      "vertices": 0,
+      "triangles": 0,
+      "warnings": [
+        "the custom profile needs at least two (radius, height) points"
+      ]
+    }
+  ]
+}

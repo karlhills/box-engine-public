@@ -1,0 +1,31 @@
+[package]
+name = "box_physics"
+description = "box-engine physics: Collider components and spatial queries (raycast, shapecast, overlap, triggers) on parry3d."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+# Rigid bodies, joints, collision events and character pushing on rapier3d (M7).
+dynamics = ["dep:rapier3d"]
+
+[dependencies]
+box_core.workspace = true
+parry3d.workspace = true
+rapier3d = { workspace = true, optional = true }
+glam.workspace = true
+bevy_reflect.workspace = true
+profiling.workspace = true
+tracing.workspace = true
+
+[[test]]
+name = "dynamics"
+required-features = ["dynamics"]
+
+[[example]]
+name = "dynamics_bench"
+required-features = ["dynamics"]
+
+[lints]
+workspace = true

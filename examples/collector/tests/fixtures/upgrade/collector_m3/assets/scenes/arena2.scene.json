@@ -1,0 +1,849 @@
+{
+  "version": 1,
+  "resources": {
+    "Environment": {
+      "sky_zenith": [0.01681, 0.01229, 0.09084, 1.0],
+      "sky_horizon": [0.87137, 0.25016, 0.06848, 1.0],
+      "ground": [0.02416, 0.01444, 0.01444, 1.0],
+      "ambient_intensity": 0.7,
+      "sun_disc_size": 0.02,
+      "fog_density": 0.018,
+      "fog_height_falloff": 0.12,
+      "fog_base_height": 0.0,
+      "exposure": 0.75,
+      "tonemapper": "AgX"
+    }
+  },
+  "entities": [
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000001",
+      "name": "Arena",
+      "parent": null,
+      "components": {
+        "ArenaExit": {
+          "next_scene": "arena"
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000002",
+      "name": "Sun",
+      "parent": null,
+      "components": {
+        "DirectionalLight": {
+          "color": [1.0, 0.43415, 0.16203, 1.0],
+          "intensity": 2.6,
+          "shadows": true,
+          "shadow_distance": 45.0
+        },
+        "Transform": {
+          "translation": [0.0, 12.0, 0.0],
+          "rotation": [-0.074778, -0.835184, -0.117377, 0.532071],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000003",
+      "name": "Floor 1",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [10.0, 0.5, 16.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.10462, 0.08866, 0.16203, 1.0],
+          "roughness": 0.9,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-10.0, -0.25, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000004",
+      "name": "Floor 2",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [10.0, 0.5, 16.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.07819, 0.06663, 0.12477, 1.0],
+          "roughness": 0.9,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, -0.25, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000005",
+      "name": "Floor 3",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [10.0, 0.5, 16.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.10462, 0.08866, 0.16203, 1.0],
+          "roughness": 0.9,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [10.0, -0.25, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000006",
+      "name": "Wall North",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [31.0, 2.0, 0.5]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.52712, 0.16513, 0.06848, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 1.0, -8.25],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000007",
+      "name": "Wall South",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [31.0, 2.0, 0.5]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.52712, 0.16513, 0.06848, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 1.0, 8.25],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000008",
+      "name": "Wall East",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.5, 2.0, 16.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.52712, 0.16513, 0.06848, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [15.25, 1.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000009",
+      "name": "Wall West",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.5, 2.0, 16.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.52712, 0.16513, 0.06848, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-15.25, 1.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-00020000000a",
+      "name": "Column 1",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.6,
+              "height": 3.0,
+              "segments": 32
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.69387, 0.57112, 0.39157, 1.0],
+          "roughness": 0.7,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-4.0, 1.5, -1.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-00020000000b",
+      "name": "Column 2",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.6,
+              "height": 3.0,
+              "segments": 32
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.69387, 0.57112, 0.39157, 1.0],
+          "roughness": 0.7,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 1.5, 2.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-00020000000c",
+      "name": "Column 3",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.6,
+              "height": 3.0,
+              "segments": 32
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.69387, 0.57112, 0.39157, 1.0],
+          "roughness": 0.7,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [3.0, 1.5, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-00020000000d",
+      "name": "Monolith",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [2.0, 3.0, 2.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.04231, 0.0356, 0.08022, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-8.0, 1.5, -4.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-00020000000e",
+      "name": "Ramp",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [6.2019, 0.3, 3.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.39676, 0.27468, 0.14996, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [6.524464, 0.655111, -4.0],
+          "rotation": [0.0, 0.0, 0.130526, 0.991445],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-00020000000f",
+      "name": "Ledge",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [4.0, 1.6, 4.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.27468, 0.19462, 0.10946, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [11.471281, 0.8, -4.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000010",
+      "name": "Player",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 2,
+          "mask": 4294967295
+        },
+        "PlayerController": {
+          "speed": 6.0,
+          "gravity": 20.0,
+          "jump_speed": 7.5,
+          "radius": 0.4,
+          "height": 1.8
+        },
+        "Primitive": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.5,
+              "segments": 24,
+              "rings": 8
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.04971, 0.63076, 0.58408, 1.0],
+          "roughness": 0.5,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-9.0, 0.92, 5.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000011",
+      "name": "Camera",
+      "parent": null,
+      "components": {
+        "Camera": {
+          "fov_y": 0.9,
+          "near": 0.1,
+          "active": true
+        },
+        "FollowCamera": {
+          "distance": 6.0,
+          "height": 1.0,
+          "pitch": 0.4,
+          "smoothing": 10.0,
+          "look_speed": 2.5,
+          "mouse_sensitivity": 0.004
+        },
+        "Transform": {
+          "translation": [-14.526366, 4.25651, 5.0],
+          "rotation": [-0.14048, -0.693012, -0.14048, 0.693012],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000012",
+      "name": "Gem 1",
+      "parent": null,
+      "components": {
+        "Collectible": {
+          "points": 10,
+          "spin_speed": 2.0,
+          "bob_height": 0.15
+        },
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.19462, 0.87137, 1.0, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.03689, 0.55201, 0.7454, 1.0]
+        },
+        "Transform": {
+          "translation": [-6.0, 0.9, 5.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000013",
+      "name": "Gem 2",
+      "parent": null,
+      "components": {
+        "Collectible": {
+          "points": 10,
+          "spin_speed": 2.0,
+          "bob_height": 0.15
+        },
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.19462, 0.87137, 1.0, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.03689, 0.55201, 0.7454, 1.0]
+        },
+        "Transform": {
+          "translation": [1.0, 0.9, 6.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000014",
+      "name": "Gem 3",
+      "parent": null,
+      "components": {
+        "Collectible": {
+          "points": 10,
+          "spin_speed": 2.0,
+          "bob_height": 0.15
+        },
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.19462, 0.87137, 1.0, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.03689, 0.55201, 0.7454, 1.0]
+        },
+        "Transform": {
+          "translation": [-13.0, 0.9, -6.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000015",
+      "name": "Gem 4",
+      "parent": null,
+      "components": {
+        "Collectible": {
+          "points": 10,
+          "spin_speed": 2.0,
+          "bob_height": 0.15
+        },
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.19462, 0.87137, 1.0, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.03689, 0.55201, 0.7454, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 0.9, -6.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000016",
+      "name": "Gem 5",
+      "parent": null,
+      "components": {
+        "Collectible": {
+          "points": 25,
+          "spin_speed": 2.0,
+          "bob_height": 0.15
+        },
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.19462, 0.87137, 1.0, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.03689, 0.55201, 0.7454, 1.0]
+        },
+        "Transform": {
+          "translation": [11.471281, 2.5, -4.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000017",
+      "name": "Gem 6",
+      "parent": null,
+      "components": {
+        "Collectible": {
+          "points": 10,
+          "spin_speed": 2.0,
+          "bob_height": 0.15
+        },
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.19462, 0.87137, 1.0, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.03689, 0.55201, 0.7454, 1.0]
+        },
+        "Transform": {
+          "translation": [13.0, 0.9, 6.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-000200000018",
+      "name": "Gem 7",
+      "parent": null,
+      "components": {
+        "Collectible": {
+          "points": 10,
+          "spin_speed": 2.0,
+          "bob_height": 0.15
+        },
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.19462, 0.87137, 1.0, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.03689, 0.55201, 0.7454, 1.0]
+        },
+        "Transform": {
+          "translation": [6.0, 0.9, 1.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    }
+  ]
+}

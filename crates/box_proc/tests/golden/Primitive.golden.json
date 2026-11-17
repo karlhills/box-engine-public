@@ -1,0 +1,144 @@
+{
+  "generator": "Primitive",
+  "version": 1,
+  "cases": [
+    {
+      "name": "cube",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Cuboid": {
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        "cast_shadows": true
+      },
+      "hash": "0x7e139a28a0a48790",
+      "vertices": 24,
+      "triangles": 12,
+      "warnings": []
+    },
+    {
+      "name": "box",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Cuboid": {
+            "size": [
+              1.0,
+              2.0,
+              3.0
+            ]
+          }
+        },
+        "cast_shadows": true
+      },
+      "hash": "0x06d76410a2b1f358",
+      "vertices": 24,
+      "triangles": 12,
+      "warnings": []
+    },
+    {
+      "name": "sphere",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Sphere": {
+            "radius": 0.5,
+            "sectors": 32,
+            "stacks": 16
+          }
+        },
+        "cast_shadows": true
+      },
+      "hash": "0xf9724e1a408d1d4b",
+      "vertices": 561,
+      "triangles": 960,
+      "warnings": []
+    },
+    {
+      "name": "cylinder",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Cylinder": {
+            "radius": 0.5,
+            "height": 1.0,
+            "segments": 32
+          }
+        },
+        "cast_shadows": true
+      },
+      "hash": "0x82fcc8a39515fc3d",
+      "vertices": 132,
+      "triangles": 128,
+      "warnings": []
+    },
+    {
+      "name": "capsule",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Capsule": {
+            "radius": 0.4000000059604645,
+            "half_height": 0.4000000059604645,
+            "segments": 24,
+            "rings": 8
+          }
+        },
+        "cast_shadows": true
+      },
+      "hash": "0x5ec6559c1d4bf1c0",
+      "vertices": 450,
+      "triangles": 816,
+      "warnings": []
+    },
+    {
+      "name": "plane",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Plane": {
+            "size": [
+              4.0,
+              2.0
+            ],
+            "cells": [
+              4,
+              2
+            ]
+          }
+        },
+        "cast_shadows": true
+      },
+      "hash": "0x3aeaaf51c2365e4c",
+      "vertices": 15,
+      "triangles": 16,
+      "warnings": []
+    },
+    {
+      "name": "clamped",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Sphere": {
+            "radius": -1.0,
+            "sectors": 0,
+            "stacks": 1000
+          }
+        },
+        "cast_shadows": true
+      },
+      "hash": "0xa93f86292cc904b3",
+      "vertices": 516,
+      "triangles": 762,
+      "warnings": [
+        "shape parameters outside their ranges were clamped"
+      ]
+    }
+  ]
+}

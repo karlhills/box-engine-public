@@ -1,0 +1,637 @@
+[
+  {
+    "op": "set_resource",
+    "path": "Environment",
+    "value": {
+      "sky_zenith": [
+        0.02,
+        0.24,
+        0.9,
+        1.0
+      ],
+      "sky_horizon": [
+        0.36,
+        0.62,
+        1.0,
+        1.0
+      ],
+      "ground": [
+        0.18,
+        0.16,
+        0.13,
+        1.0
+      ],
+      "ambient_intensity": 0.55,
+      "fog_density": 0.006,
+      "exposure": 0.8,
+      "tonemapper": "AgX"
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "7e3b0000-0000-4000-8000-000000000001",
+    "name": "Sun",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          12,
+          0
+        ],
+        "rotation": [
+          -0.418082,
+          0.270273,
+          0.131821,
+          0.857195
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "DirectionalLight": {
+        "color": [
+          1.0,
+          0.87962,
+          0.71569,
+          1.0
+        ],
+        "intensity": 3.2,
+        "shadows": true,
+        "shadow_distance": 40.0
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "7e3b0000-0000-4000-8000-000000000002",
+    "name": "Camera",
+    "components": {
+      "Transform": {
+        "translation": [
+          8.0,
+          7.5,
+          13.5
+        ],
+        "rotation": [
+          -0.207729,
+          0.259872,
+          0.056435,
+          0.941419
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Camera": {
+        "fov_y": 0.87266463,
+        "near": 0.1,
+        "active": true
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "7e3b0000-0000-4000-8000-000000000003",
+    "name": "Ground",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Primitive": {
+        "shape": {
+          "Plane": {
+            "size": [
+              60.0,
+              60.0
+            ],
+            "cells": [
+              1,
+              1
+            ]
+          }
+        },
+        "cast_shadows": false
+      },
+      "StandardMaterial": {
+        "base_color": [
+          0.159,
+          0.27,
+          0.078,
+          1.0
+        ],
+        "roughness": 0.95
+      },
+      "Scatter": {
+        "species": [
+          {
+            "source": {
+              "Mesh": {
+                "mesh": "models/garden.glb#Mesh/Shrub",
+                "materials": [
+                  "models/garden.glb#Material/Leaves"
+                ]
+              }
+            },
+            "weight": 2.0,
+            "scale": [
+              0.7,
+              1.4
+            ],
+            "random_yaw": true,
+            "align_to_normal": 0.0,
+            "tint_jitter": 0.15,
+            "cast_shadows": true
+          },
+          {
+            "source": {
+              "Mesh": {
+                "mesh": "models/garden.glb#Mesh/Rock",
+                "materials": [
+                  "models/garden.glb#Material/Rock"
+                ]
+              }
+            },
+            "weight": 1.0,
+            "scale": [
+              0.6,
+              1.6
+            ],
+            "random_yaw": true,
+            "align_to_normal": 0.0,
+            "tint_jitter": 0.05,
+            "cast_shadows": true
+          }
+        ],
+        "density": 0.15,
+        "min_distance": 1.2,
+        "area": [
+          [
+            -12.0,
+            -12.0
+          ],
+          [
+            12.0,
+            -12.0
+          ],
+          [
+            12.0,
+            12.0
+          ],
+          [
+            -12.0,
+            12.0
+          ]
+        ],
+        "seed": 7
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "7e3b0000-0000-4000-8000-000000000004",
+    "name": "Garden Path",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "ScriptIntent": {
+        "rule": "rules/garden_path.luau",
+        "points": [
+          [
+            -1.0,
+            0.0,
+            9.0
+          ],
+          [
+            0.5,
+            0.0,
+            5.5
+          ],
+          [
+            -0.5,
+            0.0,
+            2.0
+          ],
+          [
+            1.0,
+            0.0,
+            -1.5
+          ],
+          [
+            0.0,
+            0.0,
+            -5.0
+          ]
+        ],
+        "properties": []
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "7e3b0000-0000-4000-8000-000000000005",
+    "name": "Column 1",
+    "components": {
+      "Transform": {
+        "translation": [
+          -2.6,
+          0,
+          -5.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Lathe": {
+        "shape": {
+          "Column": {
+            "height": 2.6,
+            "radius": 0.25
+          }
+        }
+      },
+      "StandardMaterial": {
+        "base_color": [
+          0.86,
+          0.82,
+          0.74,
+          1.0
+        ],
+        "roughness": 0.7
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "7e3b0000-0000-4000-8000-000000000006",
+    "name": "Column 2",
+    "components": {
+      "Transform": {
+        "translation": [
+          3.0,
+          0,
+          -5.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Lathe": {
+        "shape": {
+          "Column": {
+            "height": 2.6,
+            "radius": 0.25
+          }
+        }
+      },
+      "StandardMaterial": {
+        "base_color": [
+          0.86,
+          0.82,
+          0.74,
+          1.0
+        ],
+        "roughness": 0.7
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "7e3b0000-0000-4000-8000-000000000007",
+    "name": "Planter",
+    "components": {
+      "Transform": {
+        "translation": [
+          3.2,
+          0,
+          2.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Extrude": {
+        "outline": {
+          "Polygon": {
+            "sides": 6,
+            "radius": 0.9
+          }
+        },
+        "hole": {
+          "Inset": {
+            "width": 0.15
+          }
+        },
+        "depth": 0.5,
+        "bevel_width": 0.03
+      },
+      "StandardMaterial": {
+        "base_color": [
+          0.55,
+          0.36,
+          0.25,
+          1.0
+        ],
+        "roughness": 0.85
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "7e3b0000-0000-4000-8000-000000000008",
+    "name": "Vase",
+    "components": {
+      "Transform": {
+        "translation": [
+          3.2,
+          0,
+          2.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Lathe": {
+        "shape": {
+          "Vase": {
+            "height": 1.1,
+            "radius": 0.35
+          }
+        }
+      },
+      "StandardMaterial": {
+        "base_color": [
+          0.25,
+          0.45,
+          0.7,
+          1.0
+        ],
+        "roughness": 0.4
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "7e3b0000-0000-4000-8000-000000000009",
+    "name": "Star",
+    "components": {
+      "Transform": {
+        "translation": [
+          0.2,
+          0.0,
+          -6.0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Extrude": {
+        "outline": {
+          "Star": {
+            "points": 5,
+            "outer_radius": 0.9,
+            "inner_radius": 0.4
+          }
+        },
+        "depth": 0.25
+      },
+      "StandardMaterial": {
+        "base_color": [
+          0.9,
+          0.7,
+          0.2,
+          1.0
+        ],
+        "roughness": 0.5
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "7e3b0000-0000-4000-8000-00000000000a",
+    "name": "Garden Wall",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Spline": {
+        "points": [
+          {
+            "position": [
+              -5.5,
+              0.3,
+              6.0
+            ]
+          },
+          {
+            "position": [
+              -4.0,
+              0.3,
+              1.5
+            ]
+          },
+          {
+            "position": [
+              -4.8,
+              0.3,
+              -2.5
+            ]
+          },
+          {
+            "position": [
+              -3.0,
+              0.3,
+              -6.5
+            ]
+          }
+        ],
+        "mode": "CatmullRom",
+        "closed": false
+      },
+      "Sweep": {
+        "profile": {
+          "Rect": {
+            "width": 0.35,
+            "height": 0.6
+          }
+        },
+        "orientation": "Up"
+      },
+      "StandardMaterial": {
+        "base_color": [
+          0.62,
+          0.58,
+          0.52,
+          1.0
+        ],
+        "roughness": 0.9
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "7e3b0000-0000-4000-8000-00000000000b",
+    "name": "Arch",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          -5.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Spline": {
+        "points": [
+          {
+            "position": [
+              -2.6,
+              2.6,
+              0.0
+            ]
+          },
+          {
+            "position": [
+              -1.4,
+              3.6,
+              0.0
+            ]
+          },
+          {
+            "position": [
+              1.8,
+              3.6,
+              0.0
+            ]
+          },
+          {
+            "position": [
+              3.0,
+              2.6,
+              0.0
+            ]
+          }
+        ],
+        "mode": "CatmullRom",
+        "closed": false
+      },
+      "Sweep": {
+        "profile": {
+          "Circle": {
+            "radius": 0.12,
+            "segments": 16
+          }
+        }
+      },
+      "StandardMaterial": {
+        "base_color": [
+          0.3,
+          0.32,
+          0.36,
+          1.0
+        ],
+        "roughness": 0.4,
+        "metallic": 0.8
+      }
+    }
+  }
+]

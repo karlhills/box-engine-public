@@ -1,0 +1,18 @@
+{
+  "hud": {
+    "score": "Score [color=$accent]{score}[/color]",
+    "gems": "Gems left {left}"
+  },
+  "menu": {
+    "paused": "Paused",
+    "resume": "Resume",
+    "save": "Save game",
+    "load": "Load game",
+    "language": "Language: English"
+  },
+  "toast": {
+    "saved": "Game saved",
+    "loaded": "Game loaded",
+    "failed": "No saved game"
+  }
+}

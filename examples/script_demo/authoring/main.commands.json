@@ -1,0 +1,90 @@
+[
+  { "op": "despawn", "entity": "Cube" },
+  {
+    "op": "add_component", "entity": "Ground", "component": "Collider",
+    "value": { "shape": { "Cuboid": { "size": [40.0, 0.2, 40.0] } }, "offset": [0.0, -0.1, 0.0], "is_trigger": false, "layers": 1, "mask": 4294967295 }
+  },
+  {
+    "op": "spawn", "uid": "5c0d0000-0000-4000-8000-000000000001", "name": "Player",
+    "components": {
+      "Transform": { "translation": [0.0, 0.5, 2.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Capsule": { "radius": 0.5, "half_height": 0.25, "segments": 24, "rings": 6 } }, "cast_shadows": true },
+      "StandardMaterial": { "base_color": [0.9, 0.55, 0.12, 1.0], "roughness": 0.5 },
+      "Collider": { "shape": { "Sphere": { "radius": 0.5 } }, "offset": [0.0, 0.0, 0.0], "is_trigger": false, "layers": 2, "mask": 4294967295 },
+      "Script": {
+        "source": "scripts/player.luau",
+        "properties": [{ "name": "camera", "value": { "Entity": "5c0d0000-0000-4000-8000-000000000002" } }]
+      }
+    }
+  },
+  { "op": "despawn", "entity": "Camera" },
+  {
+    "op": "spawn", "uid": "5c0d0000-0000-4000-8000-000000000002", "name": "Camera",
+    "components": {
+      "Transform": { "translation": [0.0, 4.0, 9.0], "rotation": [-0.2164396, 0.0, 0.0, 0.9762960], "scale": [1.0, 1.0, 1.0] },
+      "Camera": { "fov_y": 0.87266463, "near": 0.1, "active": true },
+      "Script": {
+        "source": "scripts/follow.luau",
+        "properties": [{ "name": "target", "value": { "Entity": "5c0d0000-0000-4000-8000-000000000001" } }]
+      }
+    }
+  },
+  {
+    "op": "spawn", "uid": "5c0d0000-0000-4000-8000-000000000003", "name": "Totem",
+    "components": {
+      "Transform": { "translation": [-3.0, 1.2, -2.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Cuboid": { "size": [1.0, 1.0, 1.0] } }, "cast_shadows": true },
+      "StandardMaterial": { "base_color": [0.58, 0.13, 0.05, 1.0], "roughness": 0.6 },
+      "Script": {
+        "source": "scripts/spinner.luau",
+        "properties": [{ "name": "speed", "value": { "Number": 120.0 } }, { "name": "axis", "value": { "Vector": [0.3, 1.0, 0.2] } }]
+      }
+    }
+  },
+  {
+    "op": "spawn", "uid": "5c0d0000-0000-4000-8000-000000000004", "name": "Beacon",
+    "components": {
+      "Transform": { "translation": [3.0, 1.5, -2.5], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Sphere": { "radius": 0.2, "sectors": 16, "stacks": 8 } }, "cast_shadows": false },
+      "StandardMaterial": { "base_color": [1.0, 0.3, 0.2, 1.0], "emissive": [4.0, 1.0, 0.6, 1.0], "roughness": 0.4 },
+      "PointLight": { "color": [1.0, 0.45, 0.3, 1.0], "intensity": 40.0, "range": 8.0 },
+      "Script": { "source": "scripts/beacon.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "5c0d0000-0000-4000-8000-000000000005", "name": "Gem A",
+    "components": {
+      "Transform": { "translation": [0.0, 0.8, -1.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Sphere": { "radius": 0.3, "sectors": 16, "stacks": 8 } }, "cast_shadows": true },
+      "StandardMaterial": { "base_color": [0.05, 0.63, 1.0, 1.0], "emissive": [0.2, 1.2, 1.6, 1.0], "roughness": 0.3 },
+      "Collider": { "shape": { "Sphere": { "radius": 0.4 } }, "offset": [0.0, 0.0, 0.0], "is_trigger": true, "layers": 1, "mask": 4294967295 },
+      "Script": { "source": "scripts/gem.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "5c0d0000-0000-4000-8000-000000000006", "name": "Gem B",
+    "components": {
+      "Transform": { "translation": [-1.5, 0.8, -3.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Sphere": { "radius": 0.3, "sectors": 16, "stacks": 8 } }, "cast_shadows": true },
+      "StandardMaterial": { "base_color": [0.05, 0.63, 1.0, 1.0], "emissive": [0.2, 1.2, 1.6, 1.0], "roughness": 0.3 },
+      "Collider": { "shape": { "Sphere": { "radius": 0.4 } }, "offset": [0.0, 0.0, 0.0], "is_trigger": true, "layers": 1, "mask": 4294967295 },
+      "Script": { "source": "scripts/gem.luau", "properties": [{ "name": "points", "value": { "Integer": 25 } }] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "5c0d0000-0000-4000-8000-000000000007", "name": "Gem C",
+    "components": {
+      "Transform": { "translation": [1.8, 0.8, -4.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Sphere": { "radius": 0.3, "sectors": 16, "stacks": 8 } }, "cast_shadows": true },
+      "StandardMaterial": { "base_color": [0.05, 0.63, 1.0, 1.0], "emissive": [0.2, 1.2, 1.6, 1.0], "roughness": 0.3 },
+      "Collider": { "shape": { "Sphere": { "radius": 0.4 } }, "offset": [0.0, 0.0, 0.0], "is_trigger": true, "layers": 1, "mask": 4294967295 },
+      "Script": { "source": "scripts/gem.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "5c0d0000-0000-4000-8000-000000000008", "name": "Rules",
+    "components": {
+      "Script": { "source": "scripts/game.luau", "properties": [] }
+    }
+  }
+]

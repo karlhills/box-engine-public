@@ -1,0 +1,40 @@
+{
+  "hud": {
+    "health": "Health {hp}",
+    "score": "Score [color=$accent]{score}[/color]",
+    "enemies": "Cinderlings left {left}"
+  },
+  "area": {
+    "outdoor": "The Ember Fields",
+    "keep": "Cinder Keep"
+  },
+  "menu": {
+    "paused": "Paused",
+    "resume": "Resume",
+    "restart": "Restart from checkpoint",
+    "language": "Language: English",
+    "quit": "Quit"
+  },
+  "dialogue": {
+    "continue": "Continue",
+    "warden": {
+      "name": "Old Warden",
+      "1": "So you came after all. The keep has burned for nine nights.",
+      "2": "Cinderlings swarm the courtyard. Strike them down before they touch you: [color=$accent]J[/color], [color=$accent]F[/color] or [color=$accent]X[/color] on a pad.",
+      "3": "Your swing also scatters the embers the spitters throw.",
+      "4": "Clear the courtyard and the gate will open. The throne waits beyond. Go."
+    }
+  },
+  "toast": {
+    "checkpoint": "Checkpoint reached",
+    "gate_open": "The gate is open",
+    "wave": "The cinderlings are coming!",
+    "failed": "Could not save"
+  },
+  "win": {
+    "title": "The Keep is Yours",
+    "score": "Final score {score}",
+    "again": "Play again",
+    "quit": "Quit"
+  }
+}

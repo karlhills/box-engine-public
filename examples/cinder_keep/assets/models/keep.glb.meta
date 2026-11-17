@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "id": "edafd3af-c56e-41d6-9fea-c1ea325c0428",
+  "importer": "gltf",
+  "settings": {
+    "scale": 1.0,
+    "generate_tangents": true,
+    "colliders": true
+  }
+}

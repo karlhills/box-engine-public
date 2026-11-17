@@ -1,0 +1,10 @@
+/target
+**/*.rs.bk
+.DS_Store
+/captures/
+/spikes/*/target
+*.trace
+# Local coding-assistant state (worktrees, settings).
+/.claude
+*.actual.png
+*.diff.png

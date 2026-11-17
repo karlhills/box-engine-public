@@ -1,0 +1,178 @@
+{
+  "generator": "WallGen",
+  "version": 1,
+  "cases": [
+    {
+      "name": "free",
+      "seed": 0,
+      "params": {
+        "points": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            4.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.30000001192092896,
+        "start": "Cap",
+        "end": "Cap",
+        "fills": []
+      },
+      "hash": "0x9f861ea97405d9ad",
+      "vertices": 24,
+      "triangles": 12,
+      "warnings": []
+    },
+    {
+      "name": "mitre_end",
+      "seed": 0,
+      "params": {
+        "points": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            4.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.30000001192092896,
+        "start": "Cap",
+        "end": {
+          "Mitre": {
+            "neighbour_dir": [
+              0.0,
+              0.0,
+              -3.0
+            ]
+          }
+        },
+        "fills": []
+      },
+      "hash": "0xbb9e63a46ef83685",
+      "vertices": 20,
+      "triangles": 10,
+      "warnings": []
+    },
+    {
+      "name": "butt_owner_and_cut",
+      "seed": 0,
+      "params": {
+        "points": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            4.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.30000001192092896,
+        "start": {
+          "Butt": {
+            "point": [
+              0.0,
+              0.0,
+              0.10000000149011612
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "cap": false
+          }
+        },
+        "end": {
+          "Butt": {
+            "point": [
+              4.099999904632568,
+              0.0,
+              0.0
+            ],
+            "normal": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "cap": true
+          }
+        },
+        "fills": []
+      },
+      "hash": "0x023624adbf8784d1",
+      "vertices": 20,
+      "triangles": 10,
+      "warnings": [
+        "joint plane is parallel to the path; end left square"
+      ]
+    },
+    {
+      "name": "corners_and_bevel_fill",
+      "seed": 0,
+      "params": {
+        "points": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -4.0
+          ],
+          [
+            4.0,
+            0.0,
+            -4.0
+          ],
+          [
+            4.0,
+            0.0,
+            -1.0
+          ]
+        ],
+        "height": 3.0,
+        "thickness": 0.3499999940395355,
+        "start": "Open",
+        "end": "Cap",
+        "fills": [
+          [
+            4.0,
+            0.0,
+            -1.0
+          ],
+          [
+            4.175000190734863,
+            0.0,
+            -1.0
+          ],
+          [
+            4.099999904632568,
+            0.0,
+            -0.8999999761581421
+          ]
+        ]
+      },
+      "hash": "0xb87ce9ffc4977151",
+      "vertices": 70,
+      "triangles": 34,
+      "warnings": []
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+[
+  { "op": "despawn", "entity": "Cube" },
+  { "op": "despawn", "entity": "Camera" },
+  {
+    "op": "spawn", "uid": "9a0c0000-0000-4000-8000-000000000001", "name": "Camera",
+    "components": {
+      "Transform": { "translation": [3.0, 4.5, 8.0], "rotation": [-0.207729, 0.159872, 0.034435, 0.964419], "scale": [1.0, 1.0, 1.0] },
+      "Camera": { "fov_y": 0.87266463, "near": 0.1, "active": true }
+    }
+  },
+  {
+    "op": "spawn", "uid": "9a0c0000-0000-4000-8000-000000000002", "name": "Garden Walk",
+    "components": {
+      "Transform": { "translation": [-4.0, 0.0, 3.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "ScriptIntent": {
+        "rule": "rules/walk.luau",
+        "points": [[0.0, 0.0, 0.0], [3.0, 0.0, -1.0], [5.5, 0.0, -3.5], [8.0, 0.0, -4.0]],
+        "properties": []
+      },
+      "Overrides": {
+        "parts": [
+          { "rule": "rules/walk.luau", "part": "lantern2", "hidden": true, "fields": [] },
+          {
+            "rule": "rules/walk.luau", "part": "leg1/stone0", "hidden": false,
+            "fields": [{ "path": "StandardMaterial.base_color", "value": "[0.6, 0.25, 0.2, 1.0]" }]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "op": "spawn", "uid": "9a0c0000-0000-4000-8000-000000000003", "name": "Side Walk",
+    "components": {
+      "Transform": { "translation": [2.0, 0.0, 3.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "ScriptIntent": {
+        "rule": "rules/walk.luau",
+        "points": [[0.0, 0.0, 0.0], [2.5, 0.0, -2.0]],
+        "properties": [
+          { "name": "lanterns", "value": { "Boolean": false } },
+          { "name": "width", "value": { "Number": 0.8 } }
+        ]
+      }
+    }
+  },
+  {
+    "op": "spawn", "uid": "9a0c0000-0000-4000-8000-000000000004", "name": "Column",
+    "components": {
+      "Transform": { "translation": [-3.0, 0.0, -3.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Lathe": { "shape": { "Column": { "height": 2.4, "radius": 0.25 } } },
+      "StandardMaterial": { "base_color": [0.86, 0.82, 0.74, 1.0], "roughness": 0.7 }
+    }
+  },
+  {
+    "op": "spawn", "uid": "9a0c0000-0000-4000-8000-000000000005", "name": "Star",
+    "components": {
+      "Transform": { "translation": [-0.5, 0.0, -3.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Extrude": {
+        "outline": { "Star": { "points": 5, "outer_radius": 0.9, "inner_radius": 0.4 } },
+        "depth": 0.4
+      },
+      "Procedural": { "seed": 0, "materials": [], "cast_shadows": true },
+      "StandardMaterial": { "base_color": [0.9, 0.7, 0.2, 1.0], "roughness": 0.5 }
+    }
+  },
+  {
+    "op": "spawn", "uid": "9a0c0000-0000-4000-8000-000000000006", "name": "Tube",
+    "components": {
+      "Transform": { "translation": [3.0, 0.5, -3.5], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Spline": {
+        "points": [
+          { "position": [-1.5, 0.0, 0.5] },
+          { "position": [-0.5, 1.0, -0.5] },
+          { "position": [0.5, 0.0, 0.5] },
+          { "position": [1.5, 1.0, -0.5] }
+        ],
+        "mode": "CatmullRom",
+        "closed": false
+      },
+      "Sweep": { "profile": { "Circle": { "radius": 0.12, "segments": 16 } } },
+      "StandardMaterial": { "base_color": [0.2, 0.45, 0.8, 1.0], "roughness": 0.4 }
+    }
+  }
+]

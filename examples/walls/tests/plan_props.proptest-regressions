@@ -1,0 +1,12 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 26683fc62843442b9e6724af1b73fffbde007d1ee74616ec6048ab0f53aa4b59 # shrinks to walls = [WallPath { points: [Vec3(1.9433631, 0.0, 6.0), Vec3(0.0, 0.0, 0.0)], height: 2.5, thickness: 0.2 }, WallPath { points: [Vec3(4.0, 0.0, 0.0), Vec3(1.9532074, 0.0, 6.0), Vec3(2.0, 0.0, 0.0)], height: 2.5, thickness: 0.2 }], shift = -29.486979
+cc 39599e49b3bd1b9f3e9b9e4279d40a6829608e30ab4ecd4c2f1f33a9e783abd2 # shrinks to paths = [[Vec3(4.0, 0.0, 6.0), Vec3(4.0, 0.0, 5.9458447)], [Vec3(4.0, 0.0, 6.0), Vec3(0.0, 0.0, 0.0)]]
+cc 703e12a985c760145252958ca1a19583aac35b14270fd79738079cab22af6389 # shrinks to paths = [[Vec3(8.032756, 0.0, 1.943809), Vec3(0.0, 0.0, 0.0)], [Vec3(2.0, 0.0, 4.0), Vec3(8.0, 0.0, 2.0500016)], [Vec3(0.0, 0.0, 0.0), Vec3(7.962073, 0.0, 2.0342984)]]
+cc d3424dc7d3bf6be81a800b7f8f657d55fa08928bae79381b560d64bce378af96 # shrinks to paths = [[Vec3(6.0, 0.0, 0.0), Vec3(3.9475486, 0.0, 2.0)], [Vec3(4.0299616, 0.0, 2.05918), Vec3(0.0, 0.0, 0.0)]]
+cc b4e4f6230e1010a2c8529f88c6286da1447e8f1233f63c6f0688ad686489b030 # shrinks to walls = [WallPath { points: [Vec3(0.0, 0.0, 0.0), Vec3(7.9534636, 0.0, 4.002092), Vec3(7.9932284, 0.0, 8.0)], height: 2.5, thickness: 0.2 }, WallPath { points: [Vec3(8.033549, 0.0, 4.0015154), Vec3(6.0, 0.0, 0.0)], height: 2.5, thickness: 0.2 }], shift = 30.753553
+cc 761e3ec056dba643552427ea030483bbf6d9eb2436527b59ef0792a295b1f2df # shrinks to paths = [[Vec3(6.0, 0.0, 0.0), Vec3(1.9485579, 0.0, 2.0499399)], [Vec3(2.0544128, 0.0, 2.0), Vec3(2.0, 0.0, 0.0)], [Vec3(1.9509264, 0.0, 1.9437256), Vec3(4.0, 0.0, 0.0)]]

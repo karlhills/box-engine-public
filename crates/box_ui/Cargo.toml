@@ -1,0 +1,36 @@
+[package]
+name = "box_ui"
+description = "In-game UI for box-engine: a retained node tree, theme assets, focus navigation, string tables (D11)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+# Script bindings (`ui` and `strings` Luau globals); box_engine's `script`
+# feature enables it.
+script = ["dep:box_script"]
+
+[dependencies]
+box_core.workspace = true
+box_script = { workspace = true, optional = true }
+box_assets.workspace = true
+# Only the `Overlay` resource and `Camera`; no wgpu types are used here.
+box_render.workspace = true
+epaint.workspace = true
+glam.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+profiling.workspace = true
+
+[dev-dependencies]
+# Examples and GPU tests run through the engine (as box_proc's do).
+box_engine.workspace = true
+anyhow.workspace = true
+image.workspace = true
+
+[lints]
+workspace = true

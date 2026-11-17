@@ -1,0 +1,34 @@
+{
+  "title": { "name": "Box Engine", "tagline": "An in-game UI demo" },
+  "menu": {
+    "start": "Start",
+    "options": "Options",
+    "quit": "Quit",
+    "resume": "Resume",
+    "save": "Save game",
+    "load": "Load game",
+    "to_title": "Quit to title",
+    "paused": "Paused"
+  },
+  "options": {
+    "title": "Options",
+    "volume": "Music volume",
+    "subtitles": "Subtitles",
+    "german": "Deutsch",
+    "back": "Back"
+  },
+  "hud": {
+    "health": "Health",
+    "coins": "Coins [color=$accent]{count}[/color] / {total}",
+    "coin": "Coin",
+    "saved": "Saved to slot {slot}",
+    "loaded": "Loaded slot {slot}"
+  },
+  "dialogue": {
+    "speaker": "Keeper",
+    "line1": "Welcome, traveller. The [color=$accent]coins[/color] scattered here belong to whoever finds them.",
+    "line2": "Press [i]Start[/i] any time to pause, save or load.",
+    "line3": "Off you go!",
+    "next": "Continue"
+  }
+}

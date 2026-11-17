@@ -1,0 +1,27 @@
+[package]
+name = "box_arch"
+description = "box-engine architectural construction plugin: walls with openings, roofs, platforms, stairs and attachment anchors (docs/PROCEDURAL.md section 9)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+box_core.workspace = true
+box_proc.workspace = true
+glam.workspace = true
+bevy_reflect.workspace = true
+profiling.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+anyhow.workspace = true
+# The gallery capture, the timing example and the runtime/editor tests.
+box_engine.workspace = true
+box_editor.workspace = true
+box_render.workspace = true
+egui.workspace = true
+
+[lints]
+workspace = true

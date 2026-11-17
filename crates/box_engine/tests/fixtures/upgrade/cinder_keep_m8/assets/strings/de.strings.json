@@ -1,0 +1,40 @@
+{
+  "hud": {
+    "health": "Leben {hp}",
+    "score": "Punkte [color=$accent]{score}[/color]",
+    "enemies": "Glutlinge übrig {left}"
+  },
+  "area": {
+    "outdoor": "Die Glutfelder",
+    "keep": "Aschenburg"
+  },
+  "menu": {
+    "paused": "Pause",
+    "resume": "Weiterspielen",
+    "restart": "Vom Kontrollpunkt neu starten",
+    "language": "Sprache: Deutsch",
+    "quit": "Beenden"
+  },
+  "dialogue": {
+    "continue": "Weiter",
+    "warden": {
+      "name": "Alter Wächter",
+      "1": "Du bist also doch gekommen. Die Burg brennt seit neun Nächten.",
+      "2": "Glutlinge wimmeln im Hof. Schlag sie nieder, bevor sie dich berühren: [color=$accent]J[/color], [color=$accent]F[/color] oder [color=$accent]X[/color] am Controller.",
+      "3": "Dein Hieb zerstreut auch die Glut, die die Speier werfen.",
+      "4": "Räum den Hof, dann öffnet sich das Tor. Dahinter wartet der Thron. Geh."
+    }
+  },
+  "toast": {
+    "checkpoint": "Kontrollpunkt erreicht",
+    "gate_open": "Das Tor ist offen",
+    "wave": "Die Glutlinge kommen!",
+    "failed": "Speichern fehlgeschlagen"
+  },
+  "win": {
+    "title": "Die Burg gehört dir",
+    "score": "Endstand {score}",
+    "again": "Noch einmal",
+    "quit": "Beenden"
+  }
+}

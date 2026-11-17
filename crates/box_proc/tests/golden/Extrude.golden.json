@@ -1,0 +1,229 @@
+{
+  "generator": "Extrude",
+  "version": 1,
+  "cases": [
+    {
+      "name": "slab",
+      "seed": 0,
+      "params": {
+        "outline": {
+          "Rectangle": {
+            "size": [
+              1.0,
+              1.0
+            ],
+            "corner_radius": 0.15000000596046448
+          }
+        },
+        "hole": "None",
+        "depth": 0.30000001192092896,
+        "bevel_width": 0.03999999910593033,
+        "bevel_segments": 3,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0xa0a0389dd81fd903",
+      "vertices": 462,
+      "triangles": 444,
+      "warnings": []
+    },
+    {
+      "name": "hole_and_bevel",
+      "seed": 0,
+      "params": {
+        "outline": {
+          "Rectangle": {
+            "size": [
+              1.2000000476837158,
+              0.800000011920929
+            ],
+            "corner_radius": 0.10000000149011612
+          }
+        },
+        "hole": {
+          "Circle": {
+            "radius": 0.2199999988079071,
+            "segments": 32,
+            "offset": [
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "depth": 0.25,
+        "bevel_width": 0.05000000074505806,
+        "bevel_segments": 4,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0xb91998e1d59aab9d",
+      "vertices": 1236,
+      "triangles": 1200,
+      "warnings": []
+    },
+    {
+      "name": "star_chamfer",
+      "seed": 0,
+      "params": {
+        "outline": {
+          "Star": {
+            "points": 5,
+            "outer_radius": 0.6000000238418579,
+            "inner_radius": 0.27000001072883606
+          }
+        },
+        "hole": "None",
+        "depth": 0.20000000298023224,
+        "bevel_width": 0.029999999329447746,
+        "bevel_segments": 1,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0x0d4fee78a311d8d4",
+      "vertices": 140,
+      "triangles": 76,
+      "warnings": []
+    },
+    {
+      "name": "hexagon_frame",
+      "seed": 0,
+      "params": {
+        "outline": {
+          "Polygon": {
+            "sides": 6,
+            "radius": 0.6000000238418579
+          }
+        },
+        "hole": {
+          "Inset": {
+            "width": 0.15000000596046448
+          }
+        },
+        "depth": 0.3499999940395355,
+        "bevel_width": 0.019999999552965164,
+        "bevel_segments": 3,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0x183edd07ee05fc1b",
+      "vertices": 360,
+      "triangles": 192,
+      "warnings": []
+    },
+    {
+      "name": "custom_outline_and_holes",
+      "seed": 0,
+      "params": {
+        "outline": {
+          "Custom": {
+            "points": [
+              [
+                -1.0,
+                -0.5
+              ],
+              [
+                1.0,
+                -0.5
+              ],
+              [
+                1.0,
+                0.5
+              ],
+              [
+                0.0,
+                0.8999999761581421
+              ],
+              [
+                -1.0,
+                0.5
+              ]
+            ]
+          }
+        },
+        "hole": {
+          "Custom": {
+            "rings": [
+              [
+                [
+                  -0.699999988079071,
+                  -0.20000000298023224
+                ],
+                [
+                  -0.30000001192092896,
+                  -0.20000000298023224
+                ],
+                [
+                  -0.30000001192092896,
+                  0.20000000298023224
+                ],
+                [
+                  -0.699999988079071,
+                  0.20000000298023224
+                ]
+              ],
+              [
+                [
+                  0.30000001192092896,
+                  -0.20000000298023224
+                ],
+                [
+                  0.699999988079071,
+                  -0.20000000298023224
+                ],
+                [
+                  0.5,
+                  0.20000000298023224
+                ]
+              ]
+            ]
+          }
+        },
+        "depth": 0.5,
+        "bevel_width": 0.0,
+        "bevel_segments": 3,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0x449d7916f2f3bbb3",
+      "vertices": 72,
+      "triangles": 48,
+      "warnings": []
+    },
+    {
+      "name": "hole_outside",
+      "seed": 0,
+      "params": {
+        "outline": {
+          "Rectangle": {
+            "size": [
+              1.0,
+              1.0
+            ],
+            "corner_radius": 0.15000000596046448
+          }
+        },
+        "hole": {
+          "Circle": {
+            "radius": 0.10000000149011612,
+            "segments": 8,
+            "offset": [
+              5.0,
+              0.0
+            ]
+          }
+        },
+        "depth": 0.30000001192092896,
+        "bevel_width": 0.03999999910593033,
+        "bevel_segments": 3,
+        "caps": true,
+        "smooth_angle": 0.6000000238418579
+      },
+      "hash": "0xa0a0389dd81fd903",
+      "vertices": 462,
+      "triangles": 444,
+      "warnings": [
+        "the hole lies outside the outline"
+      ]
+    }
+  ]
+}

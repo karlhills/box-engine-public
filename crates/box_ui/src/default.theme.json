@@ -1,0 +1,87 @@
+{
+  "fonts": {},
+  "colors": {
+    "text": "#f4f1ea",
+    "text_dim": "#b9b4a8",
+    "panel": "#141a26e6",
+    "panel_line": "#ffffff1f",
+    "control": "#ffffff14",
+    "control_hover": "#ffffff26",
+    "accent": "#f2a65a",
+    "accent_dark": "#c97a35",
+    "track": "#ffffff26",
+    "shadow": "#00000066"
+  },
+  "focus_ring": { "color": "#ffd166", "width": 3, "offset": 3 },
+  "styles": {
+    "panel": {
+      "background": "$panel",
+      "border_color": "$panel_line",
+      "border_width": 1,
+      "radius": 18,
+      "padding": 28,
+      "gap": 14,
+      "shadow": { "color": "$shadow", "blur": 24, "offset": [0, 6] }
+    },
+    "column": { "gap": 12 },
+    "row": { "gap": 12, "align": "center" },
+    "list": { "gap": 8 },
+    "text": { "text_color": "$text", "text_size": 26 },
+    "button": {
+      "background": "$control",
+      "text_color": "$text",
+      "text_size": 28,
+      "text_align": "center",
+      "radius": 12,
+      "padding": [14, 28],
+      "min_width": 280,
+      "hover": { "background": "$control_hover" },
+      "focus": { "background": "$accent", "text_color": "#1b1408" },
+      "pressed": { "background": "$accent_dark" },
+      "disabled": { "text_color": "#ffffff55" }
+    },
+    "slider": {
+      "text_color": "$text",
+      "text_size": 26,
+      "radius": 12,
+      "padding": [12, 20],
+      "gap": 24,
+      "track_color": "$track",
+      "fill_color": "$accent",
+      "knob_color": "$text",
+      "control_width": 240,
+      "control_height": 10,
+      "focus": { "background": "$control_hover" }
+    },
+    "toggle": {
+      "text_color": "$text",
+      "text_size": 26,
+      "radius": 12,
+      "padding": [12, 20],
+      "gap": 24,
+      "track_color": "$track",
+      "fill_color": "$accent",
+      "knob_color": "$text",
+      "control_width": 64,
+      "control_height": 32,
+      "focus": { "background": "$control_hover" }
+    },
+    "progress": {
+      "background": "$track",
+      "fill_color": "$accent",
+      "radius": 6,
+      "width": 320,
+      "control_height": 18
+    },
+    "label": {
+      "background": "#000000a0",
+      "text_color": "$text",
+      "text_size": 22,
+      "radius": 8,
+      "padding": [6, 12]
+    },
+    "title": { "text_size": 64, "text_color": "$text", "text_align": "center" },
+    "subtitle": { "text_size": 26, "text_color": "$text_dim", "text_align": "center" },
+    "hud": { "background": "#0000008c", "radius": 14, "padding": [12, 18], "gap": 10 }
+  }
+}

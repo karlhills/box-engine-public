@@ -1,0 +1,4 @@
+# Editor layout, registry, saves and other local state. The luau-lsp type
+# definitions are committed.
+.box/*
+!.box/types/

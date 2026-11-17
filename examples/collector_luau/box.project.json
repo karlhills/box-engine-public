@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "name": "Collector (Luau)",
+  "engine_version": "0.1.0",
+  "start_scene": "assets/scenes/arena.scene.json"
+}

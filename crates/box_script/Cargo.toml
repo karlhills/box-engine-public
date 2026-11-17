@@ -1,0 +1,34 @@
+[package]
+name = "box_script"
+description = "box-engine scripting: Luau scripts (mlua) with a registry-generated engine API, hot reload and type definitions."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+# Rigid bodies (box_physics on rapier3d): `physics.apply_impulse` and the
+# other forces, body reads, and `on_collision_enter` / `on_collision_exit`.
+dynamics = ["box_physics/dynamics"]
+
+[dependencies]
+box_core.workspace = true
+box_assets.workspace = true
+box_physics.workspace = true
+# Script rules (`rules.rs`): parts, reconcile, the rule list.
+box_proc.workspace = true
+mlua.workspace = true
+glam.workspace = true
+bevy_reflect.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+profiling.workspace = true
+
+[dev-dependencies]
+box_engine.workspace = true
+anyhow.workspace = true
+
+[lints]
+workspace = true

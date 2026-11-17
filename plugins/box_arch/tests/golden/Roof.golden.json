@@ -1,0 +1,220 @@
+{
+  "generator": "Roof",
+  "version": 1,
+  "cases": [
+    {
+      "name": "gable",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Gable": {
+            "size": [
+              5.0,
+              4.0
+            ],
+            "ridge": "Longer"
+          }
+        },
+        "pitch": 0.4712388813495636,
+        "overhang": 0.3499999940395355,
+        "thickness": 0.20000000298023224,
+        "start": "Free",
+        "end": "Free",
+        "boards": true,
+        "ridge_rolls": true,
+        "ao": 1.0
+      },
+      "hash": "0x1930ac316e600cc2",
+      "vertices": 462,
+      "triangles": 154,
+      "warnings": []
+    },
+    {
+      "name": "hip",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Hip": {
+            "size": [
+              5.0,
+              4.0
+            ],
+            "ridge": "Longer"
+          }
+        },
+        "pitch": 0.4712388813495636,
+        "overhang": 0.3499999940395355,
+        "thickness": 0.20000000298023224,
+        "start": "Free",
+        "end": "Free",
+        "boards": true,
+        "ridge_rolls": true,
+        "ao": 1.0
+      },
+      "hash": "0xf323059f135c91be",
+      "vertices": 438,
+      "triangles": 146,
+      "warnings": []
+    },
+    {
+      "name": "hip_abut",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Hip": {
+            "size": [
+              5.0,
+              4.0
+            ],
+            "ridge": "Longer"
+          }
+        },
+        "pitch": 0.4712388813495636,
+        "overhang": 0.3499999940395355,
+        "thickness": 0.20000000298023224,
+        "start": "Abut",
+        "end": "Free",
+        "boards": true,
+        "ridge_rolls": true,
+        "ao": 1.0
+      },
+      "hash": "0xf701f456c587ce15",
+      "vertices": 318,
+      "triangles": 106,
+      "warnings": []
+    },
+    {
+      "name": "gable_abut_bare",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Gable": {
+            "size": [
+              5.0,
+              4.0
+            ],
+            "ridge": "Longer"
+          }
+        },
+        "pitch": 0.4712388813495636,
+        "overhang": 0.3499999940395355,
+        "thickness": 0.20000000298023224,
+        "start": "Free",
+        "end": "Abut",
+        "boards": false,
+        "ridge_rolls": false,
+        "ao": 1.0
+      },
+      "hash": "0x69b974f97cbbf0ba",
+      "vertices": 168,
+      "triangles": 56,
+      "warnings": []
+    },
+    {
+      "name": "shed",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Shed": {
+            "size": [
+              5.0,
+              4.0
+            ],
+            "ridge": "X",
+            "high_abuts": false
+          }
+        },
+        "pitch": 0.4712388813495636,
+        "overhang": 0.3499999940395355,
+        "thickness": 0.20000000298023224,
+        "start": "Free",
+        "end": "Free",
+        "boards": true,
+        "ridge_rolls": true,
+        "ao": 1.0
+      },
+      "hash": "0x17dde2dd69170110",
+      "vertices": 324,
+      "triangles": 108,
+      "warnings": []
+    },
+    {
+      "name": "lean_to",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Shed": {
+            "size": [
+              5.0,
+              4.0
+            ],
+            "ridge": "Z",
+            "high_abuts": true
+          }
+        },
+        "pitch": 0.30000001192092896,
+        "overhang": 0.3499999940395355,
+        "thickness": 0.20000000298023224,
+        "start": "Free",
+        "end": "Free",
+        "boards": true,
+        "ridge_rolls": true,
+        "ao": 1.0
+      },
+      "hash": "0x693c42a42cdc198e",
+      "vertices": 240,
+      "triangles": 80,
+      "warnings": []
+    },
+    {
+      "name": "cone",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Cone": {
+            "radius": 1.5,
+            "segments": 24
+          }
+        },
+        "pitch": 0.8999999761581421,
+        "overhang": 0.3499999940395355,
+        "thickness": 0.20000000298023224,
+        "start": "Free",
+        "end": "Free",
+        "boards": true,
+        "ridge_rolls": true,
+        "ao": 1.0
+      },
+      "hash": "0x7b24015198356152",
+      "vertices": 720,
+      "triangles": 240,
+      "warnings": []
+    },
+    {
+      "name": "dome",
+      "seed": 0,
+      "params": {
+        "shape": {
+          "Dome": {
+            "radius": 2.0,
+            "rise": 1.5,
+            "segments": 24,
+            "rings": 8
+          }
+        },
+        "pitch": 0.4712388813495636,
+        "overhang": 0.3499999940395355,
+        "thickness": 0.20000000298023224,
+        "start": "Free",
+        "end": "Free",
+        "boards": true,
+        "ridge_rolls": true,
+        "ao": 1.0
+      },
+      "hash": "0xf37900e6dc35e562",
+      "vertices": 2880,
+      "triangles": 960,
+      "warnings": []
+    }
+  ]
+}

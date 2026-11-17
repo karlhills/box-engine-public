@@ -1,0 +1,272 @@
+[
+  {
+    "op": "set_resource",
+    "path": "Environment",
+    "value": {
+      "sky_zenith": [0.05, 0.09, 0.32, 1.0],
+      "sky_horizon": [0.75, 0.52, 0.36, 1.0],
+      "ground": [0.07, 0.05, 0.03, 1.0],
+      "ambient_intensity": 0.6,
+      "sun_disc_size": 0.02,
+      "fog_density": 0.003,
+      "fog_height_falloff": 0.1,
+      "fog_base_height": -4.0,
+      "exposure": 0.55,
+      "tonemapper": "AgX",
+      "bloom": { "enabled": true, "intensity": 0.08, "scatter": 0.6 }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000101", "name": "Level",
+    "components": {
+      "Script": { "source": "scripts/level.luau", "properties": [
+        { "name": "title", "value": { "String": "area.outdoor" } }
+      ] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000102", "name": "Sun",
+    "components": {
+      "Transform": { "translation": [0, 20, 0], "rotation": [-0.40, 0.33, 0.16, 0.84], "scale": [1, 1, 1] },
+      "DirectionalLight": { "color": [1.0, 0.78, 0.55, 1.0], "intensity": 3.0, "shadows": true, "shadow_distance": 60.0 }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000103", "name": "Fields",
+    "components": { "PrefabInstance": { "scene": "models/outdoor.glb#Scene" } }
+  },
+
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000110", "name": "Player",
+    "components": {
+      "Transform": { "translation": [0, 0.92, 8], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "Collider": { "shape": { "Capsule": { "radius": 0.4, "half_height": 0.5 } }, "layers": 2 },
+      "Interpolated": { "teleport_distance": 10.0 },
+      "KinematicCharacter": { "radius": 0.4, "height": 1.8, "gravity": 20.0, "jump_speed": 7.5, "max_fall_speed": 40.0, "ground_snap": 0.1, "skin": 0.02, "step_height": 0.3, "mass": 80.0, "max_slope": 0.9272952 },
+      "Script": { "source": "scripts/player.luau", "properties": [
+        { "name": "camera", "value": { "Entity": "c1de0000-0000-4000-8000-000000000112" } },
+        { "name": "body", "value": { "Entity": "c1de0000-0000-4000-8000-000000000111" } }
+      ] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000111", "name": "Body", "parent": "c1de0000-0000-4000-8000-000000000110",
+    "components": {
+      "Transform": { "translation": [0, -0.92, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "PrefabInstance": { "scene": "models/character.glb#Scene" },
+      "AnimationStateMachine": { "source": "animation/hero.animgraph.json" }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000112", "name": "Camera",
+    "components": {
+      "Transform": { "translation": [0.0, 4.66, 15.5], "rotation": [-0.174108, 0.0, 0.0, 0.984727], "scale": [1, 1, 1] },
+      "Camera": { "fov_y": 0.9, "near": 0.1, "active": true },
+      "Script": { "source": "scripts/camera.luau", "properties": [
+        { "name": "target", "value": { "Entity": "c1de0000-0000-4000-8000-000000000110" } },
+        { "name": "distance", "value": { "Number": 7.5 } },
+        { "name": "pitch", "value": { "Number": 0.4 } }
+      ] }
+    }
+  },
+
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000120", "name": "Warden",
+    "components": {
+      "Transform": { "translation": [-3.0, 0.0, 4.0], "rotation": [0.0, -0.7071068, 0.0, 0.7071068], "scale": [1, 1, 1] },
+      "Collider": { "shape": { "Sphere": { "radius": 3.2 } }, "offset": [0, 1, 0], "is_trigger": true, "mask": 2 },
+      "Script": { "source": "scripts/warden.luau" }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000121", "name": "Warden Body", "parent": "c1de0000-0000-4000-8000-000000000120",
+    "components": {
+      "Transform": { "translation": [0, 0, 0], "rotation": [0, 0, 0, 1], "scale": [0.95, 0.95, 0.95] },
+      "PrefabInstance": { "scene": "models/character.glb#Scene" },
+      "AnimationPlayer": { "clip": "models/character.glb#Animation/Idle", "looping": true, "speed": 0.8 },
+      "Collider": { "shape": { "Capsule": { "radius": 0.4, "half_height": 0.5 } }, "offset": [0, 0.92, 0] }
+    }
+  },
+
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000130", "name": "Checkpoint Meadow",
+    "components": {
+      "Transform": { "translation": [2.2, 0.0, -1.0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "MeshAsset": { "mesh": "models/props.glb#Mesh/Brazier", "materials": ["models/props.glb#Material/Ember", "models/props.glb#Material/Iron", "models/props.glb#Material/Stone"] },
+      "Collider": { "shape": { "Sphere": { "radius": 2.5 } }, "offset": [0, 1, 0], "is_trigger": true, "mask": 2 },
+      "PointLight": { "color": [1.0, 0.55, 0.2, 1.0], "intensity": 4.0, "range": 8.0, "shadows": false },
+      "Script": { "source": "scripts/checkpoint.luau", "properties": [
+        { "name": "id", "value": { "String": "meadow" } },
+        { "name": "flame", "value": { "Entity": "c1de0000-0000-4000-8000-000000000131" } }
+      ] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000131", "name": "Flame", "parent": "c1de0000-0000-4000-8000-000000000130",
+    "components": {
+      "Transform": { "translation": [0, 1.3, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "ParticleEmitter": {
+        "playing": false, "looping": true, "rate": 40, "max_particles": 96,
+        "lifetime": [0.5, 0.9], "speed": [0.6, 1.4], "direction": [0, 1, 0], "cone_angle": 0.35, "spawn_radius": 0.25,
+        "gravity": [0, 1.5, 0],
+        "size": [{ "t": 0, "value": 0.35 }, { "t": 1, "value": 0.05 }],
+        "color": [{ "t": 0, "color": [1.0, 0.7, 0.25, 1.0] }, { "t": 1, "color": [0.9, 0.15, 0.02, 0.0] }],
+        "intensity": 6, "blend": "Additive"
+      }
+    }
+  },
+
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000140", "name": "Crate 1",
+    "components": {
+      "Transform": { "translation": [-1.6, 0.52, -6.0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "MeshAsset": { "mesh": "models/props.glb#Mesh/Crate", "materials": ["models/props.glb#Material/Wood", "models/props.glb#Material/Iron"] },
+      "Collider": { "shape": { "Cuboid": { "size": [1, 1, 1] } } },
+      "RigidBody": { "kind": "Dynamic", "mass": 15.0 }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000141", "name": "Crate 2",
+    "components": {
+      "Transform": { "translation": [-0.45, 0.52, -6.5], "rotation": [0, 0.13, 0, 0.9915], "scale": [1, 1, 1] },
+      "MeshAsset": { "mesh": "models/props.glb#Mesh/Crate", "materials": ["models/props.glb#Material/Wood", "models/props.glb#Material/Iron"] },
+      "Collider": { "shape": { "Cuboid": { "size": [1, 1, 1] } } },
+      "RigidBody": { "kind": "Dynamic", "mass": 15.0 }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000142", "name": "Crate 3",
+    "components": {
+      "Transform": { "translation": [-1.4, 1.54, -6.2], "rotation": [0, 0.2, 0, 0.98], "scale": [1, 1, 1] },
+      "MeshAsset": { "mesh": "models/props.glb#Mesh/Crate", "materials": ["models/props.glb#Material/Wood", "models/props.glb#Material/Iron"] },
+      "Collider": { "shape": { "Cuboid": { "size": [1, 1, 1] } } },
+      "RigidBody": { "kind": "Dynamic", "mass": 15.0 }
+    }
+  },
+
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000150", "name": "Rockfall",
+    "components": {
+      "Transform": { "translation": [0, 3.0, -23.5], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "Collider": { "shape": { "Cuboid": { "size": [8, 2, 3] } }, "is_trigger": true, "mask": 2 },
+      "Script": { "source": "scripts/rockfall.luau" }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000151", "name": "Boulder 1",
+    "components": {
+      "Transform": { "translation": [10.0, 4.95, -22.5], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "MeshAsset": { "mesh": "models/props.glb#Mesh/Boulder", "materials": ["models/props.glb#Material/Rock"] },
+      "Collider": { "shape": { "Sphere": { "radius": 0.6 } }, "friction": 0.8 },
+      "RigidBody": { "kind": "Kinematic", "mass": 120.0, "angular_damping": 0.2 },
+      "Script": { "source": "scripts/boulder.luau" }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000152", "name": "Boulder 2",
+    "components": {
+      "Transform": { "translation": [10.6, 5.2, -24.0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "MeshAsset": { "mesh": "models/props.glb#Mesh/Boulder", "materials": ["models/props.glb#Material/Rock"] },
+      "Collider": { "shape": { "Sphere": { "radius": 0.6 } }, "friction": 0.8 },
+      "RigidBody": { "kind": "Kinematic", "mass": 120.0, "angular_damping": 0.2 },
+      "Script": { "source": "scripts/boulder.luau" }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000153", "name": "Boulder 3",
+    "components": {
+      "Transform": { "translation": [9.5, 4.8, -25.4], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "MeshAsset": { "mesh": "models/props.glb#Mesh/Boulder", "materials": ["models/props.glb#Material/Rock"] },
+      "Collider": { "shape": { "Sphere": { "radius": 0.6 } }, "friction": 0.8 },
+      "RigidBody": { "kind": "Kinematic", "mass": 120.0, "angular_damping": 0.2 },
+      "Script": { "source": "scripts/boulder.luau" }
+    }
+  },
+
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000132", "name": "Checkpoint Courtyard",
+    "components": {
+      "Transform": { "translation": [2.2, 2.0, -33.5], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "MeshAsset": { "mesh": "models/props.glb#Mesh/Brazier", "materials": ["models/props.glb#Material/Ember", "models/props.glb#Material/Iron", "models/props.glb#Material/Stone"] },
+      "Collider": { "shape": { "Sphere": { "radius": 2.5 } }, "offset": [0, 1, 0], "is_trigger": true, "mask": 2 },
+      "PointLight": { "color": [1.0, 0.55, 0.2, 1.0], "intensity": 4.0, "range": 8.0, "shadows": false },
+      "Script": { "source": "scripts/checkpoint.luau", "properties": [
+        { "name": "id", "value": { "String": "courtyard" } },
+        { "name": "flame", "value": { "Entity": "c1de0000-0000-4000-8000-000000000133" } }
+      ] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000133", "name": "Flame", "parent": "c1de0000-0000-4000-8000-000000000132",
+    "components": {
+      "Transform": { "translation": [0, 1.3, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "ParticleEmitter": {
+        "playing": false, "looping": true, "rate": 40, "max_particles": 96,
+        "lifetime": [0.5, 0.9], "speed": [0.6, 1.4], "direction": [0, 1, 0], "cone_angle": 0.35, "spawn_radius": 0.25,
+        "gravity": [0, 1.5, 0],
+        "size": [{ "t": 0, "value": 0.35 }, { "t": 1, "value": 0.05 }],
+        "color": [{ "t": 0, "color": [1.0, 0.7, 0.25, 1.0] }, { "t": 1, "color": [0.9, 0.15, 0.02, 0.0] }],
+        "intensity": 6, "blend": "Additive"
+      }
+    }
+  },
+
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000160", "name": "Wave",
+    "components": {
+      "Transform": { "translation": [0, 2, -44], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "Script": { "source": "scripts/wave.luau", "properties": [
+        { "name": "gate", "value": { "Entity": "c1de0000-0000-4000-8000-000000000170" } }
+      ] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000170", "name": "Gate",
+    "components": {
+      "Transform": { "translation": [0.0, 3.75, -57.5], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "MeshAsset": { "mesh": "models/props.glb#Mesh/Gate", "materials": ["models/props.glb#Material/Wood", "models/props.glb#Material/Iron"] },
+      "Collider": { "shape": { "Cuboid": { "size": [3.3, 3.36, 0.12] } }, "friction": 0.1 },
+      "RigidBody": { "kind": "Fixed", "mass": 60.0, "angular_damping": 0.5 },
+      "Joint": { "kind": "Hinge", "anchor": [-1.7, 0, 0], "axis": [0, 1, 0], "limits_enabled": true, "limits": [-0.05, 1.6] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000171", "name": "Keep Door",
+    "components": {
+      "Transform": { "translation": [0.0, 3.5, -60.5], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "Collider": { "shape": { "Cuboid": { "size": [3.2, 3.0, 2.0] } }, "is_trigger": true, "mask": 2 },
+      "Script": { "source": "scripts/door.luau", "properties": [
+        { "name": "scene", "value": { "String": "keep" } }
+      ] }
+    }
+  },
+
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000180", "name": "Lava Glow West",
+    "components": {
+      "Transform": { "translation": [-7.0, -3.0, -29.5], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "PointLight": { "color": [1.0, 0.35, 0.08, 1.0], "intensity": 60.0, "range": 12.0, "shadows": false }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000181", "name": "Lava Glow East",
+    "components": {
+      "Transform": { "translation": [7.0, -3.0, -29.5], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "PointLight": { "color": [1.0, 0.35, 0.08, 1.0], "intensity": 60.0, "range": 12.0, "shadows": false }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000182", "name": "Gate Torch West",
+    "components": {
+      "Transform": { "translation": [-2.6, 5.0, -56.5], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "PointLight": { "color": [1.0, 0.6, 0.25, 1.0], "intensity": 25.0, "range": 9.0, "shadows": false }
+    }
+  },
+  {
+    "op": "spawn", "uid": "c1de0000-0000-4000-8000-000000000183", "name": "Gate Torch East",
+    "components": {
+      "Transform": { "translation": [2.6, 5.0, -56.5], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
+      "PointLight": { "color": [1.0, 0.6, 0.25, 1.0], "intensity": 25.0, "range": 9.0, "shadows": false }
+    }
+  }
+]

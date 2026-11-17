@@ -1,0 +1,798 @@
+[
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000001",
+    "name": "Sun",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          12,
+          0
+        ],
+        "rotation": [
+          -0.418082,
+          0.270273,
+          0.131821,
+          0.857195
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "DirectionalLight": {
+        "color": [
+          1.0,
+          0.87962,
+          0.71569,
+          1.0
+        ],
+        "intensity": 3.2,
+        "shadows": true,
+        "shadow_distance": 45.0
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000002",
+    "name": "Camera",
+    "components": {
+      "Transform": {
+        "translation": [
+          1.0,
+          17.0,
+          17.0
+        ],
+        "rotation": [
+          -0.388967,
+          0.027876,
+          0.011776,
+          0.920755
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Camera": {
+        "fov_y": 0.8,
+        "near": 0.1,
+        "active": true
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000003",
+    "name": "Ground",
+    "components": {
+      "Transform": {
+        "translation": [
+          0.5,
+          -0.1,
+          0.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Primitive": {
+        "shape": {
+          "Cuboid": {
+            "size": [
+              34,
+              0.2,
+              24
+            ]
+          }
+        },
+        "cast_shadows": true
+      },
+      "StandardMaterial": {
+        "base_color": [
+          0.3,
+          0.4,
+          0.22,
+          1.0
+        ],
+        "roughness": 0.95,
+        "metallic": 0.0,
+        "emissive": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000004",
+    "name": "L Mitre A",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            -12,
+            0.0,
+            -6
+          ],
+          [
+            -6,
+            0.0,
+            -6
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.3
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000005",
+    "name": "L Mitre B",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            -6,
+            0.0,
+            -6
+          ],
+          [
+            -6,
+            0.0,
+            -1
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.3
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000006",
+    "name": "L Butt Owner",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            -2,
+            0.0,
+            -6
+          ],
+          [
+            3,
+            0.0,
+            -6
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.45
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000007",
+    "name": "L Butt Other",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            3,
+            0.0,
+            -6
+          ],
+          [
+            3,
+            0.0,
+            -1
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.25
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000008",
+    "name": "T Body",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            -12,
+            0.0,
+            2
+          ],
+          [
+            -5,
+            0.0,
+            2
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.3
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000009",
+    "name": "T Stem",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            -8.5,
+            0.0,
+            2.15
+          ],
+          [
+            -8.5,
+            0.0,
+            6.5
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.3
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000010",
+    "name": "X West",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            -2,
+            0.0,
+            4
+          ],
+          [
+            1.2,
+            0.0,
+            4
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.3
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000011",
+    "name": "X East",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            1.2,
+            0.0,
+            4
+          ],
+          [
+            4.7,
+            0.0,
+            4
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.3
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000012",
+    "name": "X Front",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            1.2,
+            0.0,
+            1.5
+          ],
+          [
+            1.2,
+            0.0,
+            4
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.3
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000013",
+    "name": "X Back",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            1.2,
+            0.0,
+            4
+          ],
+          [
+            1.2,
+            0.0,
+            7
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.3
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000014",
+    "name": "Acute A",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            7,
+            0.0,
+            -6
+          ],
+          [
+            12,
+            0.0,
+            -6
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.3
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000015",
+    "name": "Acute B",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            7,
+            0.0,
+            -6
+          ],
+          [
+            11,
+            0.0,
+            -4
+          ]
+        ],
+        "height": 2.5,
+        "thickness": 0.3
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000016",
+    "name": "U Room",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            7,
+            0.0,
+            2
+          ],
+          [
+            7,
+            0.0,
+            6
+          ],
+          [
+            11,
+            0.0,
+            6
+          ],
+          [
+            11,
+            0.0,
+            3
+          ]
+        ],
+        "height": 3.0,
+        "thickness": 0.3
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000017",
+    "name": "Fence A",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "FencePath": {
+        "points": [
+          [
+            -5.85,
+            0.0,
+            -3.5
+          ],
+          [
+            -0.5,
+            0.0,
+            -3.5
+          ],
+          [
+            -0.5,
+            0.0,
+            0.0
+          ]
+        ],
+        "height": 1.1,
+        "post_spacing": 2.0,
+        "post_size": 0.14,
+        "rail_count": 2
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000018",
+    "name": "Fence B",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "FencePath": {
+        "points": [
+          [
+            -0.5,
+            0.0,
+            0.0
+          ],
+          [
+            4.5,
+            0.0,
+            0.0
+          ]
+        ],
+        "height": 1.1,
+        "post_spacing": 2.0,
+        "post_size": 0.14,
+        "rail_count": 2
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000300000019",
+    "name": "Fence C",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "FencePath": {
+        "points": [
+          [
+            2.0,
+            0.0,
+            0.0
+          ],
+          [
+            2.0,
+            0.0,
+            -3.0
+          ]
+        ],
+        "height": 1.1,
+        "post_spacing": 2.0,
+        "post_size": 0.14,
+        "rail_count": 2
+      }
+    }
+  }
+]

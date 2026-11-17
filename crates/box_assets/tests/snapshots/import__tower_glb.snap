@@ -1,0 +1,314 @@
+---
+source: crates/box_assets/tests/import.rs
+expression: "summarize(&server, &world, \"models/tower.glb\")"
+---
+{
+  "Material/Roof_Tiles (StandardMaterial)": {
+    "base_color": [
+      0.6,
+      0.1,
+      0.1,
+      1.0
+    ],
+    "roughness": 0.5,
+    "metallic": 0.25,
+    "emissive": [
+      0.2,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "base_color_texture": "none",
+    "normal_texture": "none",
+    "orm_texture": "none",
+    "emissive_texture": "none",
+    "alpha_mode": "Mask { cutoff: 0.3 }",
+    "double_sided": true
+  },
+  "Material/Stone (StandardMaterial)": {
+    "base_color": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "roughness": 0.9,
+    "metallic": 0.0,
+    "emissive": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "base_color_texture": "models/tower.glb#Texture/0",
+    "normal_texture": "none",
+    "orm_texture": "models/tower.glb#Texture/orm_1_none",
+    "emissive_texture": "none",
+    "alpha_mode": "Opaque",
+    "double_sided": false
+  },
+  "Mesh/Base (MeshData)": {
+    "vertices": 24,
+    "triangles": 12,
+    "uv_sets": 1,
+    "tangents": true,
+    "colors": false,
+    "groups": [
+      [
+        0,
+        36,
+        0
+      ]
+    ],
+    "bounds": {
+      "min": [
+        -0.5,
+        -0.5,
+        -0.5
+      ],
+      "max": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  },
+  "Mesh/Roof (MeshData)": {
+    "vertices": 16,
+    "triangles": 6,
+    "uv_sets": 1,
+    "tangents": true,
+    "colors": false,
+    "groups": [
+      [
+        0,
+        12,
+        0
+      ],
+      [
+        12,
+        6,
+        1
+      ]
+    ],
+    "bounds": {
+      "min": [
+        -0.5,
+        0.0,
+        -0.5
+      ],
+      "max": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  },
+  "Scene (SceneAsset)": {
+    "version": 1,
+    "entities": [
+      {
+        "uid": "db1f03f3-1862-44b9-a13b-2b0945180134",
+        "name": "tower",
+        "parent": null,
+        "components": {
+          "Transform": {
+            "translation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      },
+      {
+        "uid": "b1a7ba71-94b0-412b-a4a5-97fd662d8801",
+        "name": "Tower",
+        "parent": "db1f03f3-1862-44b9-a13b-2b0945180134",
+        "components": {
+          "Transform": {
+            "translation": [
+              0.0,
+              0.0,
+              -2.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      },
+      {
+        "uid": "5df9e107-9a28-4105-9c66-3bf2cbb3c9bc",
+        "name": "Base",
+        "parent": "b1a7ba71-94b0-412b-a4a5-97fd662d8801",
+        "components": {
+          "MeshAsset": {
+            "mesh": {
+              "id": "10000000-0000-4000-8000-000000000002",
+              "label": "Mesh/Base",
+              "path": "models/tower.glb"
+            },
+            "materials": [
+              {
+                "id": "10000000-0000-4000-8000-000000000002",
+                "label": "Material/Stone",
+                "path": "models/tower.glb"
+              }
+            ],
+            "cast_shadows": true
+          },
+          "Transform": {
+            "translation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      },
+      {
+        "uid": "c8c3e797-8e03-400a-b65c-764efb6aa000",
+        "name": "Roof",
+        "parent": "b1a7ba71-94b0-412b-a4a5-97fd662d8801",
+        "components": {
+          "MeshAsset": {
+            "mesh": {
+              "id": "10000000-0000-4000-8000-000000000002",
+              "label": "Mesh/Roof",
+              "path": "models/tower.glb"
+            },
+            "materials": [
+              {
+                "id": "10000000-0000-4000-8000-000000000002",
+                "label": "Material/Roof_Tiles",
+                "path": "models/tower.glb"
+              },
+              {
+                "id": "10000000-0000-4000-8000-000000000002",
+                "label": "Material/Stone",
+                "path": "models/tower.glb"
+              }
+            ],
+            "cast_shadows": true
+          },
+          "Transform": {
+            "translation": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.3826834559440613,
+              0.0,
+              0.9238795042037964
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      },
+      {
+        "uid": "da28e81c-933b-41f3-9669-83f60261720f",
+        "name": "Flag",
+        "parent": "c8c3e797-8e03-400a-b65c-764efb6aa000",
+        "components": {
+          "Transform": {
+            "translation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ],
+            "scale": [
+              0.5,
+              0.5,
+              0.5
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "Texture/0 (ImageData)": {
+    "size": [
+      4,
+      4
+    ],
+    "color_space": "Srgb",
+    "mips": 3,
+    "first_pixel": [
+      200,
+      40,
+      40,
+      255
+    ]
+  },
+  "Texture/1 (ImageData)": {
+    "size": [
+      2,
+      2
+    ],
+    "color_space": "Linear",
+    "mips": 2,
+    "first_pixel": [
+      0,
+      128,
+      255,
+      255
+    ]
+  },
+  "Texture/orm_1_none (ImageData)": {
+    "size": [
+      2,
+      2
+    ],
+    "color_space": "Linear",
+    "mips": 2,
+    "first_pixel": [
+      255,
+      128,
+      255,
+      255
+    ]
+  }
+}

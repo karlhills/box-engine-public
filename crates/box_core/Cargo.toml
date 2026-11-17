@@ -1,0 +1,27 @@
+[package]
+name = "box_core"
+description = "Core runtime for box-engine: app loop, world, transforms, input, mesh data, reflection, scenes and edits."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+glam.workspace = true
+libm.workspace = true
+hecs.workspace = true
+bytemuck.workspace = true
+profiling.workspace = true
+# Warnings about game-code mistakes (unregistered plugin types, bare `Parent`).
+tracing.workspace = true
+bevy_reflect.workspace = true
+uuid.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

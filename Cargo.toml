@@ -1,0 +1,127 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/box_core",
+    "crates/box_render",
+    "crates/box_engine",
+    "crates/box_editor",
+    "crates/box_physics",
+    "crates/box_assets",
+    "crates/box_proc",
+    "crates/box_audio",
+    "crates/box_ui",
+    "crates/box_script",
+    "crates/box_export",
+    "apps/editor",
+    "apps/cli",
+    "apps/player",
+    "examples/collector",
+    "examples/minimal_native",
+    "examples/guide_native",
+    "examples/walls",
+    "plugins/box_arch",
+]
+# Spikes are throwaway proofs of concept, each its own workspace.
+exclude = ["spikes"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/karlhills/box-engine-public"
+rust-version = "1.95"
+
+[workspace.dependencies]
+box_core = { path = "crates/box_core" }
+box_render = { path = "crates/box_render" }
+box_engine = { path = "crates/box_engine" }
+box_editor = { path = "crates/box_editor" }
+box_physics = { path = "crates/box_physics" }
+box_proc = { path = "crates/box_proc" }
+box_assets = { path = "crates/box_assets" }
+box_audio = { path = "crates/box_audio" }
+box_ui = { path = "crates/box_ui" }
+box_script = { path = "crates/box_script" }
+box_export = { path = "crates/box_export" }
+
+wgpu = "30.0.2"
+naga = { version = "30.0.2", features = ["wgsl-in"] }
+winit = "0.30.13"
+# Gamepads (winit has none). Default features: Windows Gaming Input on Windows.
+gilrs = "0.11.2"
+# Editor UI (docs/TECH_STACK.md section 3). egui-wgpu 0.37 targets wgpu 30 and winit 0.30.13.
+egui = "0.37.0"
+egui-winit = "0.37.0"
+egui-wgpu = { version = "0.37.0", features = ["winit"] }
+egui_tiles = "0.18.0"
+# In-game UI (box_ui, D11): egui's painter (text shaping and layout, font
+# atlas, anti-aliased shapes) without egui's widgets; same version as egui.
+epaint = { version = "0.37.0", default-features = false }
+# Font files (box_assets `font` importer): validation and family names.
+ttf-parser = "0.25.1"
+# `libm`: glam's trigonometry and powers (rotation constructors, slerp) come
+# from the pure-Rust libm crate instead of the platform C library, so
+# generated geometry is bit-identical on every platform (docs/DECISIONS.md D17).
+glam = { version = "0.33.12", features = ["bytemuck", "libm"] }
+# Portable transcendental functions (`box_core::pmath`); the version glam uses.
+libm = "0.2.16"
+# Spatial queries (D12). parry's math comes from `glamx`; see box_physics/src/convert.rs.
+parry3d = "0.31.1"
+# Dynamics (D12, M7): pinned exactly (frequent breaking releases). 0.36.1 depends
+# on parry3d 0.31.1 and glamx 0.3.1, the query layer's versions, so rapier and
+# the query layer share shape and math types (glam 0.33).
+rapier3d = { version = "=0.36.1", default-features = false, features = ["dim3", "f32", "std"] }
+hecs = "0.11.2"
+bytemuck = { version = "1.25", features = ["derive"] }
+pollster = "1.0"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+notify = "8.2.2"
+# Asset pipeline (docs/ASSETS.md, docs/TECH_STACK.md section 5).
+notify-debouncer-full = "0.7.0"
+gltf = { version = "1.4.1", default-features = false, features = ["utils", "names", "KHR_materials_emissive_strength"] }
+bevy_mikktspace = "1.0.0"
+insta = { version = "1.49.0", features = ["json"] }
+profiling = "1.0.18"
+thiserror = "2.0"
+# Pak content hashes (box_assets::pak): xxh3-128 per file, xxh3-64 header.
+twox-hash = { version = "2.1.2", default-features = false, features = ["std", "xxhash3_64", "xxhash3_128"] }
+anyhow = "1.0"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+# Reflection (D3). `glam` must stay on the version bevy_reflect's `glam` feature uses; upgrade them together.
+bevy_reflect = { version = "=0.20.1", default-features = false, features = ["std", "debug", "uuid", "reflect_documentation", "glam"] }
+uuid = { version = "1.21", features = ["v4", "v7", "serde"] }
+serde = { version = "1", features = ["derive"] }
+# `preserve_order` keeps unknown scene components byte-identical on save.
+serde_json = { version = "1", features = ["preserve_order"] }
+proptest = "1"
+# Procedural geometry (box_proc): 2D booleans and offsets, triangulation.
+i_overlay = "9.1.0"
+earcut = "0.4.12"
+# Audio (box_audio): kira with its symphonia decoders and cpal output, without
+# the realtime-priority extras (dbus on Linux).
+kira = { version = "0.12.6", default-features = false, features = ["cpal", "ogg", "vorbis", "mp3", "flac", "wav", "pcm"] }
+mint = "0.5.9"
+# Scripting (box_script, D4): Luau through mlua (Luau is always built from
+# source; `serialize` converts Lua values to and from JSON).
+mlua = { version = "0.12.2", features = ["luau", "vendored", "serialize"] }
+# `box` CLI (D13).
+rfd = "0.18.0"
+clap = { version = "4.6.7", features = ["derive"] }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+too_many_arguments = "allow"
+
+[profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 3
+# Dependency debug assertions (objc2 message verification, wgpu-core checks)
+# doubled editor render CPU in dev builds (docs/measurements/m2-editor.md).
+# wgpu validation is separate and stays on.
+debug-assertions = false

@@ -1,0 +1,197 @@
+[
+  { "op": "despawn", "entity": "Cube" },
+  { "op": "despawn", "entity": "Camera" },
+  {
+    "op": "add_component", "entity": "Ground", "component": "Collider",
+    "value": { "shape": { "Cuboid": { "size": [40.0, 0.2, 40.0] } }, "offset": [0.0, -0.1, 0.0] }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000001", "name": "Player",
+    "components": {
+      "Transform": { "translation": [0.0, 0.92, 4.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Capsule": { "radius": 0.4, "half_height": 0.5, "segments": 24, "rings": 6 } } },
+      "StandardMaterial": { "base_color": [0.9, 0.55, 0.12, 1.0], "roughness": 0.5 },
+      "Collider": { "shape": { "Capsule": { "radius": 0.4, "half_height": 0.5 } }, "layers": 2 },
+      "KinematicCharacter": { "radius": 0.4, "height": 1.8 },
+      "Interpolated": { "teleport_distance": 10.0 },
+      "Script": { "source": "scripts/player.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000002", "name": "Camera",
+    "components": {
+      "Transform": { "translation": [0.0, 6.0, 12.0], "rotation": [-0.2588190, 0.0, 0.0, 0.9659258], "scale": [1.0, 1.0, 1.0] },
+      "Camera": { "fov_y": 0.87266463, "near": 0.1, "active": true },
+      "Script": { "source": "scripts/look.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000003", "name": "Coin 1",
+    "components": {
+      "Transform": { "translation": [0.0, 1.0, 2.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Cylinder": { "radius": 0.35, "height": 0.08, "segments": 24 } } },
+      "StandardMaterial": { "base_color": [1.0, 0.75, 0.1, 1.0], "metallic": 1.0, "roughness": 0.3 },
+      "Collider": { "shape": { "Sphere": { "radius": 0.5 } }, "is_trigger": true },
+      "Script": { "source": "scripts/coin.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000004", "name": "Coin 2",
+    "components": {
+      "Transform": { "translation": [0.0, 1.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Cylinder": { "radius": 0.35, "height": 0.08, "segments": 24 } } },
+      "StandardMaterial": { "base_color": [1.0, 0.75, 0.1, 1.0], "metallic": 1.0, "roughness": 0.3 },
+      "Collider": { "shape": { "Sphere": { "radius": 0.5 } }, "is_trigger": true },
+      "Script": { "source": "scripts/coin.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000005", "name": "Gem",
+    "components": {
+      "Transform": { "translation": [0.0, 1.0, -2.0], "rotation": [0.364972, 0.115075, 0.277816, 0.88112], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Cuboid": { "size": [0.5, 0.5, 0.5] } } },
+      "StandardMaterial": { "base_color": [0.3, 0.85, 1.0, 1.0], "emissive": [0.2, 0.6, 0.8, 1.0], "roughness": 0.2 },
+      "Collider": { "shape": { "Sphere": { "radius": 0.5 } }, "is_trigger": true },
+      "Script": { "source": "scripts/gem.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000006", "name": "Goal",
+    "components": {
+      "Transform": { "translation": [0.0, 1.0, -14.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Cuboid": { "size": [2.0, 2.0, 0.2] } } },
+      "StandardMaterial": { "base_color": [0.2, 0.9, 0.3, 1.0], "emissive": [0.1, 0.5, 0.1, 1.0] },
+      "Collider": { "shape": { "Cuboid": { "size": [2.0, 2.0, 1.0] } }, "is_trigger": true },
+      "Script": { "source": "scripts/goal.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000007", "name": "Totem",
+    "components": {
+      "Transform": { "translation": [-3.0, 1.0, -2.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Cuboid": { "size": [1.0, 2.0, 1.0] } } },
+      "StandardMaterial": { "base_color": [0.58, 0.13, 0.05, 1.0], "roughness": 0.6 },
+      "Script": { "source": "scripts/spinner.luau", "properties": [{ "name": "speed", "value": { "Number": 120.0 } }] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000008", "name": "Lamp",
+    "components": {
+      "Transform": { "translation": [3.0, 0.5, 2.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Sphere": { "radius": 0.15, "sectors": 16, "stacks": 8 } } },
+      "StandardMaterial": { "base_color": [1.0, 0.9, 0.6, 1.0], "emissive": [4.0, 3.0, 1.5, 1.0] },
+      "PointLight": { "color": [1.0, 0.8, 0.5, 1.0], "intensity": 10.0, "range": 8.0 },
+      "Script": { "source": "scripts/lamp.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000009", "name": "Crate",
+    "components": {
+      "Transform": { "translation": [4.0, 0.5, -3.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Cuboid": { "size": [1.0, 1.0, 1.0] } } },
+      "StandardMaterial": { "base_color": [0.55, 0.38, 0.24, 1.0], "roughness": 0.8 },
+      "Collider": { "shape": "Primitive" },
+      "RigidBody": { "kind": "Dynamic", "mass": 10.0 }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-00000000000a", "name": "Lift",
+    "components": {
+      "Transform": { "translation": [4.0, 2.5, -3.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Script": { "source": "scripts/lift.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-00000000000b", "name": "Hero",
+    "components": {
+      "Transform": { "translation": [-5.0, 0.92, 3.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Collider": { "shape": { "Capsule": { "radius": 0.4, "half_height": 0.5 } }, "layers": 2 },
+      "KinematicCharacter": { "radius": 0.4, "height": 1.8 },
+      "Script": {
+        "source": "scripts/hero.luau",
+        "properties": [{ "name": "body", "value": { "Entity": "6a1d0000-0000-4000-8000-00000000000c" } }]
+      }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-00000000000c", "name": "Body",
+    "parent": "6a1d0000-0000-4000-8000-00000000000b",
+    "components": {
+      "Transform": { "translation": [0.0, -0.92, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "PrefabInstance": { "scene": "models/character.glb#Scene" },
+      "AnimationStateMachine": { "source": "animation/locomotion.animgraph.json" }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-00000000000d", "name": "Fence Row",
+    "components": {
+      "Transform": { "translation": [-8.0, 0.0, -6.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "ScriptIntent": { "rule": "rules/row.luau", "points": [], "properties": [{ "name": "count", "value": { "Integer": 4 } }] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000010", "name": "Game",
+    "components": {
+      "Transform": { "translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Script": { "source": "scripts/game.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000011", "name": "Score",
+    "components": {
+      "Transform": { "translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Script": { "source": "scripts/score.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000012", "name": "Hud",
+    "components": {
+      "Transform": { "translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Script": { "source": "scripts/hud.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000013", "name": "Menu",
+    "components": {
+      "Transform": { "translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Script": { "source": "scripts/menu.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000014", "name": "Countdown",
+    "components": {
+      "Transform": { "translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Script": { "source": "scripts/countdown.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000015", "name": "Level",
+    "components": {
+      "Transform": { "translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Script": { "source": "scripts/level.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000017", "name": "Ball",
+    "components": {
+      "Transform": { "translation": [2.0, 0.5, 4.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Primitive": { "shape": { "Sphere": { "radius": 0.5, "sectors": 32, "stacks": 16 } } },
+      "StandardMaterial": { "base_color": [0.2, 0.4, 0.9, 1.0] },
+      "Script": { "source": "scripts/hello.luau", "properties": [] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000018", "name": "Swarm",
+    "components": {
+      "Transform": { "translation": [-6.0, 1.5, 6.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Script": { "source": "scripts/swarm.luau", "properties": [{ "name": "count", "value": { "Integer": 12 } }] }
+    }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000016", "name": "Spawner",
+    "components": {
+      "Transform": { "translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Script": { "source": "scripts/spawner.luau", "properties": [] }
+    }
+  }
+]

@@ -1,0 +1,24 @@
+{
+  "examples": [
+    {
+      "name": "collector_luau",
+      "title": "Collector",
+      "description": "A small complete game in Luau: run and jump around two arenas collecting gems, with a HUD, a pause menu, saves and two languages."
+    },
+    {
+      "name": "cinder_keep",
+      "title": "Cinder Keep",
+      "description": "A short third-person action-platformer in Luau: dialogue, sword combat, an enemy wave and imported glTF levels."
+    },
+    {
+      "name": "script_rules",
+      "title": "Script Rules",
+      "description": "Two Luau rules build fences and a colonnade while you edit: drag the points, change the properties, edit the rule files."
+    },
+    {
+      "name": "script_demo",
+      "title": "Script Demo",
+      "description": "A small scripted scene: a player, a follow camera, spinning gems and beacons."
+    }
+  ]
+}

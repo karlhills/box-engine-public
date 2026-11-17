@@ -1,0 +1,688 @@
+{
+  "version": 1,
+  "resources": {
+    "Environment": {
+      "sky_zenith": [0.02, 0.02, 0.05, 1.0],
+      "sky_horizon": [0.1, 0.06, 0.05, 1.0],
+      "ground": [0.02, 0.015, 0.01, 1.0],
+      "ambient_intensity": 0.4,
+      "sun_disc_size": 0.0,
+      "fog_density": 0.0,
+      "fog_height_falloff": 0.08,
+      "fog_base_height": 0.0,
+      "exposure": 1.1,
+      "tonemapper": "AgX",
+      "ambient_occlusion": {
+        "enabled": true,
+        "intensity": 1.5,
+        "radius": 1.0,
+        "bias": 0.02,
+        "power": 1.2,
+        "direct_lighting": 0.0
+      },
+      "bloom": {
+        "enabled": true,
+        "intensity": 0.1,
+        "scatter": 0.6
+      },
+      "color_grading": {
+        "temperature": 0.0,
+        "tint": 0.0,
+        "contrast": 1.0,
+        "saturation": 1.0,
+        "shadows": [1.0, 1.0, 1.0],
+        "midtones": [1.0, 1.0, 1.0],
+        "highlights": [1.0, 1.0, 1.0],
+        "shadows_end": 0.3,
+        "highlights_start": 0.55,
+        "lift": [0.0, 0.0, 0.0],
+        "gamma": [1.0, 1.0, 1.0],
+        "gain": [1.0, 1.0, 1.0]
+      },
+      "sky": {
+        "gradient": "Simple",
+        "sun_glow": 1.0,
+        "sun_disc": 1.0,
+        "horizon_glow": 0.0,
+        "stars": 0.0
+      },
+      "aerial_haze": {
+        "enabled": false,
+        "color": [0.37, 0.51, 0.71, 1.0],
+        "density": 0.0005,
+        "start_distance": 60.0,
+        "max_opacity": 0.97,
+        "sun_scatter": 0.12,
+        "sky_height": 0.12
+      },
+      "height_mist": {
+        "enabled": false,
+        "color": [0.53, 0.6, 0.74, 1.0],
+        "top": -20.0,
+        "bottom": -60.0,
+        "max_opacity": 1.0,
+        "near_fade": 120.0
+      },
+      "distance_quieting": {
+        "enabled": false,
+        "start": 90.0,
+        "end": 1800.0,
+        "desaturate": 0.5,
+        "contrast": 0.38,
+        "tone": [0.3, 0.42, 0.58, 1.0]
+      },
+      "vignette": {
+        "intensity": 0.0,
+        "smoothness": 0.5,
+        "rounded": false
+      },
+      "wind": {
+        "direction": [1.0, 0.0],
+        "strength": 1.0,
+        "gust_length": 17.0,
+        "gust_speed": 3.0
+      }
+    }
+  },
+  "entities": [
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000201",
+      "name": "Level",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "7be810d9-a127-4b34-8239-28f9124695d2",
+            "path": "scripts/level.luau"
+          },
+          "properties": [
+            {
+              "name": "title",
+              "value": {
+                "String": "area.keep"
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000202",
+      "name": "Hall Ambient",
+      "parent": null,
+      "components": {
+        "AmbientVolume": {
+          "half_extents": [9.0, 4.0, 19.0],
+          "color": [1.0, 0.7, 0.5, 1.0],
+          "intensity": 0.25,
+          "sky_contribution": 0.0,
+          "blend_distance": 1.0
+        },
+        "Transform": {
+          "translation": [0.0, 3.5, -14.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000203",
+      "name": "Hall",
+      "parent": null,
+      "components": {
+        "PrefabInstance": {
+          "scene": {
+            "id": "edafd3af-c56e-41d6-9fea-c1ea325c0428",
+            "label": "Scene",
+            "path": "models/keep.glb"
+          }
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000210",
+      "name": "Player",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 2,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Interpolated": {
+          "teleport_distance": 10.0
+        },
+        "KinematicCharacter": {
+          "radius": 0.4,
+          "height": 1.8,
+          "gravity": 20.0,
+          "max_fall_speed": 40.0,
+          "jump_speed": 7.5,
+          "max_slope": 0.9272952,
+          "ground_snap": 0.1,
+          "skin": 0.02,
+          "step_height": 0.3,
+          "mass": 80.0
+        },
+        "Script": {
+          "source": {
+            "id": "f8fec86b-27c8-4529-9e4c-dc7c1d98de72",
+            "path": "scripts/player.luau"
+          },
+          "properties": [
+            {
+              "name": "camera",
+              "value": {
+                "Entity": "c1de0000-0000-4000-8000-000000000212"
+              }
+            },
+            {
+              "name": "body",
+              "value": {
+                "Entity": "c1de0000-0000-4000-8000-000000000211"
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 0.92, -2.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000211",
+      "name": "Body",
+      "parent": "c1de0000-0000-4000-8000-000000000210",
+      "components": {
+        "AnimationStateMachine": {
+          "source": {
+            "id": "cea34de7-e2c9-45f5-811c-0c27564edf8e",
+            "path": "animation/hero.animgraph.json"
+          },
+          "graph": {
+            "states": [],
+            "transitions": [],
+            "start": ""
+          },
+          "parameters": []
+        },
+        "PrefabInstance": {
+          "scene": {
+            "id": "6775a1ef-331c-47a4-98e2-31a764b7e8ec",
+            "label": "Scene",
+            "path": "models/character.glb"
+          }
+        },
+        "Transform": {
+          "translation": [0.0, -0.92, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000212",
+      "name": "Camera",
+      "parent": null,
+      "components": {
+        "Camera": {
+          "fov_y": 0.95,
+          "near": 0.1,
+          "active": true
+        },
+        "Script": {
+          "source": {
+            "id": "ba9670c8-a96a-4380-91cd-eb2fc060e11f",
+            "path": "scripts/camera.luau"
+          },
+          "properties": [
+            {
+              "name": "target",
+              "value": {
+                "Entity": "c1de0000-0000-4000-8000-000000000210"
+              }
+            },
+            {
+              "name": "distance",
+              "value": {
+                "Number": 6.5
+              }
+            },
+            {
+              "name": "pitch",
+              "value": {
+                "Number": 0.35
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 4.2, 4.0],
+          "rotation": [-0.174108, 0.0, 0.0, 0.984727],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000220",
+      "name": "Throne Room",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Cuboid": {
+              "size": [8.0, 2.0, 5.0]
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 1,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Script": {
+          "source": {
+            "id": "acfd9b01-300c-4d2f-85b5-ff6697cb3864",
+            "path": "scripts/door.luau"
+          },
+          "properties": [
+            {
+              "name": "victory",
+              "value": {
+                "Boolean": true
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 3.0, -25.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000230",
+      "name": "Throne Light",
+      "parent": null,
+      "components": {
+        "SpotLight": {
+          "color": [1.0, 0.85, 0.6, 1.0],
+          "intensity": 220.0,
+          "range": 16.0,
+          "inner_angle": 0.35,
+          "outer_angle": 0.6,
+          "shadows": true,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Transform": {
+          "translation": [0.0, 6.8, -23.0],
+          "rotation": [-0.3476, 0.0, 0.0, 0.9376],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000231",
+      "name": "Torch 1",
+      "parent": null,
+      "components": {
+        "PointLight": {
+          "color": [1.0, 0.55, 0.22, 1.0],
+          "intensity": 30.0,
+          "range": 9.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Transform": {
+          "translation": [-7.4, 3.2, -4.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000232",
+      "name": "Torch 2",
+      "parent": null,
+      "components": {
+        "PointLight": {
+          "color": [1.0, 0.55, 0.22, 1.0],
+          "intensity": 30.0,
+          "range": 9.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Transform": {
+          "translation": [7.4, 3.2, -4.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000233",
+      "name": "Torch 3",
+      "parent": null,
+      "components": {
+        "PointLight": {
+          "color": [1.0, 0.55, 0.22, 1.0],
+          "intensity": 30.0,
+          "range": 9.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Transform": {
+          "translation": [-7.4, 3.2, -13.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000234",
+      "name": "Torch 4",
+      "parent": null,
+      "components": {
+        "PointLight": {
+          "color": [1.0, 0.55, 0.22, 1.0],
+          "intensity": 30.0,
+          "range": 9.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Transform": {
+          "translation": [7.4, 3.2, -13.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000240",
+      "name": "Brazier West",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.55,
+              "height": 1.3
+            }
+          },
+          "offset": [0.0, 0.65, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "MeshAsset": {
+          "mesh": {
+            "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+            "label": "Mesh/Brazier",
+            "path": "models/props.glb"
+          },
+          "materials": [
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Ember",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Iron",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Stone",
+              "path": "models/props.glb"
+            }
+          ],
+          "cast_shadows": true
+        },
+        "PointLight": {
+          "color": [1.0, 0.5, 0.18, 1.0],
+          "intensity": 20.0,
+          "range": 7.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Transform": {
+          "translation": [-3.5, 0.0, -16.8],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000241",
+      "name": "Flame",
+      "parent": "c1de0000-0000-4000-8000-000000000240",
+      "components": {
+        "ParticleEmitter": {
+          "playing": true,
+          "looping": true,
+          "duration": 5.0,
+          "rate": 40.0,
+          "rate_over_distance": 0.0,
+          "bursts": [],
+          "max_particles": 96,
+          "lifetime": [0.5, 0.9],
+          "speed": [0.6, 1.4],
+          "direction": [0.0, 1.0, 0.0],
+          "cone_angle": 0.35,
+          "spawn_radius": 0.25,
+          "gravity": [0.0, 1.5, 0.0],
+          "drag": 0.0,
+          "size": [
+            {
+              "t": 0.0,
+              "value": 0.35
+            },
+            {
+              "t": 1.0,
+              "value": 0.05
+            }
+          ],
+          "size_random": 0.0,
+          "color": [
+            {
+              "t": 0.0,
+              "color": [1.0, 0.7, 0.25, 1.0]
+            },
+            {
+              "t": 1.0,
+              "color": [0.9, 0.15, 0.02, 0.0]
+            }
+          ],
+          "intensity": 6.0,
+          "spin": [0.0, 0.0],
+          "random_rotation": false,
+          "texture": null,
+          "atlas": [1, 1],
+          "blend": "Additive",
+          "soft_distance": 0.0,
+          "lit": false,
+          "space": "World",
+          "seed": 1,
+          "despawn_when_finished": false
+        },
+        "Transform": {
+          "translation": [0.0, 1.3, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000242",
+      "name": "Brazier East",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.55,
+              "height": 1.3
+            }
+          },
+          "offset": [0.0, 0.65, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "MeshAsset": {
+          "mesh": {
+            "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+            "label": "Mesh/Brazier",
+            "path": "models/props.glb"
+          },
+          "materials": [
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Ember",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Iron",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Stone",
+              "path": "models/props.glb"
+            }
+          ],
+          "cast_shadows": true
+        },
+        "PointLight": {
+          "color": [1.0, 0.5, 0.18, 1.0],
+          "intensity": 20.0,
+          "range": 7.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Transform": {
+          "translation": [3.5, 0.0, -16.8],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000243",
+      "name": "Flame",
+      "parent": "c1de0000-0000-4000-8000-000000000242",
+      "components": {
+        "ParticleEmitter": {
+          "playing": true,
+          "looping": true,
+          "duration": 5.0,
+          "rate": 40.0,
+          "rate_over_distance": 0.0,
+          "bursts": [],
+          "max_particles": 96,
+          "lifetime": [0.5, 0.9],
+          "speed": [0.6, 1.4],
+          "direction": [0.0, 1.0, 0.0],
+          "cone_angle": 0.35,
+          "spawn_radius": 0.25,
+          "gravity": [0.0, 1.5, 0.0],
+          "drag": 0.0,
+          "size": [
+            {
+              "t": 0.0,
+              "value": 0.35
+            },
+            {
+              "t": 1.0,
+              "value": 0.05
+            }
+          ],
+          "size_random": 0.0,
+          "color": [
+            {
+              "t": 0.0,
+              "color": [1.0, 0.7, 0.25, 1.0]
+            },
+            {
+              "t": 1.0,
+              "color": [0.9, 0.15, 0.02, 0.0]
+            }
+          ],
+          "intensity": 6.0,
+          "spin": [0.0, 0.0],
+          "random_rotation": false,
+          "texture": null,
+          "atlas": [1, 1],
+          "blend": "Additive",
+          "soft_distance": 0.0,
+          "lit": false,
+          "space": "World",
+          "seed": 1,
+          "despawn_when_finished": false
+        },
+        "Transform": {
+          "translation": [0.0, 1.3, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    }
+  ]
+}

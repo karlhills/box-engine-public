@@ -1,0 +1,45 @@
+# Walls: the M5 acceptance scenario for derived entities
+# (docs/PROCEDURAL_DIRECTION.md section 7). A box project (box.project.json,
+# assets/) and the native crate around it: `src/lib.rs` is the plugin (saved
+# `WallPath` / `FencePath` intent, the `walls` and `fences` rules, the
+# `WallGen` and `FenceGen` generators); `walls-editor` and `walls-player` are
+# its editor and player.
+[package]
+name = "walls"
+description = "box-engine example: neighbour-aware walls and fences from saved paths."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[features]
+# The editor binary: `cargo run -p walls --features editor --bin walls-editor`.
+editor = ["dep:box_editor", "dep:serde_json"]
+
+[[bin]]
+name = "walls-editor"
+path = "src/bin/walls-editor.rs"
+required-features = ["editor"]
+
+[[bin]]
+name = "walls-player"
+path = "src/bin/walls-player.rs"
+
+[dependencies]
+box_engine.workspace = true
+box_editor = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+anyhow.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+box_editor.workspace = true
+egui.workspace = true
+image.workspace = true
+proptest.workspace = true
+# The tests drive the editor tools (`walls::editor`), behind `editor`.
+walls = { path = ".", features = ["editor"] }
+serde_json.workspace = true

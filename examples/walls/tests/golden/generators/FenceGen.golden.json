@@ -1,0 +1,98 @@
+{
+  "generator": "FenceGen",
+  "version": 1,
+  "cases": [
+    {
+      "name": "default",
+      "seed": 0,
+      "params": {
+        "points": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            6.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "height": 1.100000023841858,
+        "post_spacing": 2.0,
+        "post_size": 0.14000000059604645,
+        "rail_count": 2,
+        "start_post": true,
+        "end_post": true
+      },
+      "hash": "0x673adf87890ded0c",
+      "vertices": 176,
+      "triangles": 80,
+      "warnings": []
+    },
+    {
+      "name": "corner_shared_post",
+      "seed": 0,
+      "params": {
+        "points": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            5.0,
+            0.0,
+            0.0
+          ],
+          [
+            5.0,
+            0.0,
+            -3.0
+          ]
+        ],
+        "height": 1.100000023841858,
+        "post_spacing": 2.0,
+        "post_size": 0.14000000059604645,
+        "rail_count": 3,
+        "start_post": false,
+        "end_post": true
+      },
+      "hash": "0x781612470d4c4b2b",
+      "vertices": 304,
+      "triangles": 142,
+      "warnings": []
+    },
+    {
+      "name": "clamped",
+      "seed": 0,
+      "params": {
+        "points": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            6.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "height": 1.100000023841858,
+        "post_spacing": 0.05000000074505806,
+        "post_size": 0.14000000059604645,
+        "rail_count": 40,
+        "start_post": true,
+        "end_post": true
+      },
+      "hash": "0x1ca33b0732d35e67",
+      "vertices": 896,
+      "triangles": 404,
+      "warnings": [
+        "post spacing is less than two posts wide; using 0.28 m",
+        "40 rails is too many; building 8"
+      ]
+    }
+  ]
+}

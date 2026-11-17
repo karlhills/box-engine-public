@@ -1,0 +1,24 @@
+# Generated content must be bit-identical on every platform (D17): use
+# box_core::pmath, not the platform C library's transcendental functions.
+disallowed-methods = [
+    { path = "f32::sin", reason = "use box_core::pmath::sin (portable, D17)" },
+    { path = "f32::cos", reason = "use box_core::pmath::cos (portable, D17)" },
+    { path = "f32::sin_cos", reason = "use box_core::pmath::sin_cos (portable, D17)" },
+    { path = "f32::tan", reason = "use box_core::pmath::tan (portable, D17)" },
+    { path = "f32::asin", reason = "use box_core::pmath::asin (portable, D17)" },
+    { path = "f32::acos", reason = "use box_core::pmath::acos (portable, D17)" },
+    { path = "f32::atan", reason = "use box_core::pmath::atan (portable, D17)" },
+    { path = "f32::atan2", reason = "use box_core::pmath::atan2 (portable, D17)" },
+    { path = "f32::powf", reason = "use box_core::pmath::powf (portable, D17)" },
+    { path = "f32::exp", reason = "use box_core::pmath::exp (portable, D17)" },
+    { path = "f32::ln", reason = "use box_core::pmath::ln (portable, D17)" },
+    { path = "f64::sin", reason = "use box_core::pmath::f64::sin (portable, D17)" },
+    { path = "f64::cos", reason = "use box_core::pmath::f64::cos (portable, D17)" },
+    { path = "f64::sin_cos", reason = "use box_core::pmath::f64::sin_cos (portable, D17)" },
+    { path = "f64::tan", reason = "use box_core::pmath::f64::tan (portable, D17)" },
+    { path = "f64::acos", reason = "use box_core::pmath::f64::acos (portable, D17)" },
+    { path = "f64::atan2", reason = "use box_core::pmath::f64::atan2 (portable, D17)" },
+    { path = "f64::powf", reason = "use box_core::pmath::f64::powf (portable, D17)" },
+    { path = "f64::exp", reason = "use box_core::pmath::f64::exp (portable, D17)" },
+    { path = "f64::ln", reason = "use box_core::pmath::f64::ln (portable, D17)" },
+]

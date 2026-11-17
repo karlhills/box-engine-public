@@ -1,0 +1,32 @@
+# The Rust code samples of the guides (docs/guide/native-plugins.md and
+# docs/guide/procedural.md): every Rust block in those guides is copied from
+# this crate, which builds and is tested (`cargo test -p guide_native`).
+[package]
+name = "guide_native"
+description = "box-engine guide samples: a native game crate with plugins, components, systems, events, an editor action, generators and rules."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[features]
+# The editor binary and editor-only code: `cargo run -p guide_native --features editor --bin guide-editor`.
+editor = ["dep:box_editor"]
+
+[[bin]]
+name = "guide-editor"
+path = "src/bin/guide-editor.rs"
+required-features = ["editor"]
+
+[[bin]]
+name = "guide-player"
+path = "src/bin/guide-player.rs"
+
+[dependencies]
+box_engine.workspace = true
+box_editor = { workspace = true, optional = true }
+anyhow.workspace = true
+
+[lints]
+workspace = true

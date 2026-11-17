@@ -1,0 +1,7 @@
+{
+  "title": "Native (Rust)",
+  "description": "The empty project plus a Cargo crate: game code in Rust with its own editor and player binaries. Needs Rust and a box-engine checkout.",
+  "order": 3,
+  "native": true,
+  "base": "empty"
+}

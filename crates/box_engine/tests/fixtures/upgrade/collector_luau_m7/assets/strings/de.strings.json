@@ -1,0 +1,18 @@
+{
+  "hud": {
+    "score": "Punkte [color=$accent]{score}[/color]",
+    "gems": "Edelsteine übrig {left}"
+  },
+  "menu": {
+    "paused": "Pause",
+    "resume": "Weiterspielen",
+    "save": "Spiel speichern",
+    "load": "Spiel laden",
+    "language": "Sprache: Deutsch"
+  },
+  "toast": {
+    "saved": "Spiel gespeichert",
+    "loaded": "Spiel geladen",
+    "failed": "Kein Spielstand"
+  }
+}

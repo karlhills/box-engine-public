@@ -1,0 +1,34 @@
+{
+  "title": { "name": "Box Engine", "tagline": "Eine Demo der Spieloberfläche" },
+  "menu": {
+    "start": "Starten",
+    "options": "Optionen",
+    "quit": "Beenden",
+    "resume": "Weiter",
+    "save": "Spiel speichern",
+    "load": "Spiel laden",
+    "to_title": "Zum Titel",
+    "paused": "Pause"
+  },
+  "options": {
+    "title": "Optionen",
+    "volume": "Musiklautstärke",
+    "subtitles": "Untertitel",
+    "german": "Deutsch",
+    "back": "Zurück"
+  },
+  "hud": {
+    "health": "Leben",
+    "coins": "Münzen [color=$accent]{count}[/color] / {total}",
+    "coin": "Münze",
+    "saved": "In Platz {slot} gespeichert",
+    "loaded": "Platz {slot} geladen"
+  },
+  "dialogue": {
+    "speaker": "Wächter",
+    "line1": "Willkommen, Reisender. Die [color=$accent]Münzen[/color] hier gehören dem, der sie findet.",
+    "line2": "Drücke jederzeit [i]Start[/i], um zu pausieren, zu speichern oder zu laden.",
+    "line3": "Los geht's!",
+    "next": "Weiter"
+  }
+}

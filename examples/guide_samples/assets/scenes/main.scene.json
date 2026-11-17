@@ -1,0 +1,1065 @@
+{
+  "version": 1,
+  "resources": {
+    "Environment": {
+      "sky_zenith": [0.02, 0.24, 0.9, 1.0],
+      "sky_horizon": [0.36, 0.62, 1.0, 1.0],
+      "ground": [0.18, 0.16, 0.13, 1.0],
+      "ambient_intensity": 0.55,
+      "sun_disc_size": 0.010471975,
+      "fog_density": 0.006,
+      "fog_height_falloff": 0.08,
+      "fog_base_height": 0.0,
+      "exposure": 0.8,
+      "tonemapper": "AgX",
+      "ambient_occlusion": {
+        "enabled": true,
+        "intensity": 1.5,
+        "radius": 1.0,
+        "bias": 0.02,
+        "power": 1.2,
+        "direct_lighting": 0.0
+      },
+      "bloom": {
+        "enabled": true,
+        "intensity": 0.025,
+        "scatter": 0.7
+      },
+      "color_grading": {
+        "temperature": 0.0,
+        "tint": 0.0,
+        "contrast": 1.0,
+        "saturation": 1.0,
+        "shadows": [1.0, 1.0, 1.0],
+        "midtones": [1.0, 1.0, 1.0],
+        "highlights": [1.0, 1.0, 1.0],
+        "shadows_end": 0.3,
+        "highlights_start": 0.55,
+        "lift": [0.0, 0.0, 0.0],
+        "gamma": [1.0, 1.0, 1.0],
+        "gain": [1.0, 1.0, 1.0]
+      },
+      "sky": {
+        "gradient": "Simple",
+        "sun_glow": 1.0,
+        "sun_disc": 1.0,
+        "horizon_glow": 0.0,
+        "stars": 0.0
+      },
+      "aerial_haze": {
+        "enabled": false,
+        "color": [0.37, 0.51, 0.71, 1.0],
+        "density": 0.0005,
+        "start_distance": 60.0,
+        "max_opacity": 0.97,
+        "sun_scatter": 0.12,
+        "sky_height": 0.12
+      },
+      "height_mist": {
+        "enabled": false,
+        "color": [0.53, 0.6, 0.74, 1.0],
+        "top": -20.0,
+        "bottom": -60.0,
+        "max_opacity": 1.0,
+        "near_fade": 120.0
+      },
+      "distance_quieting": {
+        "enabled": false,
+        "start": 90.0,
+        "end": 1800.0,
+        "desaturate": 0.5,
+        "contrast": 0.38,
+        "tone": [0.3, 0.42, 0.58, 1.0]
+      },
+      "vignette": {
+        "intensity": 0.0,
+        "smoothness": 0.5,
+        "rounded": false
+      },
+      "wind": {
+        "direction": [1.0, 0.0],
+        "strength": 1.0,
+        "gust_length": 17.0,
+        "gust_speed": 3.0
+      }
+    }
+  },
+  "entities": [
+    {
+      "uid": "01a1e62f-3ee1-7183-8fab-40a9b197b01c",
+      "name": "Ground",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Cuboid": {
+              "size": [40.0, 0.2, 40.0]
+            }
+          },
+          "offset": [0.0, -0.1, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Plane": {
+              "size": [200.0, 200.0],
+              "cells": [1, 1]
+            }
+          },
+          "cast_shadows": false
+        },
+        "StandardMaterial": {
+          "base_color": [0.15896086, 0.27467737, 0.07818743, 1.0],
+          "roughness": 0.95,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a1e62f-3ee1-7183-8fab-40abb39fa5e8",
+      "name": "Sun",
+      "parent": null,
+      "components": {
+        "DirectionalLight": {
+          "color": [1.0, 0.95, 0.88, 1.0],
+          "intensity": 3.0,
+          "shadows": true,
+          "shadow_distance": 40.0
+        },
+        "Transform": {
+          "translation": [0.0, 10.0, 0.0],
+          "rotation": [-0.3711401, -0.24092104, -0.100337386, 0.8911479],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000001",
+      "name": "Player",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 2,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Interpolated": {
+          "teleport_distance": 10.0
+        },
+        "KinematicCharacter": {
+          "radius": 0.4,
+          "height": 1.8,
+          "gravity": 20.0,
+          "max_fall_speed": 40.0,
+          "jump_speed": 7.5,
+          "max_slope": 0.9272952,
+          "ground_snap": 0.1,
+          "skin": 0.02,
+          "step_height": 0.3,
+          "mass": 80.0
+        },
+        "Primitive": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.5,
+              "segments": 24,
+              "rings": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "8a98616d-83c1-40c7-9a26-4ab396b89782",
+            "path": "scripts/player.luau"
+          },
+          "properties": []
+        },
+        "StandardMaterial": {
+          "base_color": [0.9, 0.55, 0.12, 1.0],
+          "roughness": 0.5,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 0.92, 4.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000002",
+      "name": "Camera",
+      "parent": null,
+      "components": {
+        "Camera": {
+          "fov_y": 0.87266463,
+          "near": 0.1,
+          "active": true
+        },
+        "Script": {
+          "source": {
+            "id": "87deb880-eca6-42de-bdde-ebd0fbdd83fa",
+            "path": "scripts/look.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [0.0, 6.0, 12.0],
+          "rotation": [-0.258819, 0.0, 0.0, 0.9659258],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000003",
+      "name": "Coin 1",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.35,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "219de75a-5095-4f5a-9975-99849f7d141e",
+            "path": "scripts/coin.luau"
+          },
+          "properties": []
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.75, 0.1, 1.0],
+          "roughness": 0.3,
+          "metallic": 1.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 1.0, 2.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000004",
+      "name": "Coin 2",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.35,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "219de75a-5095-4f5a-9975-99849f7d141e",
+            "path": "scripts/coin.luau"
+          },
+          "properties": []
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.75, 0.1, 1.0],
+          "roughness": 0.3,
+          "metallic": 1.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 1.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000005",
+      "name": "Gem",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.5, 0.5, 0.5]
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "7a7b0775-0065-4eb7-9584-a9fe4f466836",
+            "path": "scripts/gem.luau"
+          },
+          "properties": []
+        },
+        "StandardMaterial": {
+          "base_color": [0.3, 0.85, 1.0, 1.0],
+          "roughness": 0.2,
+          "metallic": 0.0,
+          "emissive": [0.2, 0.6, 0.8, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 1.0, -2.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000006",
+      "name": "Goal",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Cuboid": {
+              "size": [2.0, 2.0, 1.0]
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [2.0, 2.0, 0.2]
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "37271a24-6241-4390-84d9-13ce8461e177",
+            "path": "scripts/goal.luau"
+          },
+          "properties": []
+        },
+        "StandardMaterial": {
+          "base_color": [0.2, 0.9, 0.3, 1.0],
+          "roughness": 0.5,
+          "metallic": 0.0,
+          "emissive": [0.1, 0.5, 0.1, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 1.0, -14.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000007",
+      "name": "Totem",
+      "parent": null,
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [1.0, 2.0, 1.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "502ce798-456a-493f-91e2-39be2c51e7b5",
+            "path": "scripts/spinner.luau"
+          },
+          "properties": [
+            {
+              "name": "speed",
+              "value": {
+                "Number": 120.0
+              }
+            }
+          ]
+        },
+        "StandardMaterial": {
+          "base_color": [0.58, 0.13, 0.05, 1.0],
+          "roughness": 0.6,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-3.0, 1.0, -2.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000008",
+      "name": "Lamp",
+      "parent": null,
+      "components": {
+        "PointLight": {
+          "color": [1.0, 0.8, 0.5, 1.0],
+          "intensity": 10.0,
+          "range": 8.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Primitive": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.15,
+              "sectors": 16,
+              "stacks": 8
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "c2a23604-16de-489c-89d4-b5fc5ba12b98",
+            "path": "scripts/lamp.luau"
+          },
+          "properties": []
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.9, 0.6, 1.0],
+          "roughness": 0.5,
+          "metallic": 0.0,
+          "emissive": [4.0, 3.0, 1.5, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [3.0, 0.5, 2.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000009",
+      "name": "Crate",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [1.0, 1.0, 1.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "RigidBody": {
+          "kind": "Dynamic",
+          "mass": 10.0,
+          "linear_damping": 0.0,
+          "angular_damping": 0.05,
+          "gravity_scale": 1.0,
+          "ccd": false,
+          "can_sleep": true,
+          "locks": {
+            "translate_x": false,
+            "translate_y": false,
+            "translate_z": false,
+            "rotate_x": false,
+            "rotate_y": false,
+            "rotate_z": false
+          }
+        },
+        "StandardMaterial": {
+          "base_color": [0.55, 0.38, 0.24, 1.0],
+          "roughness": 0.8,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [4.0, 0.5, -3.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-00000000000a",
+      "name": "Lift",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "6392fffb-3405-40da-ae95-75dc23127465",
+            "path": "scripts/lift.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [4.0, 2.5, -3.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-00000000000b",
+      "name": "Hero",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 2,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "KinematicCharacter": {
+          "radius": 0.4,
+          "height": 1.8,
+          "gravity": 20.0,
+          "max_fall_speed": 40.0,
+          "jump_speed": 7.5,
+          "max_slope": 0.9272952,
+          "ground_snap": 0.1,
+          "skin": 0.02,
+          "step_height": 0.3,
+          "mass": 80.0
+        },
+        "Script": {
+          "source": {
+            "id": "65e0e914-96fb-4f0f-814f-1efdbd40addf",
+            "path": "scripts/hero.luau"
+          },
+          "properties": [
+            {
+              "name": "body",
+              "value": {
+                "Entity": "6a1d0000-0000-4000-8000-00000000000c"
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [-5.0, 0.92, 3.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-00000000000c",
+      "name": "Body",
+      "parent": "6a1d0000-0000-4000-8000-00000000000b",
+      "components": {
+        "AnimationStateMachine": {
+          "source": {
+            "id": "b27db714-a54b-4ab9-9634-36290f42fba0",
+            "path": "animation/locomotion.animgraph.json"
+          },
+          "graph": {
+            "states": [],
+            "transitions": [],
+            "start": ""
+          },
+          "parameters": []
+        },
+        "PrefabInstance": {
+          "scene": {
+            "id": "e5fa5e6f-e9c0-4a4c-a0bc-d30f2dd61e18",
+            "label": "Scene",
+            "path": "models/character.glb"
+          }
+        },
+        "Transform": {
+          "translation": [0.0, -0.92, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-00000000000d",
+      "name": "Fence Row",
+      "parent": null,
+      "components": {
+        "ScriptIntent": {
+          "rule": {
+            "id": "e5eddda9-72a0-45c3-9be5-a5e8eb0b4b9a",
+            "path": "rules/row.luau"
+          },
+          "points": [],
+          "properties": [
+            {
+              "name": "count",
+              "value": {
+                "Integer": 4
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [-8.0, 0.0, -6.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000010",
+      "name": "Game",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "56b9ba99-152f-45be-a362-2a6025c309a6",
+            "path": "scripts/game.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000011",
+      "name": "Score",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "34daae7a-26b5-4479-aa10-233d5339fbf0",
+            "path": "scripts/score.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000012",
+      "name": "Hud",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "b4fc0b38-9630-4f55-b408-7dfc08df25e6",
+            "path": "scripts/hud.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000013",
+      "name": "Menu",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "e514e6e9-076e-4873-a3f0-9a7cf8cf37ff",
+            "path": "scripts/menu.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000014",
+      "name": "Countdown",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "d498f40a-e464-4cec-9e68-d5f12d66fb1d",
+            "path": "scripts/countdown.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000015",
+      "name": "Level",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "6af3e2f0-60ea-4888-ae9d-727d523d1f18",
+            "path": "scripts/level.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000017",
+      "name": "Ball",
+      "parent": null,
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5,
+              "sectors": 32,
+              "stacks": 16
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "e06ec1ba-ad2f-4270-a493-2e301769d590",
+            "path": "scripts/hello.luau"
+          },
+          "properties": []
+        },
+        "StandardMaterial": {
+          "base_color": [0.2, 0.4, 0.9, 1.0],
+          "roughness": 0.5,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [2.0, 0.5, 4.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000018",
+      "name": "Swarm",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "27609352-c9c7-4b7e-98c5-99775acfc360",
+            "path": "scripts/swarm.luau"
+          },
+          "properties": [
+            {
+              "name": "count",
+              "value": {
+                "Integer": 12
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [-6.0, 1.5, 6.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000016",
+      "name": "Spawner",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "a3e61d48-e0f9-49c2-a576-666f826b5cf0",
+            "path": "scripts/spawner.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 3f7f126d9a6b7c8784ca252566cda97a37b797ec18ff28d95339394d1070551a # shrinks to seed = 670, ops = [Spawn { parent: None }, Despawn { who: 1403903034560143 }, SetTags { who: 7797701751237762000, n: 3 }]

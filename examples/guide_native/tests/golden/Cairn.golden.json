@@ -1,0 +1,32 @@
+{
+  "generator": "Cairn",
+  "version": 1,
+  "cases": [
+    {
+      "name": "default",
+      "seed": 0,
+      "params": {
+        "stones": 5,
+        "size": 0.6000000238418579,
+        "jitter": 0.15000000596046448
+      },
+      "hash": "0x46116c2233fb4b6b",
+      "vertices": 120,
+      "triangles": 60,
+      "warnings": []
+    },
+    {
+      "name": "tall",
+      "seed": 3,
+      "params": {
+        "stones": 12,
+        "size": 0.6000000238418579,
+        "jitter": 0.15000000596046448
+      },
+      "hash": "0xf5ea3a1b867f6780",
+      "vertices": 288,
+      "triangles": 144,
+      "warnings": []
+    }
+  ]
+}

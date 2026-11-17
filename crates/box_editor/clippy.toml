@@ -1,0 +1,5 @@
+# egui's checkbox draws its box in the field colour without a border, so on
+# menus and windows (also the field colour) only a bare check mark shows.
+disallowed-methods = [
+    { path = "egui::Ui::checkbox", reason = "use widgets::checkbox_labeled: its box is visible on every background" },
+]

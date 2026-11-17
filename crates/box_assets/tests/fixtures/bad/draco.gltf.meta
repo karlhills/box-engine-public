@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "id": "10000000-0000-4000-8000-000000000015",
+  "importer": "gltf",
+  "settings": {
+    "scale": 1.0,
+    "generate_tangents": true
+  }
+}

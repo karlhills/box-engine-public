@@ -1,0 +1,50 @@
+[
+  { "op": "despawn", "entity": "Cube" },
+  { "op": "despawn", "entity": "Camera" },
+  {
+    "op": "spawn", "uid": "5c0e0000-0000-4000-8000-000000000001", "name": "Camera",
+    "components": {
+      "Transform": { "translation": [7.5, 5.5, 9.5], "rotation": [-0.180578, 0.321914, 0.06269, 0.927272], "scale": [1.0, 1.0, 1.0] },
+      "Camera": { "fov_y": 0.87266463, "near": 0.1, "active": true }
+    }
+  },
+  {
+    "op": "spawn", "uid": "5c0e0000-0000-4000-8000-000000000002", "name": "Fence West",
+    "components": {
+      "Transform": { "translation": [-4.0, 0.0, -2.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "ScriptIntent": {
+        "rule": "rules/fence.luau",
+        "points": [[0.0, 0.0, 0.0], [0.0, 0.0, 5.0], [4.0, 0.0, 5.0]],
+        "properties": []
+      }
+    }
+  },
+  {
+    "op": "spawn", "uid": "5c0e0000-0000-4000-8000-000000000003", "name": "Fence East",
+    "components": {
+      "Transform": { "translation": [0.0, 0.0, 3.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "ScriptIntent": {
+        "rule": "rules/fence.luau",
+        "points": [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [4.0, 0.0, -3.5]],
+        "properties": [
+          { "name": "rails", "value": { "Integer": 3 } },
+          { "name": "spacing", "value": { "Number": 1.5 } },
+          { "name": "color", "value": { "Color": [0.32, 0.36, 0.42, 1.0] } }
+        ]
+      }
+    }
+  },
+  {
+    "op": "spawn", "uid": "5c0e0000-0000-4000-8000-000000000004", "name": "Colonnade",
+    "components": {
+      "Transform": { "translation": [-3.0, 0.0, -4.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "ScriptIntent": {
+        "rule": "rules/colonnade.luau",
+        "points": [[0.0, 0.0, 0.0], [6.5, 0.0, 0.0]],
+        "properties": [
+          { "name": "height", "value": { "Number": 2.6 } }
+        ]
+      }
+    }
+  }
+]

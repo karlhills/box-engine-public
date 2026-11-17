@@ -1,0 +1,26 @@
+[package]
+name = "box_audio"
+description = "box-engine audio: audio clip assets, ambience loops, positional one-shots and buses on kira."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+box_core.workspace = true
+box_assets.workspace = true
+kira.workspace = true
+mint.workspace = true
+glam.workspace = true
+bevy_reflect.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+profiling.workspace = true
+
+[dev-dependencies]
+anyhow.workspace = true
+
+[lints]
+workspace = true

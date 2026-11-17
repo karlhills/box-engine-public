@@ -1,0 +1,616 @@
+{
+  "generator": "Wall",
+  "version": 3,
+  "cases": [
+    {
+      "name": "default",
+      "seed": 0,
+      "params": {
+        "path": {
+          "Points": {
+            "points": [
+              {
+                "position": [
+                  -2.0,
+                  0.0
+                ],
+                "bulge": 0.0
+              },
+              {
+                "position": [
+                  2.0,
+                  0.0
+                ],
+                "bulge": 0.0
+              }
+            ],
+            "closed": false
+          }
+        },
+        "thickness": 0.30000001192092896,
+        "height": 3.0,
+        "roof": null,
+        "start": "Cap",
+        "end": "Cap",
+        "openings": [],
+        "plinth": false,
+        "cornice": false,
+        "coping": false,
+        "ao": 1.0
+      },
+      "hash": "0xaf537540b6a07751",
+      "vertices": 66,
+      "triangles": 22,
+      "warnings": []
+    },
+    {
+      "name": "l_mitred_openings",
+      "seed": 0,
+      "params": {
+        "path": {
+          "Points": {
+            "points": [
+              {
+                "position": [
+                  -4.0,
+                  0.0
+                ],
+                "bulge": 0.0
+              },
+              {
+                "position": [
+                  0.0,
+                  0.0
+                ],
+                "bulge": 0.0
+              },
+              {
+                "position": [
+                  0.0,
+                  4.0
+                ],
+                "bulge": 0.0
+              }
+            ],
+            "closed": false
+          }
+        },
+        "thickness": 0.30000001192092896,
+        "height": 3.0,
+        "roof": null,
+        "start": "Cap",
+        "end": "Cap",
+        "openings": [
+          {
+            "kind": "Door",
+            "top": "Flat",
+            "offset": 1.5,
+            "width": 1.0,
+            "height": 2.1500000953674316,
+            "sill": 0.0
+          },
+          {
+            "kind": "Window",
+            "top": "Flat",
+            "offset": 3.200000047683716,
+            "width": 0.800000011920929,
+            "height": 1.100000023841858,
+            "sill": 0.949999988079071
+          },
+          {
+            "kind": "Window",
+            "top": "Round",
+            "offset": 5.5,
+            "width": 0.8500000238418579,
+            "height": 1.350000023841858,
+            "sill": 0.8999999761581421
+          }
+        ],
+        "plinth": true,
+        "cornice": false,
+        "coping": false,
+        "ao": 1.0
+      },
+      "hash": "0x0f670dcc9d7ef7a5",
+      "vertices": 1062,
+      "triangles": 354,
+      "warnings": [
+        "opening 1 (at U=3.20) is too close to the corner or end at U=4.00 (keep 0.46 m clear); dropped"
+      ]
+    },
+    {
+      "name": "loop_under_gable",
+      "seed": 0,
+      "params": {
+        "path": {
+          "Points": {
+            "points": [
+              {
+                "position": [
+                  2.8499999046325684,
+                  1.850000023841858
+                ],
+                "bulge": 0.0
+              },
+              {
+                "position": [
+                  2.8499999046325684,
+                  -1.850000023841858
+                ],
+                "bulge": 0.0
+              },
+              {
+                "position": [
+                  -2.8499999046325684,
+                  -1.850000023841858
+                ],
+                "bulge": 0.0
+              },
+              {
+                "position": [
+                  -2.8499999046325684,
+                  1.850000023841858
+                ],
+                "bulge": 0.0
+              }
+            ],
+            "closed": true
+          }
+        },
+        "thickness": 0.30000001192092896,
+        "height": 3.0,
+        "roof": {
+          "surfaces": [
+            {
+              "Plane": {
+                "origin": [
+                  0.0,
+                  -2.0
+                ],
+                "inward": [
+                  0.0,
+                  1.0
+                ],
+                "height": 3.0,
+                "slope": 0.5095254182815552
+              }
+            },
+            {
+              "Plane": {
+                "origin": [
+                  0.0,
+                  2.0
+                ],
+                "inward": [
+                  0.0,
+                  -1.0
+                ],
+                "height": 3.0,
+                "slope": 0.5095254182815552
+              }
+            }
+          ],
+          "lift": 0.10000000149011612
+        },
+        "start": "Cap",
+        "end": "Cap",
+        "openings": [
+          {
+            "kind": "Door",
+            "top": "Flat",
+            "offset": 15.0,
+            "width": 1.0,
+            "height": 2.1500000953674316,
+            "sill": 0.0
+          },
+          {
+            "kind": "Window",
+            "top": "Flat",
+            "offset": 2.0,
+            "width": 0.800000011920929,
+            "height": 1.100000023841858,
+            "sill": 0.949999988079071
+          }
+        ],
+        "plinth": true,
+        "cornice": true,
+        "coping": false,
+        "ao": 1.0
+      },
+      "hash": "0xad6dbe4e4541dfe5",
+      "vertices": 1956,
+      "triangles": 652,
+      "warnings": []
+    },
+    {
+      "name": "arc_pointed",
+      "seed": 0,
+      "params": {
+        "path": {
+          "Points": {
+            "points": [
+              {
+                "position": [
+                  -3.0,
+                  0.0
+                ],
+                "bulge": 0.4000000059604645
+              },
+              {
+                "position": [
+                  3.0,
+                  0.0
+                ],
+                "bulge": 0.0
+              }
+            ],
+            "closed": false
+          }
+        },
+        "thickness": 0.30000001192092896,
+        "height": 3.0,
+        "roof": null,
+        "start": "Cap",
+        "end": "Cap",
+        "openings": [
+          {
+            "kind": "Window",
+            "top": "Pointed",
+            "offset": 2.0,
+            "width": 0.800000011920929,
+            "height": 1.100000023841858,
+            "sill": 0.949999988079071
+          },
+          {
+            "kind": "Passage",
+            "top": "Round",
+            "offset": 4.5,
+            "width": 1.399999976158142,
+            "height": 2.5999999046325684,
+            "sill": 0.0
+          }
+        ],
+        "plinth": false,
+        "cornice": false,
+        "coping": false,
+        "ao": 1.0
+      },
+      "hash": "0x0f969c814fb27996",
+      "vertices": 1392,
+      "triangles": 464,
+      "warnings": []
+    },
+    {
+      "name": "butt_owner",
+      "seed": 0,
+      "params": {
+        "path": {
+          "Points": {
+            "points": [
+              {
+                "position": [
+                  -4.0,
+                  0.0
+                ],
+                "bulge": 0.0
+              },
+              {
+                "position": [
+                  0.0,
+                  0.0
+                ],
+                "bulge": 0.0
+              }
+            ],
+            "closed": false
+          }
+        },
+        "thickness": 0.4000000059604645,
+        "height": 3.0,
+        "roof": null,
+        "start": "Cap",
+        "end": {
+          "Butt": {
+            "point": [
+              0.125,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              1.0
+            ],
+            "cap": true,
+            "band_shift": -0.03500000014901161,
+            "concave": [
+              true,
+              false
+            ]
+          }
+        },
+        "openings": [],
+        "plinth": true,
+        "cornice": false,
+        "coping": false,
+        "ao": 1.0
+      },
+      "hash": "0x75d1082b62d454ed",
+      "vertices": 150,
+      "triangles": 50,
+      "warnings": []
+    },
+    {
+      "name": "butt_subordinate_and_tee",
+      "seed": 0,
+      "params": {
+        "path": {
+          "Points": {
+            "points": [
+              {
+                "position": [
+                  0.0,
+                  0.0
+                ],
+                "bulge": 0.0
+              },
+              {
+                "position": [
+                  0.0,
+                  3.0
+                ],
+                "bulge": 0.0
+              }
+            ],
+            "closed": false
+          }
+        },
+        "thickness": 0.25,
+        "height": 2.0,
+        "roof": null,
+        "start": {
+          "Butt": {
+            "point": [
+              0.0,
+              0.20000000298023224
+            ],
+            "direction": [
+              -1.0,
+              0.0
+            ],
+            "cap": false,
+            "band_shift": 0.03500000014901161,
+            "concave": [
+              true,
+              false
+            ]
+          }
+        },
+        "end": {
+          "Butt": {
+            "point": [
+              0.0,
+              2.8499999046325684
+            ],
+            "direction": [
+              1.0,
+              0.0
+            ],
+            "cap": false,
+            "band_shift": 0.03500000014901161,
+            "concave": [
+              true,
+              true
+            ]
+          }
+        },
+        "openings": [],
+        "plinth": true,
+        "cornice": false,
+        "coping": true,
+        "ao": 1.0
+      },
+      "hash": "0xd2f007bef918848b",
+      "vertices": 216,
+      "triangles": 72,
+      "warnings": []
+    },
+    {
+      "name": "extend_abut_ao_off",
+      "seed": 0,
+      "params": {
+        "path": {
+          "Points": {
+            "points": [
+              {
+                "position": [
+                  -2.0,
+                  0.0
+                ],
+                "bulge": 0.0
+              },
+              {
+                "position": [
+                  2.0,
+                  0.0
+                ],
+                "bulge": 0.0
+              }
+            ],
+            "closed": false
+          }
+        },
+        "thickness": 0.30000001192092896,
+        "height": 3.0,
+        "roof": null,
+        "start": {
+          "Extend": {
+            "distance": 0.5
+          }
+        },
+        "end": "Abut",
+        "openings": [],
+        "plinth": false,
+        "cornice": false,
+        "coping": false,
+        "ao": 0.0
+      },
+      "hash": "0xa228690ba6cbd42b",
+      "vertices": 18,
+      "triangles": 6,
+      "warnings": []
+    },
+    {
+      "name": "acute_split",
+      "seed": 0,
+      "params": {
+        "path": {
+          "Points": {
+            "points": [
+              {
+                "position": [
+                  0.0,
+                  -3.0
+                ],
+                "bulge": 0.0
+              },
+              {
+                "position": [
+                  0.0,
+                  2.0
+                ],
+                "bulge": 0.0
+              },
+              {
+                "position": [
+                  1.600000023841858,
+                  -3.0
+                ],
+                "bulge": 0.0
+              }
+            ],
+            "closed": false
+          }
+        },
+        "thickness": 0.30000001192092896,
+        "height": 3.0,
+        "roof": null,
+        "start": "Cap",
+        "end": "Cap",
+        "openings": [],
+        "plinth": false,
+        "cornice": false,
+        "coping": false,
+        "ao": 1.0
+      },
+      "hash": "0x57592fefc3b984ec",
+      "vertices": 153,
+      "triangles": 51,
+      "warnings": [
+        "corner at (0.00, 2.00) is sharper than the mitre limit (18° < 29°); both sides end square with a bevel fill"
+      ]
+    },
+    {
+      "name": "spline",
+      "seed": 0,
+      "params": {
+        "path": {
+          "Spline": {
+            "entity": null,
+            "tolerance": 0.009999999776482582
+          }
+        },
+        "thickness": 0.30000001192092896,
+        "height": 3.0,
+        "roof": null,
+        "start": "Cap",
+        "end": "Cap",
+        "openings": [
+          {
+            "kind": "Window",
+            "top": "Flat",
+            "offset": 3.0,
+            "width": 0.800000011920929,
+            "height": 1.100000023841858,
+            "sill": 0.949999988079071
+          }
+        ],
+        "plinth": false,
+        "cornice": false,
+        "coping": false,
+        "ao": 1.0
+      },
+      "owner": "a7c40000-0000-4000-8000-000000000001",
+      "inputs": [
+        {
+          "uid": "a7c40000-0000-4000-8000-000000000001",
+          "component": "Spline",
+          "value": {
+            "points": [
+              {
+                "position": [
+                  -3.0,
+                  0.0,
+                  0.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  -1.0,
+                  0.0,
+                  -1.5
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  1.0,
+                  0.0,
+                  -1.5
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              },
+              {
+                "position": [
+                  3.0,
+                  0.0,
+                  0.0
+                ],
+                "in_tangent": null,
+                "out_tangent": null,
+                "roll": 0.0,
+                "scale": [
+                  1.0,
+                  1.0
+                ]
+              }
+            ],
+            "mode": "CatmullRom",
+            "closed": false
+          }
+        }
+      ],
+      "hash": "0x012fc983c8364c55",
+      "vertices": 1026,
+      "triangles": 342,
+      "warnings": []
+    }
+  ]
+}

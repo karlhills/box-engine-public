@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc c2607e1cf07f006ac1c25f2c9b8d3bee7028ca1c877fd074cc7c1fef41a515dc # shrinks to a = [Vec2(1e30, 1e30), Vec2(0.0, 0.0), Vec2(1e30, 0.0)], b = [], h = [], d = 0.0
+cc da0642ee194034647d59412897032bc7155bb5bfb99c27384f209fcf2c6f4df2 # shrinks to outer = Polygon { outer: [Vec2(0.5, 0.0), Vec2(-0.25000003, 0.4330127), Vec2(0.48901588, -0.10422802)], holes: [] }, hole_scale = 0.14249252

@@ -1,0 +1,6 @@
+{
+  "luau-lsp.types.definitionFiles": [
+    ".box/types/box.d.luau"
+  ],
+  "luau-lsp.platform.type": "standard"
+}

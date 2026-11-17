@@ -1,0 +1,26 @@
+---
+source: crates/box_assets/tests/import.rs
+expression: material_summary(mat)
+---
+{
+  "base_color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "roughness": 0.8,
+  "metallic": 0.0,
+  "emissive": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "base_color_texture": "textures/checker.png",
+  "normal_texture": "none",
+  "orm_texture": "none",
+  "emissive_texture": "none",
+  "alpha_mode": "Opaque",
+  "double_sided": true
+}

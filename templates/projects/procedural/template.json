@@ -1,0 +1,5 @@
+{
+  "title": "Procedural scene",
+  "description": "A garden built from generators: lathe columns, extrusions, spline sweeps, a Luau rule that lays a path, and scattered shrubs and rocks.",
+  "order": 2
+}

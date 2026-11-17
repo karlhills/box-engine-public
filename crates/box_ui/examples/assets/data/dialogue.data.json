@@ -1,0 +1,12 @@
+{
+  "intro": [
+    { "speaker": "dialogue.speaker", "line": "dialogue.line1" },
+    { "speaker": "dialogue.speaker", "line": "dialogue.line2" },
+    { "speaker": "dialogue.speaker", "line": "dialogue.line3" }
+  ],
+  "coins": [
+    { "id": "a", "position": [2.5, 0.5, 1.0] },
+    { "id": "b", "position": [5.0, 0.5, 1.0] },
+    { "id": "c", "position": [-1.5, 0.5, 1.0] }
+  ]
+}

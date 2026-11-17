@@ -1,0 +1,22 @@
+[package]
+name = "box_export"
+description = "Export box-engine games: cook a project into game.pak and bundle it with a prebuilt player as a macOS .app or a Windows folder."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+box_engine.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+image = { workspace = true, features = ["png"] }
+# Windows PE resources (icon, version info, subsystem) patched from any host
+# (spike S7). BSD-2-Clause.
+editpe = { version = "0.2.4", default-features = false, features = ["std", "images"] }
+
+[lints]
+workspace = true

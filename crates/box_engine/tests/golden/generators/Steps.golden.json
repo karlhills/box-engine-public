@@ -1,0 +1,54 @@
+{
+  "generator": "Steps",
+  "version": 1,
+  "cases": [
+    {
+      "name": "default",
+      "seed": 0,
+      "params": {
+        "count": 6,
+        "width": 1.600000023841858,
+        "rise": 0.18000000715255737,
+        "run": 0.30000001192092896,
+        "wobble": 0.0
+      },
+      "hash": "0x55e866d0df24fdaa",
+      "vertices": 144,
+      "triangles": 72,
+      "warnings": []
+    },
+    {
+      "name": "wobbly",
+      "seed": 3,
+      "params": {
+        "count": 10,
+        "width": 1.2000000476837158,
+        "rise": 0.18000000715255737,
+        "run": 0.30000001192092896,
+        "wobble": 0.03999999910593033
+      },
+      "hash": "0xf8c4afc2729b646e",
+      "vertices": 240,
+      "triangles": 120,
+      "warnings": []
+    },
+    {
+      "name": "clamped",
+      "seed": 0,
+      "params": {
+        "count": 500,
+        "width": 1.600000023841858,
+        "rise": -1.0,
+        "run": 0.30000001192092896,
+        "wobble": 0.0
+      },
+      "hash": "0xa934f445dae6983e",
+      "vertices": 1536,
+      "triangles": 768,
+      "warnings": [
+        "rise must be above 0; using 0.18",
+        "500 steps is too many; building 64"
+      ]
+    }
+  ]
+}

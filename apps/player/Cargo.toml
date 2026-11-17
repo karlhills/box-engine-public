@@ -1,0 +1,25 @@
+[package]
+name = "box_player_app"
+description = "box-player: runs a box-engine project's start scene standalone."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "box-player"
+path = "src/main.rs"
+
+[dependencies]
+box_engine.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+image.workspace = true
+# Export tests (tests/export.rs): this player is the template.
+box_export.workspace = true
+
+[lints]
+workspace = true

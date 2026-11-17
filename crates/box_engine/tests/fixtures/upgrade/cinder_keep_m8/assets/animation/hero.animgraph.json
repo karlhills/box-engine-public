@@ -1,0 +1,41 @@
+{
+  "states": [
+    { "name": "Idle", "clip": "models/character.glb#Animation/Idle", "speed": 1.0, "looping": true },
+    { "name": "Walk", "clip": "models/character.glb#Animation/Walk", "speed": 1.3, "looping": true },
+    { "name": "Run", "clip": "models/character.glb#Animation/Run", "speed": 1.2, "looping": true },
+    { "name": "Jump", "clip": "models/character.glb#Animation/Jump", "speed": 1.2, "looping": false },
+    { "name": "Attack", "clip": "models/character.glb#Animation/Attack", "speed": 1.0, "looping": false },
+    { "name": "Hit", "clip": "models/character.glb#Animation/Hit", "speed": 1.0, "looping": false }
+  ],
+  "transitions": [
+    { "from": "", "to": "Hit", "duration": 0.05, "exit_time": 0.0,
+      "conditions": [{ "parameter": "hit", "test": "Triggered" }] },
+    { "from": "", "to": "Attack", "duration": 0.06, "exit_time": 0.0,
+      "conditions": [{ "parameter": "attack", "test": "Triggered" }] },
+    { "from": "", "to": "Jump", "duration": 0.1, "exit_time": 0.0,
+      "conditions": [{ "parameter": "jump", "test": "Triggered" }] },
+    { "from": "Attack", "to": "Run", "duration": 0.15, "exit_time": 0.85,
+      "conditions": [{ "parameter": "speed", "test": { "Greater": 3.0 } }] },
+    { "from": "Attack", "to": "Walk", "duration": 0.15, "exit_time": 0.85,
+      "conditions": [{ "parameter": "speed", "test": { "Greater": 0.5 } }] },
+    { "from": "Attack", "to": "Idle", "duration": 0.15, "exit_time": 0.85, "conditions": [] },
+    { "from": "Hit", "to": "Run", "duration": 0.15, "exit_time": 0.8,
+      "conditions": [{ "parameter": "speed", "test": { "Greater": 3.0 } }] },
+    { "from": "Hit", "to": "Idle", "duration": 0.15, "exit_time": 0.8, "conditions": [] },
+    { "from": "Jump", "to": "Run", "duration": 0.25, "exit_time": 0.6,
+      "conditions": [{ "parameter": "grounded", "test": "IsTrue" }, { "parameter": "speed", "test": { "Greater": 3.0 } }] },
+    { "from": "Jump", "to": "Walk", "duration": 0.25, "exit_time": 0.6,
+      "conditions": [{ "parameter": "grounded", "test": "IsTrue" }, { "parameter": "speed", "test": { "Greater": 0.5 } }] },
+    { "from": "Jump", "to": "Idle", "duration": 0.25, "exit_time": 0.6,
+      "conditions": [{ "parameter": "grounded", "test": "IsTrue" }] },
+    { "from": "Idle", "to": "Walk", "duration": 0.25, "exit_time": 0.0,
+      "conditions": [{ "parameter": "speed", "test": { "Greater": 0.5 } }] },
+    { "from": "Walk", "to": "Idle", "duration": 0.25, "exit_time": 0.0,
+      "conditions": [{ "parameter": "speed", "test": { "Less": 0.5 } }] },
+    { "from": "Walk", "to": "Run", "duration": 0.25, "exit_time": 0.0,
+      "conditions": [{ "parameter": "speed", "test": { "Greater": 3.0 } }] },
+    { "from": "Run", "to": "Walk", "duration": 0.25, "exit_time": 0.0,
+      "conditions": [{ "parameter": "speed", "test": { "Less": 3.0 } }] }
+  ],
+  "start": "Idle"
+}

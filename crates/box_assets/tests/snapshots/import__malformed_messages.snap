@@ -1,0 +1,14 @@
+---
+source: crates/box_assets/tests/import.rs
+expression: messages
+---
+{
+  "truncated.png": "could not decode image: unexpected end of file; the file is damaged, incomplete or not really PNG: export or download it again",
+  "garbage.glb": "invalid glTF: could not completely read the object; the file is damaged, incomplete or not really glTF: export or download it again",
+  "empty.glb": "invalid glTF: EOF while parsing a value at line 1 column 0; the file is damaged, incomplete or not really glTF: export or download it again",
+  "bad_buffer.gltf": "invalid glTF: accessors[0].bufferView: Index out of bounds; the file is damaged, incomplete or not really glTF: export or download it again",
+  "draco.gltf": "unsupported: Draco-compressed meshes (KHR_draco_mesh_compression); re-export without Draco compression",
+  "wrong.material.json": "not a StandardMaterial: cannot convert `box_engine::StandardMaterial` from JSON: invalid type: string \"very\", expected f32",
+  "tower.glb (no main asset)": "models/tower.glb has no main asset; load a sub-asset such as models/tower.glb#Scene",
+  "tower.glb#Mesh/Nope": "models/tower.glb has no sub-asset `Mesh/Nope` (it has: Material/Roof_Tiles, Material/Stone, Mesh/Base, Mesh/Roof, Scene, Texture/0, Texture/1, Texture/orm_1_none)"
+}

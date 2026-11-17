@@ -1,0 +1,114 @@
+[package]
+name = "box_engine"
+description = "box-engine runner: window, event loop, input mapping, prelude."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["physics", "dynamics", "audio", "script"]
+tracy = ["profiling/profile-with-tracy"]
+# Colliders and spatial queries (box_physics): re-exported in the prelude,
+# `Collider` registered in `engine_registry()`.
+physics = ["dep:box_physics"]
+# Rigid bodies, joints and collision events (box_physics on rapier3d, D12):
+# `RigidBody`, `Velocity`, `Joint`, `PhysicsSettings` in the prelude and
+# `engine_registry()`. The simulation starts only when a scene has a body.
+dynamics = ["physics", "box_physics/dynamics", "box_script?/dynamics"]
+# Sound (box_audio on kira): `AudioSource`, `AudioListener`, `PlaySound` and
+# `AudioSettings` in the prelude and `engine_registry()`, `AudioPlugin` in
+# every `app_with_world`, the audio importer in `asset_server`.
+audio = ["dep:box_audio"]
+# Luau scripts (box_script): the `Script` component in `engine_registry()`,
+# `ScriptPlugin` in every `Game::app` (after the game's plugins), the `.luau`
+# importer in `asset_server`, the script APIs of the engine's modules
+# (`scenes`, `animation`, `save`, `data`, `particles`; box_ui's `ui` and
+# `strings`).
+script = ["dep:box_script", "physics", "box_ui/script"]
+
+[dependencies]
+box_core.workspace = true
+box_assets.workspace = true
+box_render.workspace = true
+box_proc.workspace = true
+box_ui.workspace = true
+box_physics = { workspace = true, optional = true }
+box_audio = { workspace = true, optional = true }
+box_script = { workspace = true, optional = true }
+winit.workspace = true
+gilrs.workspace = true
+glam.workspace = true
+pollster.workspace = true
+profiling.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# Control socket: PNG screenshots and random tokens (both already in the workspace).
+image.workspace = true
+uuid.workspace = true
+
+[[example]]
+name = "audio_demo"
+required-features = ["audio"]
+
+[[example]]
+name = "dynamics"
+required-features = ["dynamics"]
+
+[[test]]
+name = "dynamics"
+required-features = ["dynamics"]
+
+[[test]]
+name = "luau_definitions"
+required-features = ["script"]
+
+# The committed reference is generated with the default features (the
+# rigid-body API is part of it).
+[[test]]
+name = "script_reference"
+required-features = ["script", "dynamics"]
+
+[[test]]
+name = "guide_samples"
+required-features = ["script", "dynamics"]
+
+[[test]]
+name = "guide_procedural"
+required-features = ["script", "dynamics"]
+
+[[test]]
+name = "m7_acceptance"
+required-features = ["script"]
+
+[[test]]
+name = "script_bindings"
+required-features = ["script"]
+
+[[test]]
+name = "api_review"
+required-features = ["script"]
+
+[[test]]
+name = "m8_game"
+required-features = ["script", "dynamics"]
+
+# Runs itself as a child process that panics on its main thread (where the
+# crash reporter installs), so it has its own `main`.
+[[test]]
+name = "crash"
+harness = false
+
+[[test]]
+name = "upgrade"
+required-features = ["script", "dynamics", "audio"]
+
+[dev-dependencies]
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

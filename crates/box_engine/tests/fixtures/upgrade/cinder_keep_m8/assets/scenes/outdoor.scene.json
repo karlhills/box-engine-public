@@ -1,0 +1,1283 @@
+{
+  "version": 1,
+  "resources": {
+    "Environment": {
+      "sky_zenith": [0.05, 0.09, 0.32, 1.0],
+      "sky_horizon": [0.75, 0.52, 0.36, 1.0],
+      "ground": [0.07, 0.05, 0.03, 1.0],
+      "ambient_intensity": 0.6,
+      "sun_disc_size": 0.02,
+      "fog_density": 0.003,
+      "fog_height_falloff": 0.1,
+      "fog_base_height": -4.0,
+      "exposure": 0.55,
+      "tonemapper": "AgX",
+      "ambient_occlusion": {
+        "enabled": true,
+        "intensity": 1.5,
+        "radius": 1.0,
+        "bias": 0.02,
+        "power": 1.2,
+        "direct_lighting": 0.0
+      },
+      "bloom": {
+        "enabled": true,
+        "intensity": 0.08,
+        "scatter": 0.6
+      },
+      "color_grading": {
+        "temperature": 0.0,
+        "tint": 0.0,
+        "contrast": 1.0,
+        "saturation": 1.0,
+        "shadows": [1.0, 1.0, 1.0],
+        "midtones": [1.0, 1.0, 1.0],
+        "highlights": [1.0, 1.0, 1.0],
+        "shadows_end": 0.3,
+        "highlights_start": 0.55,
+        "lift": [0.0, 0.0, 0.0],
+        "gamma": [1.0, 1.0, 1.0],
+        "gain": [1.0, 1.0, 1.0]
+      },
+      "sky": {
+        "gradient": "Simple",
+        "sun_glow": 1.0,
+        "sun_disc": 1.0,
+        "horizon_glow": 0.0,
+        "stars": 0.0
+      },
+      "aerial_haze": {
+        "enabled": false,
+        "color": [0.37, 0.51, 0.71, 1.0],
+        "density": 0.0005,
+        "start_distance": 60.0,
+        "max_opacity": 0.97,
+        "sun_scatter": 0.12,
+        "sky_height": 0.12
+      },
+      "height_mist": {
+        "enabled": false,
+        "color": [0.53, 0.6, 0.74, 1.0],
+        "top": -20.0,
+        "bottom": -60.0,
+        "max_opacity": 1.0,
+        "near_fade": 120.0
+      },
+      "distance_quieting": {
+        "enabled": false,
+        "start": 90.0,
+        "end": 1800.0,
+        "desaturate": 0.5,
+        "contrast": 0.38,
+        "tone": [0.3, 0.42, 0.58, 1.0]
+      },
+      "vignette": {
+        "intensity": 0.0,
+        "smoothness": 0.5,
+        "rounded": false
+      },
+      "wind": {
+        "direction": [1.0, 0.0],
+        "strength": 1.0,
+        "gust_length": 17.0,
+        "gust_speed": 3.0
+      }
+    }
+  },
+  "entities": [
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000101",
+      "name": "Level",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "7be810d9-a127-4b34-8239-28f9124695d2",
+            "path": "scripts/level.luau"
+          },
+          "properties": [
+            {
+              "name": "title",
+              "value": {
+                "String": "area.outdoor"
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000102",
+      "name": "Sun",
+      "parent": null,
+      "components": {
+        "DirectionalLight": {
+          "color": [1.0, 0.78, 0.55, 1.0],
+          "intensity": 3.0,
+          "shadows": true,
+          "shadow_distance": 60.0
+        },
+        "Transform": {
+          "translation": [0.0, 20.0, 0.0],
+          "rotation": [-0.4, 0.33, 0.16, 0.84],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000103",
+      "name": "Fields",
+      "parent": null,
+      "components": {
+        "PrefabInstance": {
+          "scene": {
+            "id": "da91f178-c21c-4b14-a57b-182ec7ff1f4d",
+            "label": "Scene",
+            "path": "models/outdoor.glb"
+          }
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000110",
+      "name": "Player",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 2,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Interpolated": {
+          "teleport_distance": 10.0
+        },
+        "KinematicCharacter": {
+          "radius": 0.4,
+          "height": 1.8,
+          "gravity": 20.0,
+          "max_fall_speed": 40.0,
+          "jump_speed": 7.5,
+          "max_slope": 0.9272952,
+          "ground_snap": 0.1,
+          "skin": 0.02,
+          "step_height": 0.3,
+          "mass": 80.0
+        },
+        "Script": {
+          "source": {
+            "id": "f8fec86b-27c8-4529-9e4c-dc7c1d98de72",
+            "path": "scripts/player.luau"
+          },
+          "properties": [
+            {
+              "name": "camera",
+              "value": {
+                "Entity": "c1de0000-0000-4000-8000-000000000112"
+              }
+            },
+            {
+              "name": "body",
+              "value": {
+                "Entity": "c1de0000-0000-4000-8000-000000000111"
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 0.92, 8.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000111",
+      "name": "Body",
+      "parent": "c1de0000-0000-4000-8000-000000000110",
+      "components": {
+        "AnimationStateMachine": {
+          "source": {
+            "id": "cea34de7-e2c9-45f5-811c-0c27564edf8e",
+            "path": "animation/hero.animgraph.json"
+          },
+          "graph": {
+            "states": [],
+            "transitions": [],
+            "start": ""
+          },
+          "parameters": []
+        },
+        "PrefabInstance": {
+          "scene": {
+            "id": "6775a1ef-331c-47a4-98e2-31a764b7e8ec",
+            "label": "Scene",
+            "path": "models/character.glb"
+          }
+        },
+        "Transform": {
+          "translation": [0.0, -0.92, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000112",
+      "name": "Camera",
+      "parent": null,
+      "components": {
+        "Camera": {
+          "fov_y": 0.9,
+          "near": 0.1,
+          "active": true
+        },
+        "Script": {
+          "source": {
+            "id": "ba9670c8-a96a-4380-91cd-eb2fc060e11f",
+            "path": "scripts/camera.luau"
+          },
+          "properties": [
+            {
+              "name": "target",
+              "value": {
+                "Entity": "c1de0000-0000-4000-8000-000000000110"
+              }
+            },
+            {
+              "name": "distance",
+              "value": {
+                "Number": 7.5
+              }
+            },
+            {
+              "name": "pitch",
+              "value": {
+                "Number": 0.4
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 4.66, 15.5],
+          "rotation": [-0.174108, 0.0, 0.0, 0.984727],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000120",
+      "name": "Warden",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 3.2
+            }
+          },
+          "offset": [0.0, 1.0, 0.0],
+          "is_trigger": true,
+          "layers": 1,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Script": {
+          "source": {
+            "id": "c83f337f-e924-48c8-8e96-f9c2fb894086",
+            "path": "scripts/warden.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [-3.0, 0.0, 4.0],
+          "rotation": [0.0, -0.7071068, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000121",
+      "name": "Warden Body",
+      "parent": "c1de0000-0000-4000-8000-000000000120",
+      "components": {
+        "AnimationPlayer": {
+          "clip": {
+            "id": "6775a1ef-331c-47a4-98e2-31a764b7e8ec",
+            "label": "Animation/Idle",
+            "path": "models/character.glb"
+          },
+          "speed": 0.8,
+          "looping": true,
+          "paused": false,
+          "crossfade": 0.2
+        },
+        "Collider": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.5
+            }
+          },
+          "offset": [0.0, 0.92, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "PrefabInstance": {
+          "scene": {
+            "id": "6775a1ef-331c-47a4-98e2-31a764b7e8ec",
+            "label": "Scene",
+            "path": "models/character.glb"
+          }
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.95, 0.95, 0.95]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000130",
+      "name": "Checkpoint Meadow",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 2.5
+            }
+          },
+          "offset": [0.0, 1.0, 0.0],
+          "is_trigger": true,
+          "layers": 1,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "MeshAsset": {
+          "mesh": {
+            "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+            "label": "Mesh/Brazier",
+            "path": "models/props.glb"
+          },
+          "materials": [
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Ember",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Iron",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Stone",
+              "path": "models/props.glb"
+            }
+          ],
+          "cast_shadows": true
+        },
+        "PointLight": {
+          "color": [1.0, 0.55, 0.2, 1.0],
+          "intensity": 4.0,
+          "range": 8.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Script": {
+          "source": {
+            "id": "3ce75a44-3920-41ea-82ec-77261914f37a",
+            "path": "scripts/checkpoint.luau"
+          },
+          "properties": [
+            {
+              "name": "id",
+              "value": {
+                "String": "meadow"
+              }
+            },
+            {
+              "name": "flame",
+              "value": {
+                "Entity": "c1de0000-0000-4000-8000-000000000131"
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [2.2, 0.0, -1.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000131",
+      "name": "Flame",
+      "parent": "c1de0000-0000-4000-8000-000000000130",
+      "components": {
+        "ParticleEmitter": {
+          "playing": false,
+          "looping": true,
+          "duration": 5.0,
+          "rate": 40.0,
+          "rate_over_distance": 0.0,
+          "bursts": [],
+          "max_particles": 96,
+          "lifetime": [0.5, 0.9],
+          "speed": [0.6, 1.4],
+          "direction": [0.0, 1.0, 0.0],
+          "cone_angle": 0.35,
+          "spawn_radius": 0.25,
+          "gravity": [0.0, 1.5, 0.0],
+          "drag": 0.0,
+          "size": [
+            {
+              "t": 0.0,
+              "value": 0.35
+            },
+            {
+              "t": 1.0,
+              "value": 0.05
+            }
+          ],
+          "size_random": 0.0,
+          "color": [
+            {
+              "t": 0.0,
+              "color": [1.0, 0.7, 0.25, 1.0]
+            },
+            {
+              "t": 1.0,
+              "color": [0.9, 0.15, 0.02, 0.0]
+            }
+          ],
+          "intensity": 6.0,
+          "spin": [0.0, 0.0],
+          "random_rotation": false,
+          "texture": null,
+          "atlas": [1, 1],
+          "blend": "Additive",
+          "soft_distance": 0.0,
+          "lit": false,
+          "space": "World",
+          "seed": 1,
+          "despawn_when_finished": false
+        },
+        "Transform": {
+          "translation": [0.0, 1.3, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000140",
+      "name": "Crate 1",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Cuboid": {
+              "size": [1.0, 1.0, 1.0]
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "MeshAsset": {
+          "mesh": {
+            "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+            "label": "Mesh/Crate",
+            "path": "models/props.glb"
+          },
+          "materials": [
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Wood",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Iron",
+              "path": "models/props.glb"
+            }
+          ],
+          "cast_shadows": true
+        },
+        "RigidBody": {
+          "kind": "Dynamic",
+          "mass": 15.0,
+          "linear_damping": 0.0,
+          "angular_damping": 0.05,
+          "gravity_scale": 1.0,
+          "ccd": false,
+          "can_sleep": true,
+          "locks": {
+            "translate_x": false,
+            "translate_y": false,
+            "translate_z": false,
+            "rotate_x": false,
+            "rotate_y": false,
+            "rotate_z": false
+          }
+        },
+        "Transform": {
+          "translation": [-1.6, 0.52, -6.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000141",
+      "name": "Crate 2",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Cuboid": {
+              "size": [1.0, 1.0, 1.0]
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "MeshAsset": {
+          "mesh": {
+            "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+            "label": "Mesh/Crate",
+            "path": "models/props.glb"
+          },
+          "materials": [
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Wood",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Iron",
+              "path": "models/props.glb"
+            }
+          ],
+          "cast_shadows": true
+        },
+        "RigidBody": {
+          "kind": "Dynamic",
+          "mass": 15.0,
+          "linear_damping": 0.0,
+          "angular_damping": 0.05,
+          "gravity_scale": 1.0,
+          "ccd": false,
+          "can_sleep": true,
+          "locks": {
+            "translate_x": false,
+            "translate_y": false,
+            "translate_z": false,
+            "rotate_x": false,
+            "rotate_y": false,
+            "rotate_z": false
+          }
+        },
+        "Transform": {
+          "translation": [-0.45, 0.52, -6.5],
+          "rotation": [0.0, 0.13, 0.0, 0.9915],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000142",
+      "name": "Crate 3",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Cuboid": {
+              "size": [1.0, 1.0, 1.0]
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "MeshAsset": {
+          "mesh": {
+            "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+            "label": "Mesh/Crate",
+            "path": "models/props.glb"
+          },
+          "materials": [
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Wood",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Iron",
+              "path": "models/props.glb"
+            }
+          ],
+          "cast_shadows": true
+        },
+        "RigidBody": {
+          "kind": "Dynamic",
+          "mass": 15.0,
+          "linear_damping": 0.0,
+          "angular_damping": 0.05,
+          "gravity_scale": 1.0,
+          "ccd": false,
+          "can_sleep": true,
+          "locks": {
+            "translate_x": false,
+            "translate_y": false,
+            "translate_z": false,
+            "rotate_x": false,
+            "rotate_y": false,
+            "rotate_z": false
+          }
+        },
+        "Transform": {
+          "translation": [-1.4, 1.54, -6.2],
+          "rotation": [0.0, 0.2, 0.0, 0.98],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000150",
+      "name": "Rockfall",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Cuboid": {
+              "size": [8.0, 2.0, 3.0]
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 1,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Script": {
+          "source": {
+            "id": "d8d3164d-fea3-4b79-ae81-2aafeb0089d8",
+            "path": "scripts/rockfall.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [0.0, 3.0, -23.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000151",
+      "name": "Boulder 1",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.6
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.8,
+          "restitution": 0.0
+        },
+        "MeshAsset": {
+          "mesh": {
+            "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+            "label": "Mesh/Boulder",
+            "path": "models/props.glb"
+          },
+          "materials": [
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Rock",
+              "path": "models/props.glb"
+            }
+          ],
+          "cast_shadows": true
+        },
+        "RigidBody": {
+          "kind": "Kinematic",
+          "mass": 120.0,
+          "linear_damping": 0.0,
+          "angular_damping": 0.2,
+          "gravity_scale": 1.0,
+          "ccd": false,
+          "can_sleep": true,
+          "locks": {
+            "translate_x": false,
+            "translate_y": false,
+            "translate_z": false,
+            "rotate_x": false,
+            "rotate_y": false,
+            "rotate_z": false
+          }
+        },
+        "Script": {
+          "source": {
+            "id": "51134c04-bfe5-4ffb-8834-f4b24d7add88",
+            "path": "scripts/boulder.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [10.0, 4.95, -22.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000152",
+      "name": "Boulder 2",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.6
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.8,
+          "restitution": 0.0
+        },
+        "MeshAsset": {
+          "mesh": {
+            "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+            "label": "Mesh/Boulder",
+            "path": "models/props.glb"
+          },
+          "materials": [
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Rock",
+              "path": "models/props.glb"
+            }
+          ],
+          "cast_shadows": true
+        },
+        "RigidBody": {
+          "kind": "Kinematic",
+          "mass": 120.0,
+          "linear_damping": 0.0,
+          "angular_damping": 0.2,
+          "gravity_scale": 1.0,
+          "ccd": false,
+          "can_sleep": true,
+          "locks": {
+            "translate_x": false,
+            "translate_y": false,
+            "translate_z": false,
+            "rotate_x": false,
+            "rotate_y": false,
+            "rotate_z": false
+          }
+        },
+        "Script": {
+          "source": {
+            "id": "51134c04-bfe5-4ffb-8834-f4b24d7add88",
+            "path": "scripts/boulder.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [10.6, 5.2, -24.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000153",
+      "name": "Boulder 3",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.6
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.8,
+          "restitution": 0.0
+        },
+        "MeshAsset": {
+          "mesh": {
+            "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+            "label": "Mesh/Boulder",
+            "path": "models/props.glb"
+          },
+          "materials": [
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Rock",
+              "path": "models/props.glb"
+            }
+          ],
+          "cast_shadows": true
+        },
+        "RigidBody": {
+          "kind": "Kinematic",
+          "mass": 120.0,
+          "linear_damping": 0.0,
+          "angular_damping": 0.2,
+          "gravity_scale": 1.0,
+          "ccd": false,
+          "can_sleep": true,
+          "locks": {
+            "translate_x": false,
+            "translate_y": false,
+            "translate_z": false,
+            "rotate_x": false,
+            "rotate_y": false,
+            "rotate_z": false
+          }
+        },
+        "Script": {
+          "source": {
+            "id": "51134c04-bfe5-4ffb-8834-f4b24d7add88",
+            "path": "scripts/boulder.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [9.5, 4.8, -25.4],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000132",
+      "name": "Checkpoint Courtyard",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 2.5
+            }
+          },
+          "offset": [0.0, 1.0, 0.0],
+          "is_trigger": true,
+          "layers": 1,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "MeshAsset": {
+          "mesh": {
+            "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+            "label": "Mesh/Brazier",
+            "path": "models/props.glb"
+          },
+          "materials": [
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Ember",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Iron",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Stone",
+              "path": "models/props.glb"
+            }
+          ],
+          "cast_shadows": true
+        },
+        "PointLight": {
+          "color": [1.0, 0.55, 0.2, 1.0],
+          "intensity": 4.0,
+          "range": 8.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Script": {
+          "source": {
+            "id": "3ce75a44-3920-41ea-82ec-77261914f37a",
+            "path": "scripts/checkpoint.luau"
+          },
+          "properties": [
+            {
+              "name": "id",
+              "value": {
+                "String": "courtyard"
+              }
+            },
+            {
+              "name": "flame",
+              "value": {
+                "Entity": "c1de0000-0000-4000-8000-000000000133"
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [2.2, 2.0, -33.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000133",
+      "name": "Flame",
+      "parent": "c1de0000-0000-4000-8000-000000000132",
+      "components": {
+        "ParticleEmitter": {
+          "playing": false,
+          "looping": true,
+          "duration": 5.0,
+          "rate": 40.0,
+          "rate_over_distance": 0.0,
+          "bursts": [],
+          "max_particles": 96,
+          "lifetime": [0.5, 0.9],
+          "speed": [0.6, 1.4],
+          "direction": [0.0, 1.0, 0.0],
+          "cone_angle": 0.35,
+          "spawn_radius": 0.25,
+          "gravity": [0.0, 1.5, 0.0],
+          "drag": 0.0,
+          "size": [
+            {
+              "t": 0.0,
+              "value": 0.35
+            },
+            {
+              "t": 1.0,
+              "value": 0.05
+            }
+          ],
+          "size_random": 0.0,
+          "color": [
+            {
+              "t": 0.0,
+              "color": [1.0, 0.7, 0.25, 1.0]
+            },
+            {
+              "t": 1.0,
+              "color": [0.9, 0.15, 0.02, 0.0]
+            }
+          ],
+          "intensity": 6.0,
+          "spin": [0.0, 0.0],
+          "random_rotation": false,
+          "texture": null,
+          "atlas": [1, 1],
+          "blend": "Additive",
+          "soft_distance": 0.0,
+          "lit": false,
+          "space": "World",
+          "seed": 1,
+          "despawn_when_finished": false
+        },
+        "Transform": {
+          "translation": [0.0, 1.3, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000160",
+      "name": "Wave",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "c2afed79-2d8b-4383-89ef-0d6cf15c02fb",
+            "path": "scripts/wave.luau"
+          },
+          "properties": [
+            {
+              "name": "gate",
+              "value": {
+                "Entity": "c1de0000-0000-4000-8000-000000000170"
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 2.0, -44.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000170",
+      "name": "Gate",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Cuboid": {
+              "size": [3.3, 3.36, 0.12]
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.1,
+          "restitution": 0.0
+        },
+        "Joint": {
+          "kind": "Hinge",
+          "connected": null,
+          "anchor": [-1.7, 0.0, 0.0],
+          "axis": [0.0, 1.0, 0.0],
+          "limits_enabled": true,
+          "limits": [-0.05, 1.6],
+          "collide_connected": false
+        },
+        "MeshAsset": {
+          "mesh": {
+            "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+            "label": "Mesh/Gate",
+            "path": "models/props.glb"
+          },
+          "materials": [
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Wood",
+              "path": "models/props.glb"
+            },
+            {
+              "id": "08d69c40-51c4-4364-93be-58a7151b3006",
+              "label": "Material/Iron",
+              "path": "models/props.glb"
+            }
+          ],
+          "cast_shadows": true
+        },
+        "RigidBody": {
+          "kind": "Fixed",
+          "mass": 60.0,
+          "linear_damping": 0.0,
+          "angular_damping": 0.5,
+          "gravity_scale": 1.0,
+          "ccd": false,
+          "can_sleep": true,
+          "locks": {
+            "translate_x": false,
+            "translate_y": false,
+            "translate_z": false,
+            "rotate_x": false,
+            "rotate_y": false,
+            "rotate_z": false
+          }
+        },
+        "Transform": {
+          "translation": [0.0, 3.75, -57.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000171",
+      "name": "Keep Door",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Cuboid": {
+              "size": [3.2, 3.0, 2.0]
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 1,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Script": {
+          "source": {
+            "id": "acfd9b01-300c-4d2f-85b5-ff6697cb3864",
+            "path": "scripts/door.luau"
+          },
+          "properties": [
+            {
+              "name": "scene",
+              "value": {
+                "String": "keep"
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 3.5, -60.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000180",
+      "name": "Lava Glow West",
+      "parent": null,
+      "components": {
+        "PointLight": {
+          "color": [1.0, 0.35, 0.08, 1.0],
+          "intensity": 60.0,
+          "range": 12.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Transform": {
+          "translation": [-7.0, -3.0, -29.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000181",
+      "name": "Lava Glow East",
+      "parent": null,
+      "components": {
+        "PointLight": {
+          "color": [1.0, 0.35, 0.08, 1.0],
+          "intensity": 60.0,
+          "range": 12.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Transform": {
+          "translation": [7.0, -3.0, -29.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000182",
+      "name": "Gate Torch West",
+      "parent": null,
+      "components": {
+        "PointLight": {
+          "color": [1.0, 0.6, 0.25, 1.0],
+          "intensity": 25.0,
+          "range": 9.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Transform": {
+          "translation": [-2.6, 5.0, -56.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c1de0000-0000-4000-8000-000000000183",
+      "name": "Gate Torch East",
+      "parent": null,
+      "components": {
+        "PointLight": {
+          "color": [1.0, 0.6, 0.25, 1.0],
+          "intensity": 25.0,
+          "range": 9.0,
+          "shadows": false,
+          "shadow": {
+            "resolution": 1024,
+            "depth_bias": 1.0,
+            "normal_bias": 1.5
+          }
+        },
+        "Transform": {
+          "translation": [2.6, 5.0, -56.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    }
+  ]
+}

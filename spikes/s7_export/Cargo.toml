@@ -1,0 +1,20 @@
+[package]
+name = "s7_export"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Throwaway spike: its own workspace (see spikes/README.md).
+[workspace]
+
+[dependencies]
+anyhow = "1"
+zip = { version = "4.6.1", default-features = false, features = ["deflate"] }
+twox-hash = { version = "2.1.2", default-features = false, features = ["std", "xxhash3_128"] }
+blake3 = { version = "1.8.3", features = ["pure"] }
+sha2 = "0.10.9"
+editpe = "0.2.4"
+image = { version = "0.25.10", default-features = false, features = ["png", "ico"] }
+
+[profile.release]
+debug = false

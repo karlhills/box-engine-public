@@ -1,0 +1,12 @@
+{
+  "actions": {
+    "move": {
+      "kind": "axis2",
+      "bindings": [
+        { "buttons": { "up": { "key": "W" }, "down": { "key": "S" }, "left": { "key": "A" }, "right": { "key": "D" } } },
+        { "buttons": { "up": { "key": "I" }, "down": { "key": "K" }, "left": { "key": "J" }, "right": { "key": "L" } } },
+        { "stick": "Left" }
+      ]
+    }
+  }
+}

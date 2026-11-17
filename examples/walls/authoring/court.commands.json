@@ -1,0 +1,396 @@
+[
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000400000001",
+    "name": "Sun",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          12,
+          0
+        ],
+        "rotation": [
+          -0.418082,
+          0.270273,
+          0.131821,
+          0.857195
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "DirectionalLight": {
+        "color": [
+          1.0,
+          0.87962,
+          0.71569,
+          1.0
+        ],
+        "intensity": 3.2,
+        "shadows": true,
+        "shadow_distance": 45.0
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000400000002",
+    "name": "Camera",
+    "components": {
+      "Transform": {
+        "translation": [
+          -3.0,
+          15.0,
+          16.0
+        ],
+        "rotation": [
+          -0.365232,
+          -0.057828,
+          -0.022739,
+          0.92884
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Camera": {
+        "fov_y": 0.8,
+        "near": 0.1,
+        "active": true
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000400000003",
+    "name": "Ground",
+    "components": {
+      "Transform": {
+        "translation": [
+          -1.0,
+          -0.1,
+          0.0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "Primitive": {
+        "shape": {
+          "Cuboid": {
+            "size": [
+              30,
+              0.2,
+              22
+            ]
+          }
+        },
+        "cast_shadows": true
+      },
+      "StandardMaterial": {
+        "base_color": [
+          0.3,
+          0.4,
+          0.22,
+          1.0
+        ],
+        "roughness": 0.95,
+        "metallic": 0.0,
+        "emissive": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000400000004",
+    "name": "Courtyard",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            -5,
+            0.0,
+            -5
+          ],
+          [
+            5,
+            0.0,
+            -5
+          ],
+          [
+            5,
+            0.0,
+            5
+          ],
+          [
+            -5,
+            0.0,
+            5
+          ],
+          [
+            -5,
+            0.0,
+            -5
+          ]
+        ],
+        "height": 3.0,
+        "thickness": 0.35
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000400000005",
+    "name": "Inner Wall",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            0,
+            0.0,
+            -4.825
+          ],
+          [
+            0,
+            0.0,
+            0.5
+          ]
+        ],
+        "height": 2.2,
+        "thickness": 0.2
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000400000006",
+    "name": "Annex",
+    "components": {
+      "Transform": {
+        "translation": [
+          9.175,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          1.0,
+          0,
+          0.0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            0,
+            0.0,
+            0
+          ],
+          [
+            4,
+            0.0,
+            0
+          ]
+        ],
+        "height": 3.0,
+        "thickness": 0.35
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000400000007",
+    "name": "Annex Return",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "WallPath": {
+        "points": [
+          [
+            9.175,
+            0.0,
+            0
+          ],
+          [
+            9.175,
+            0.0,
+            4
+          ]
+        ],
+        "height": 3.0,
+        "thickness": 0.35
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000400000008",
+    "name": "Garden Fence",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "FencePath": {
+        "points": [
+          [
+            -5.175,
+            0.0,
+            -2
+          ],
+          [
+            -9,
+            0.0,
+            -2
+          ],
+          [
+            -9,
+            0.0,
+            3
+          ],
+          [
+            -5.175,
+            0.0,
+            3
+          ]
+        ],
+        "height": 1.1,
+        "post_spacing": 2.0,
+        "post_size": 0.14,
+        "rail_count": 2
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "c0ffee00-0000-4000-8000-000400000009",
+    "name": "Gate Fence",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "FencePath": {
+        "points": [
+          [
+            -9,
+            0.0,
+            3
+          ],
+          [
+            -12,
+            0.0,
+            3
+          ]
+        ],
+        "height": 1.1,
+        "post_spacing": 2.0,
+        "post_size": 0.14,
+        "rail_count": 3
+      }
+    }
+  }
+]

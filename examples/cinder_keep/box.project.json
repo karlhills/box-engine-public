@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "name": "Cinder Keep",
+  "engine_version": "0.1.0",
+  "start_scene": "assets/scenes/outdoor.scene.json"
+}

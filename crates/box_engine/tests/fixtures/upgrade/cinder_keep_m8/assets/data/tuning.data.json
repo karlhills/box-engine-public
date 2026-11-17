@@ -1,0 +1,36 @@
+{
+  "player": {
+    "max_health": 100,
+    "fall_limit": -3.0,
+    "attack_radius": 2.4,
+    "attack_cooldown": 0.4,
+    "attack_delay": 0.1,
+    "invulnerable": 0.6
+  },
+  "cinderling": {
+    "speed": 2.6,
+    "contact_range": 0.85,
+    "contact_damage": 6,
+    "points": 10,
+    "spacing": 0.8
+  },
+  "spitter": {
+    "speed": 1.8,
+    "hold_distance": 7.0,
+    "fire_range": 12.0,
+    "fire_interval": [3.0, 5.0],
+    "points": 25
+  },
+  "ember": {
+    "speed": 6.0,
+    "damage": 6,
+    "hit_radius": 0.5,
+    "lifetime": 3.0,
+    "pool": 24,
+    "min_interval": 0.5
+  },
+  "boulder": {
+    "damage": 20,
+    "push": 6.0
+  }
+}

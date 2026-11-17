@@ -1,0 +1,39 @@
+# Collector: the M3 sample game. A box project (box.project.json, assets/)
+# and the native game crate around it: `src/lib.rs` is the game plugin,
+# `collector-editor` and `collector-player` are its editor and player.
+[package]
+name = "collector"
+description = "box-engine sample game: collect every gem in two arenas."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[features]
+# The editor binary: `cargo run -p collector --features editor --bin collector-editor`.
+# Off by default so the player builds without the editor (egui).
+editor = ["dep:box_editor"]
+
+[[bin]]
+name = "collector-editor"
+path = "src/bin/collector-editor.rs"
+required-features = ["editor"]
+
+[[bin]]
+name = "collector-player"
+path = "src/bin/collector-player.rs"
+
+[dependencies]
+# The prelude re-exports what the game needs (`bevy_reflect` for
+# `#[derive(Reflect)]`, the `tracing` macros), so no other engine crates.
+box_engine.workspace = true
+box_editor = { workspace = true, optional = true }
+anyhow.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+box_editor.workspace = true
+image.workspace = true

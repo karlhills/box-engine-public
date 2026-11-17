@@ -1,0 +1,99 @@
+{
+  "generator": "Platform",
+  "version": 1,
+  "cases": [
+    {
+      "name": "default",
+      "seed": 0,
+      "params": {
+        "footprint": {
+          "Rectangle": {
+            "size": [
+              4.0,
+              3.0
+            ]
+          }
+        },
+        "thickness": 0.30000001192092896,
+        "edge": "None",
+        "ao": 1.0
+      },
+      "hash": "0xd6bbd142b932ab08",
+      "vertices": 36,
+      "triangles": 12,
+      "warnings": []
+    },
+    {
+      "name": "round_lip",
+      "seed": 0,
+      "params": {
+        "footprint": {
+          "Circle": {
+            "radius": 1.2000000476837158,
+            "segments": 24
+          }
+        },
+        "thickness": 0.30000001192092896,
+        "edge": {
+          "Lip": {
+            "height": 0.550000011920929,
+            "width": 0.2199999988079071
+          }
+        },
+        "ao": 1.0
+      },
+      "hash": "0xe5a4219ff866008a",
+      "vertices": 852,
+      "triangles": 284,
+      "warnings": []
+    },
+    {
+      "name": "l_shape_trim",
+      "seed": 0,
+      "params": {
+        "footprint": {
+          "Polygon": {
+            "points": [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                4.0,
+                0.0
+              ],
+              [
+                4.0,
+                2.0
+              ],
+              [
+                2.0,
+                2.0
+              ],
+              [
+                2.0,
+                4.0
+              ],
+              [
+                0.0,
+                4.0
+              ]
+            ]
+          }
+        },
+        "thickness": 0.30000001192092896,
+        "edge": {
+          "Trim": {
+            "height": 0.119999997317791,
+            "proud": 0.03999999910593033
+          }
+        },
+        "ao": 1.0
+      },
+      "hash": "0xfdcc97b3f29c1702",
+      "vertices": 168,
+      "triangles": 56,
+      "warnings": []
+    }
+  ]
+}

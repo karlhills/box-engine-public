@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md"]
+  pull_request:
+    paths-ignore: ["docs/**", "**/*.md"]
+
+# A new push to a pull request cancels its older run; runs on main finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  # Hosted runners have no dependable GPU; golden images run locally (see AGENTS.md).
+  BOX_SKIP_GPU_TESTS: "1"
+
+jobs:
+  check:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+      # Saved even when a step fails, so the next run does not rebuild every
+      # dependency (a cold Windows build takes about 45 minutes).
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Format
+        if: matrix.os == 'macos-26'
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace --no-fail-fast
+      - name: Build examples
+        run: cargo build --workspace --examples
+
+  # box_engine's optional modules (physics, dynamics, audio, script) in the
+  # combinations native games use. Each set builds alone (`-p box_engine`), so
+  # cargo does not unify features with the rest of the workspace. Linux: these
+  # check feature gating, not the platform, and Linux minutes cost a tenth of
+  # macOS minutes.
+  features:
+    name: box_engine [${{ matrix.features || 'no modules' }}]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+          - ""
+          - physics
+          - audio
+          - dynamics
+          - script
+          - physics,audio
+          - physics,audio,script
+          - physics,audio,dynamics
+    steps:
+      - uses: actions/checkout@v4
+      - name: System libraries
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+      - name: Install toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: features-${{ matrix.features }}
+          cache-on-failure: true
+      - name: Clippy
+        run: cargo clippy -p box_engine --no-default-features --features "${{ matrix.features }}" --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --no-fail-fast -p box_engine --no-default-features --features "${{ matrix.features }}"
+
+  # A native game without dynamics and script (examples/minimal_native), and
+  # the module crates' libraries without their optional features.
+  lean:
+    name: lean native build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: System libraries
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+      - name: Install toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: lean
+          cache-on-failure: true
+      - name: Module crates without optional features
+        run: cargo clippy -p box_physics -p box_ui -p box_script --no-default-features -- -D warnings
+      - name: Clippy
+        run: cargo clippy -p minimal_native --all-targets -- -D warnings
+      - name: Test
+        run: cargo test -p minimal_native

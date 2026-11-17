@@ -1,0 +1,1515 @@
+{
+  "version": 1,
+  "resources": {
+    "Environment": {
+      "sky_zenith": [0.04374, 0.15896, 0.6376, 1.0],
+      "sky_horizon": [0.55201, 0.68669, 0.85499, 1.0],
+      "ground": [0.06848, 0.05448, 0.0319, 1.0],
+      "ambient_intensity": 1.0,
+      "sun_disc_size": 0.010471975,
+      "fog_density": 0.004,
+      "fog_height_falloff": 0.08,
+      "fog_base_height": 0.0,
+      "exposure": 0.55,
+      "tonemapper": "AgX",
+      "ambient_occlusion": {
+        "enabled": true,
+        "intensity": 1.5,
+        "radius": 1.0,
+        "bias": 0.02,
+        "power": 1.2,
+        "direct_lighting": 0.0
+      },
+      "bloom": {
+        "enabled": true,
+        "intensity": 0.025,
+        "scatter": 0.7
+      },
+      "color_grading": {
+        "temperature": 0.0,
+        "tint": 0.0,
+        "contrast": 1.0,
+        "saturation": 1.0,
+        "shadows": [1.0, 1.0, 1.0],
+        "midtones": [1.0, 1.0, 1.0],
+        "highlights": [1.0, 1.0, 1.0],
+        "shadows_end": 0.3,
+        "highlights_start": 0.55,
+        "lift": [0.0, 0.0, 0.0],
+        "gamma": [1.0, 1.0, 1.0],
+        "gain": [1.0, 1.0, 1.0]
+      },
+      "sky": {
+        "gradient": "Simple",
+        "sun_glow": 1.0,
+        "sun_disc": 1.0,
+        "horizon_glow": 0.0,
+        "stars": 0.0
+      },
+      "aerial_haze": {
+        "enabled": false,
+        "color": [0.37, 0.51, 0.71, 1.0],
+        "density": 0.0005,
+        "start_distance": 60.0,
+        "max_opacity": 0.97,
+        "sun_scatter": 0.12,
+        "sky_height": 0.12
+      },
+      "height_mist": {
+        "enabled": false,
+        "color": [0.53, 0.6, 0.74, 1.0],
+        "top": -20.0,
+        "bottom": -60.0,
+        "max_opacity": 1.0,
+        "near_fade": 120.0
+      },
+      "distance_quieting": {
+        "enabled": false,
+        "start": 90.0,
+        "end": 1800.0,
+        "desaturate": 0.5,
+        "contrast": 0.38,
+        "tone": [0.3, 0.42, 0.58, 1.0]
+      },
+      "vignette": {
+        "intensity": 0.0,
+        "smoothness": 0.5,
+        "rounded": false
+      },
+      "wind": {
+        "direction": [1.0, 0.0],
+        "strength": 1.0,
+        "gust_length": 17.0,
+        "gust_speed": 3.0
+      }
+    }
+  },
+  "entities": [
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000001",
+      "name": "Arena",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "19b508fe-248b-4b6e-993b-dd70cb36c78e",
+            "path": "scripts/arena.luau"
+          },
+          "properties": [
+            {
+              "name": "next_scene",
+              "value": {
+                "String": "arena2"
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000002",
+      "name": "Sun",
+      "parent": null,
+      "components": {
+        "DirectionalLight": {
+          "color": [1.0, 0.87962, 0.71569, 1.0],
+          "intensity": 3.2,
+          "shadows": true,
+          "shadow_distance": 45.0
+        },
+        "Transform": {
+          "translation": [0.0, 12.0, 0.0],
+          "rotation": [-0.418082, 0.270273, 0.131821, 0.857195],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000003",
+      "name": "Floor 1",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [12.0, 0.5, 12.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.15896, 0.32314, 0.06848, 1.0],
+          "roughness": 0.95,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-6.0, -0.25, -6.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000004",
+      "name": "Floor 2",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [12.0, 0.5, 12.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.12214, 0.25016, 0.04971, 1.0],
+          "roughness": 0.95,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [6.0, -0.25, -6.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000005",
+      "name": "Floor 3",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [12.0, 0.5, 12.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.12214, 0.25016, 0.04971, 1.0],
+          "roughness": 0.95,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-6.0, -0.25, 6.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000006",
+      "name": "Floor 4",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [12.0, 0.5, 12.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.15896, 0.32314, 0.06848, 1.0],
+          "roughness": 0.95,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [6.0, -0.25, 6.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000007",
+      "name": "Wall North",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [25.0, 1.6, 0.5]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.37626, 0.34191, 0.29177, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 0.8, -12.25],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000008",
+      "name": "Wall South",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [25.0, 1.6, 0.5]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.37626, 0.34191, 0.29177, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 0.8, 12.25],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000009",
+      "name": "Wall East",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.5, 1.6, 24.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.37626, 0.34191, 0.29177, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [12.25, 0.8, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-10010000000a",
+      "name": "Wall West",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.5, 1.6, 24.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.37626, 0.34191, 0.29177, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-12.25, 0.8, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-10010000000b",
+      "name": "Crate A",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [1.5, 1.5, 1.5]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.32314, 0.14413, 0.04231, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-5.0, 0.75, -4.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-10010000000c",
+      "name": "Crate B",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [1.0, 1.0, 1.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.43415, 0.20508, 0.0648, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-3.6, 0.5, -5.3],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-10010000000d",
+      "name": "Pillar",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.8,
+              "height": 3.0,
+              "segments": 32
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.48515, 0.45079, 0.39157, 1.0],
+          "roughness": 0.7,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [5.0, 1.5, 4.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-10010000000e",
+      "name": "Platform",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [4.0, 0.8, 4.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.26225, 0.23074, 0.18782, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [6.0, 0.4, -6.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-10010000000f",
+      "name": "Low Wall",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [6.0, 1.0, 0.5]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.37626, 0.34191, 0.29177, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-4.0, 0.5, 5.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000010",
+      "name": "Player",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 2,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Interpolated": {
+          "teleport_distance": 10.0
+        },
+        "KinematicCharacter": {
+          "radius": 0.4,
+          "height": 1.8,
+          "gravity": 20.0,
+          "max_fall_speed": 40.0,
+          "jump_speed": 7.5,
+          "max_slope": 0.9272952,
+          "ground_snap": 0.1,
+          "skin": 0.02,
+          "step_height": 0.3,
+          "mass": 80.0
+        },
+        "Script": {
+          "source": {
+            "id": "eb18dd0d-c3e1-4264-a735-9521e3f3125f",
+            "path": "scripts/player.luau"
+          },
+          "properties": [
+            {
+              "name": "speed",
+              "value": {
+                "Number": 6.0
+              }
+            },
+            {
+              "name": "camera",
+              "value": {
+                "Entity": "c0ffee00-0000-4000-8000-100100000011"
+              }
+            },
+            {
+              "name": "body",
+              "value": {
+                "Entity": "c0ffee00-0000-4000-8000-100100000110"
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 0.92, 6.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000110",
+      "name": "Body",
+      "parent": "c0ffee00-0000-4000-8000-100100000010",
+      "components": {
+        "AnimationStateMachine": {
+          "source": {
+            "id": "abb2207b-fbdc-4334-bcf3-a3392baec6f0",
+            "path": "animation/locomotion.animgraph.json"
+          },
+          "graph": {
+            "states": [],
+            "transitions": [],
+            "start": ""
+          },
+          "parameters": []
+        },
+        "PrefabInstance": {
+          "scene": {
+            "id": "fa4b1af0-2a15-4ce6-bbde-6f0fd5c99a11",
+            "label": "Scene",
+            "path": "models/character.glb"
+          }
+        },
+        "Transform": {
+          "translation": [0.0, -0.92, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000011",
+      "name": "Camera",
+      "parent": null,
+      "components": {
+        "Camera": {
+          "fov_y": 0.9,
+          "near": 0.1,
+          "active": true
+        },
+        "Script": {
+          "source": {
+            "id": "92de84a1-b7c6-4ab5-85b3-6ad481c497e6",
+            "path": "scripts/camera.luau"
+          },
+          "properties": [
+            {
+              "name": "target",
+              "value": {
+                "Entity": "c0ffee00-0000-4000-8000-100100000010"
+              }
+            },
+            {
+              "name": "distance",
+              "value": {
+                "Number": 8.0
+              }
+            },
+            {
+              "name": "height",
+              "value": {
+                "Number": 1.0
+              }
+            },
+            {
+              "name": "pitch",
+              "value": {
+                "Number": 0.35
+              }
+            },
+            {
+              "name": "smoothing",
+              "value": {
+                "Number": 10.0
+              }
+            },
+            {
+              "name": "look_speed",
+              "value": {
+                "Number": 2.5
+              }
+            },
+            {
+              "name": "mouse_sensitivity",
+              "value": {
+                "Number": 0.004
+              }
+            }
+          ]
+        },
+        "Transform": {
+          "translation": [0.0, 4.663182, 13.514982],
+          "rotation": [-0.174108, 0.0, 0.0, 0.984727],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000012",
+      "name": "Gem 1",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "b6cd473f-102b-45e8-98c8-d83b84576af9",
+            "path": "scripts/gem.luau"
+          },
+          "properties": [
+            {
+              "name": "points",
+              "value": {
+                "Integer": 10
+              }
+            },
+            {
+              "name": "spin_speed",
+              "value": {
+                "Number": 2.0
+              }
+            },
+            {
+              "name": "bob_height",
+              "value": {
+                "Number": 0.15
+              }
+            }
+          ]
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.58408, 0.04519, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.7454, 0.37626, 0.01938, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [0.0, 0.9, 0.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000013",
+      "name": "Gem 2",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "b6cd473f-102b-45e8-98c8-d83b84576af9",
+            "path": "scripts/gem.luau"
+          },
+          "properties": [
+            {
+              "name": "points",
+              "value": {
+                "Integer": 10
+              }
+            },
+            {
+              "name": "spin_speed",
+              "value": {
+                "Number": 2.0
+              }
+            },
+            {
+              "name": "bob_height",
+              "value": {
+                "Number": 0.15
+              }
+            }
+          ]
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.58408, 0.04519, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.7454, 0.37626, 0.01938, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [6.0, 1.7, -6.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000014",
+      "name": "Gem 3",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "b6cd473f-102b-45e8-98c8-d83b84576af9",
+            "path": "scripts/gem.luau"
+          },
+          "properties": [
+            {
+              "name": "points",
+              "value": {
+                "Integer": 25
+              }
+            },
+            {
+              "name": "spin_speed",
+              "value": {
+                "Number": 2.0
+              }
+            },
+            {
+              "name": "bob_height",
+              "value": {
+                "Number": 0.15
+              }
+            }
+          ]
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.58408, 0.04519, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.7454, 0.37626, 0.01938, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-5.0, 2.4, -4.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000015",
+      "name": "Gem 4",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "b6cd473f-102b-45e8-98c8-d83b84576af9",
+            "path": "scripts/gem.luau"
+          },
+          "properties": [
+            {
+              "name": "points",
+              "value": {
+                "Integer": 10
+              }
+            },
+            {
+              "name": "spin_speed",
+              "value": {
+                "Number": 2.0
+              }
+            },
+            {
+              "name": "bob_height",
+              "value": {
+                "Number": 0.15
+              }
+            }
+          ]
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.58408, 0.04519, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.7454, 0.37626, 0.01938, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-9.0, 0.9, 9.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000016",
+      "name": "Gem 5",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "b6cd473f-102b-45e8-98c8-d83b84576af9",
+            "path": "scripts/gem.luau"
+          },
+          "properties": [
+            {
+              "name": "points",
+              "value": {
+                "Integer": 10
+              }
+            },
+            {
+              "name": "spin_speed",
+              "value": {
+                "Number": 2.0
+              }
+            },
+            {
+              "name": "bob_height",
+              "value": {
+                "Number": 0.15
+              }
+            }
+          ]
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.58408, 0.04519, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.7454, 0.37626, 0.01938, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [9.0, 0.9, 9.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000017",
+      "name": "Gem 6",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": true,
+          "layers": 4,
+          "mask": 2,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 0.6, 0.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "b6cd473f-102b-45e8-98c8-d83b84576af9",
+            "path": "scripts/gem.luau"
+          },
+          "properties": [
+            {
+              "name": "points",
+              "value": {
+                "Integer": 10
+              }
+            },
+            {
+              "name": "spin_speed",
+              "value": {
+                "Number": 2.0
+              }
+            },
+            {
+              "name": "bob_height",
+              "value": {
+                "Number": 0.15
+              }
+            }
+          ]
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.58408, 0.04519, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.0,
+          "emissive": [0.7454, 0.37626, 0.01938, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0]
+        },
+        "Transform": {
+          "translation": [-9.0, 0.9, -9.0],
+          "rotation": [0.364972, 0.115075, 0.277816, 0.88112],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "c0ffee00-0000-4000-8000-100100000099",
+      "name": "Wind",
+      "parent": null,
+      "components": {
+        "AudioSource": {
+          "clip": {
+            "id": "6efe1647-292a-4c8b-a3e9-de47714252c7",
+            "path": "audio/ambience.wav"
+          },
+          "bus": "Ambience",
+          "volume": 0.4,
+          "pitch": 1.0,
+          "looping": true,
+          "playing": true,
+          "fade_in": 2.0,
+          "fade_out": 1.0,
+          "spatial": false,
+          "min_distance": 1.0,
+          "max_distance": 30.0
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    }
+  ]
+}

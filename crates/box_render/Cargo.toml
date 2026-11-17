@@ -1,0 +1,32 @@
+[package]
+name = "box_render"
+description = "Forward renderer for box-engine built on wgpu."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["hot-reload"]
+hot-reload = ["dep:notify"]
+
+[dependencies]
+box_core.workspace = true
+# The `Reflect` derive on render components emits `bevy_reflect::` paths.
+bevy_reflect.workspace = true
+wgpu.workspace = true
+naga.workspace = true
+glam.workspace = true
+bytemuck.workspace = true
+pollster.workspace = true
+image.workspace = true
+notify = { workspace = true, optional = true }
+profiling.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true
+
+[target.'cfg(windows)'.dependencies]
+wgpu = { workspace = true, features = ["static-dxc"] }
