@@ -324,8 +324,10 @@ fn component_value(
 }
 
 /// `json` with the fields it leaves out of an enum variant it switches to
-/// filled with their types' defaults (a warning names them), so a partial
-/// variant such as `{ "Sphere": { "radius": 0.5 } }` keeps its variant.
+/// filled, so a partial variant such as `{ "Sphere": { "radius": 0.5 } }`
+/// keeps its variant: from the enum's `VariantDefaults` when it has them
+/// (silently, like a struct's missing fields), else with each field type's
+/// default (a warning names those fields).
 fn completed(
     world: &World,
     type_id: std::any::TypeId,

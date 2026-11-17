@@ -19,7 +19,10 @@ use box_core::pmath;
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use box_core::primitive::Primitive;
-use box_core::reflect::{Range, Reflect, ReflectComponent, ReflectDefault, Registry, Step, Unit};
+use box_core::reflect::{
+    Range, Reflect, ReflectComponent, ReflectDefault, ReflectVariantDefaults, Registry, Step, Unit,
+    VariantDefaults,
+};
 use glam::Vec2;
 
 use crate::extrude::{ExtrudeParams, extrude_into};
@@ -106,7 +109,7 @@ impl Default for Lathe {
 /// The profile of a [`Lathe`]. Presets stand on the entity's origin (y = 0)
 /// and close at the axis, so they make solids.
 #[derive(Reflect, Clone, Debug, PartialEq)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_engine"]
 pub enum LatheShape {
     /// A vase with a foot, a belly, a neck and an open mouth.
@@ -154,6 +157,24 @@ impl Default for LatheShape {
             height: 1.0,
             radius: 0.35,
         }
+    }
+}
+
+/// The default vase, a 2 m column of radius 0.2 m, a 0.6 m dome of 12 rings.
+impl VariantDefaults for LatheShape {
+    fn variant_default(variant: &str) -> Option<Self> {
+        Some(match variant {
+            "Vase" => Self::default(),
+            "Column" => Self::Column {
+                height: 2.0,
+                radius: 0.2,
+            },
+            "Dome" => Self::Dome {
+                radius: 0.6,
+                rings: 12,
+            },
+            _ => return None,
+        })
     }
 }
 
@@ -381,7 +402,7 @@ impl Default for Extrude {
 
 /// The outline of an [`Extrude`], centred on the origin.
 #[derive(Reflect, Clone, Debug, PartialEq)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_engine"]
 pub enum Outline {
     /// A rectangle, optionally with rounded corners.
@@ -439,9 +460,33 @@ impl Default for Outline {
     }
 }
 
+/// About a metre across: the default rounded square, a 0.5 m circle of 32
+/// segments, a 0.5 m hexagon, a five-pointed star 0.5 m / 0.25 m.
+impl VariantDefaults for Outline {
+    fn variant_default(variant: &str) -> Option<Self> {
+        Some(match variant {
+            "Rectangle" => Self::default(),
+            "Circle" => Self::Circle {
+                radius: 0.5,
+                segments: 32,
+            },
+            "Polygon" => Self::Polygon {
+                sides: 6,
+                radius: 0.5,
+            },
+            "Star" => Self::Star {
+                points: 5,
+                outer_radius: 0.5,
+                inner_radius: 0.25,
+            },
+            _ => return None,
+        })
+    }
+}
+
 /// A hole through an [`Extrude`].
 #[derive(Reflect, Clone, Debug, Default, PartialEq)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_engine"]
 pub enum Hole {
     /// No hole.
@@ -479,6 +524,26 @@ pub enum Hole {
         /// Holes as (x, y) point lists in metres.
         rings: Vec<Vec<Vec2>>,
     },
+}
+
+/// Holes that fit the default outlines: a 0.1 m inset, a centred 0.25 m
+/// circle of 32 segments, a centred 0.4 m square.
+impl VariantDefaults for Hole {
+    fn variant_default(variant: &str) -> Option<Self> {
+        Some(match variant {
+            "Inset" => Self::Inset { width: 0.1 },
+            "Circle" => Self::Circle {
+                radius: 0.25,
+                segments: 32,
+                offset: Vec2::ZERO,
+            },
+            "Rectangle" => Self::Rectangle {
+                size: Vec2::splat(0.4),
+                offset: Vec2::ZERO,
+            },
+            _ => return None,
+        })
+    }
 }
 
 impl Outline {

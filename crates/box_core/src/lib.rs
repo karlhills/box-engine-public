@@ -105,7 +105,8 @@ pub mod prelude {
     pub use crate::prefab::PrefabInstance;
     pub use crate::primitive::{Primitive, Shape};
     pub use crate::reflect::{
-        Reflect, ReflectComponent, ReflectDefault, ReflectResource, Registry,
+        Reflect, ReflectComponent, ReflectDefault, ReflectResource, ReflectVariantDefaults,
+        Registry, VariantDefaults,
     };
     pub use crate::time::Time;
     pub use crate::timer::Timer;

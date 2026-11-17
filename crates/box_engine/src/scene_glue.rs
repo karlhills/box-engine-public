@@ -488,6 +488,36 @@ mod tests {
     use box_core::world::Entity;
     use glam::Vec2;
 
+    /// Every engine enum's `VariantDefaults` names its own variant and stays
+    /// inside the fields' ranges.
+    #[test]
+    fn engine_variant_defaults_are_consistent() {
+        let registry = engine_registry();
+        assert_eq!(registry.variant_default_problems(), Vec::<String>::new());
+        let with_defaults = registry
+            .type_registry()
+            .iter()
+            .filter(|r| {
+                r.data::<box_core::reflect::ReflectVariantDefaults>()
+                    .is_some()
+            })
+            .map(|r| r.type_info().type_path_table().short_path())
+            .collect::<std::collections::BTreeSet<_>>();
+        for name in [
+            "Shape",
+            "WindWeight",
+            "SkyGradient",
+            "SweepProfile",
+            "LatheShape",
+            "Outline",
+            "Hole",
+        ] {
+            assert!(with_defaults.contains(name), "{name}: {with_defaults:?}");
+        }
+        #[cfg(feature = "physics")]
+        assert!(with_defaults.contains("ColliderShape"));
+    }
+
     /// Primitives draw through the generator runtime; without a throttle
     /// every sync applies the latest edit, as these tests expect.
     fn world() -> World {

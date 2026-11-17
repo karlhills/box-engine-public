@@ -2,7 +2,9 @@
 
 mod common;
 
-use box_core::edit::{Command, EditError, EditStack, apply_commands, parse_commands};
+use box_core::edit::{
+    Command, EditError, EditStack, apply_commands, apply_commands_with_warnings, parse_commands,
+};
 use box_core::identity::{Name, Uid};
 use box_core::primitive::{Primitive, Shape};
 use box_core::scene;
@@ -199,8 +201,9 @@ fn reparent_command_keeps_world_position_unless_keep_local() {
 }
 
 /// A spawn may give only some fields of an enum variant (the rest take that
-/// variant's defaults): `{ "Sphere": { "radius": 0.5 } }` makes a sphere,
-/// as `world.spawn` in Luau does, never the default variant.
+/// variant's defaults, `Shape`'s `VariantDefaults`): `{ "Sphere": { "radius":
+/// 0.5 } }` makes the sphere `Primitive::sphere(0.5)` makes, as `world.spawn`
+/// in Luau does, never the default variant, and without warnings.
 #[test]
 fn spawn_with_a_partial_enum_variant_keeps_the_variant() {
     let mut w = build_world(1, 3);
@@ -210,19 +213,40 @@ fn spawn_with_a_partial_enum_variant_keeps_the_variant() {
       { "op": "spawn", "name": "Ball",
         "components": { "Primitive": { "shape": { "Sphere": { "radius": 0.5 } } } } },
       { "op": "spawn", "name": "Box",
-        "components": { "Primitive": { "shape": { "Cuboid": {} } } } }
+        "components": { "Primitive": { "shape": { "Cuboid": {} } } } },
+      { "op": "spawn", "name": "Pill",
+        "components": { "Primitive": { "shape": "Capsule" } } },
+      { "op": "set", "entity": "Box", "path": "Primitive.shape", "value": { "Cylinder": { "height": 2.0 } } }
     ]"#,
     )
     .unwrap();
-    let created = apply_commands(&mut w, &mut stack, &commands, "Spawn").unwrap();
-    let ball = w.entity_by_uid(created[0]).unwrap();
-    match w.get::<Primitive>(ball).unwrap().shape {
-        Shape::Sphere { radius, .. } => assert_eq!(radius, 0.5),
-        ref other => panic!("expected a sphere, got {other:?}"),
-    }
-    let boxed = w.entity_by_uid(created[1]).unwrap();
-    assert!(matches!(
-        w.get::<Primitive>(boxed).unwrap().shape,
-        Shape::Cuboid { .. }
-    ));
+    let applied = apply_commands_with_warnings(&mut w, &mut stack, &commands, "Spawn").unwrap();
+    assert_eq!(applied.warnings, Vec::<String>::new());
+    let shape = |i: usize| {
+        let e = w.entity_by_uid(applied.created[i]).unwrap();
+        w.get::<Primitive>(e).unwrap().shape.clone()
+    };
+    assert_eq!(shape(0), Primitive::sphere(0.5).shape);
+    assert_eq!(shape(1), Primitive::cylinder(0.5, 2.0).shape);
+    assert_eq!(shape(2), Primitive::capsule(0.4, 0.4).shape);
+}
+
+/// A variant field with no variant default takes its type's default, with a
+/// warning naming it.
+#[test]
+fn a_field_without_a_variant_default_is_warned_about() {
+    let mut w = build_world(1, 3);
+    let mut stack = EditStack::new();
+    let commands = parse_commands(
+        r#"[{ "op": "spawn", "name": "Walker",
+        "components": { "Npc": { "behaviour": { "Patrol": { "waypoints": [] } } } } }]"#,
+    )
+    .unwrap();
+    let applied = apply_commands_with_warnings(&mut w, &mut stack, &commands, "Spawn").unwrap();
+    assert_eq!(applied.warnings.len(), 1, "{:?}", applied.warnings);
+    assert!(
+        applied.warnings[0].contains("`Npc.behaviour.Patrol.speed`"),
+        "{:?}",
+        applied.warnings
+    );
 }

@@ -284,3 +284,52 @@ fn subtree_snapshot_and_instantiate() {
     assert!(scene::instantiate(&mut world, &records, None).is_err());
     assert_eq!(world.entity_count(), count);
 }
+
+/// A scene file may give only some fields of an enum variant: the rest come
+/// from the enum's `VariantDefaults` (else the field type's default), and the
+/// variant is kept instead of falling back to the type's default one.
+#[test]
+fn partial_enum_variants_load_with_variant_defaults() {
+    let text = r#"{
+  "version": 1,
+  "entities": [
+    {
+      "uid": "00000000-0000-0000-0000-000000000001",
+      "name": "Ball",
+      "components": {
+        "Primitive": { "shape": { "Sphere": { "radius": 0.3 } } },
+        "Npc": { "behaviour": { "Patrol": { "waypoints": [[1.0, 0.0, 0.0]] } } }
+      }
+    },
+    {
+      "uid": "00000000-0000-0000-0000-000000000002",
+      "name": "Pill",
+      "components": { "Primitive": { "shape": "Capsule", "cast_shadows": false } }
+    }
+  ]
+}"#;
+    let world = scene::load(text.as_bytes(), registry()).unwrap();
+    let ball = world.entity_by_uid(Uid::from_u128(1)).unwrap();
+    assert_eq!(
+        *world.get::<Primitive>(ball).unwrap(),
+        Primitive::sphere(0.3)
+    );
+    assert_eq!(
+        world.get::<Npc>(ball).unwrap().behaviour,
+        Behaviour::Patrol {
+            speed: 0.0,
+            waypoints: vec![[1.0, 0.0, 0.0]]
+        }
+    );
+    let pill = world.entity_by_uid(Uid::from_u128(2)).unwrap();
+    assert_eq!(
+        *world.get::<Primitive>(pill).unwrap(),
+        Primitive::capsule(0.4, 0.4).with_shadows(false)
+    );
+    // Saving writes every field.
+    let saved: Json = serde_json::from_slice(&scene::save(&world).unwrap()).unwrap();
+    assert_eq!(
+        saved["entities"][0]["components"]["Primitive"]["shape"]["Sphere"]["sectors"],
+        32
+    );
+}

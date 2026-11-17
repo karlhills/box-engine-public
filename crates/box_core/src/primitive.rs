@@ -7,7 +7,10 @@
 use glam::{UVec2, Vec2, Vec3};
 
 use crate::mesh::MeshData;
-use crate::reflect::{Range, Reflect, ReflectComponent, ReflectDefault, Step, Unit};
+use crate::reflect::{
+    Range, Reflect, ReflectComponent, ReflectDefault, ReflectVariantDefaults, Step, Unit,
+    VariantDefaults,
+};
 
 /// A built-in shape with parameters. Saved in scenes; the mesh is derived.
 #[derive(Reflect, Clone, Debug, PartialEq)]
@@ -30,9 +33,10 @@ impl Default for Primitive {
 }
 
 /// Shape of a [`Primitive`]. All shapes are centred on the origin; round
-/// shapes are aligned with Y.
+/// shapes are aligned with Y. A variant given with only some fields takes the
+/// rest from [`VariantDefaults`] (the editor's Add menu shapes).
 #[derive(Reflect, Clone, Debug, PartialEq)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_engine"]
 pub enum Shape {
     /// An axis-aligned box.
@@ -94,6 +98,22 @@ pub enum Shape {
 impl Default for Shape {
     fn default() -> Self {
         Self::Cuboid { size: Vec3::ONE }
+    }
+}
+
+/// The shapes the editor's Add menu creates, with the segment counts of the
+/// [`Primitive`] constructors: a 1 m cube, a 0.5 m sphere, a 0.5 × 1 m
+/// cylinder, a 0.4 m capsule with a 0.4 m half height and a 10 m plane.
+impl VariantDefaults for Shape {
+    fn variant_default(variant: &str) -> Option<Self> {
+        Some(match variant {
+            "Cuboid" => Primitive::cuboid(Vec3::ONE).shape,
+            "Sphere" => Primitive::sphere(0.5).shape,
+            "Cylinder" => Primitive::cylinder(0.5, 1.0).shape,
+            "Capsule" => Primitive::capsule(0.4, 0.4).shape,
+            "Plane" => Primitive::plane(Vec2::splat(10.0)).shape,
+            _ => return None,
+        })
     }
 }
 

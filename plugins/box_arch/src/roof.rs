@@ -25,7 +25,9 @@ use box_core::pmath;
 use std::f32::consts::{FRAC_PI_2, TAU};
 
 use bevy_reflect::Reflect;
-use box_core::reflect::{Range, ReflectComponent, ReflectDefault, Step, Unit};
+use box_core::reflect::{
+    Range, ReflectComponent, ReflectDefault, ReflectVariantDefaults, Step, Unit, VariantDefaults,
+};
 use box_proc::generator::{GenContext, GenOutput, Generator};
 use glam::{Vec2, Vec3};
 
@@ -70,7 +72,7 @@ pub enum RoofEnd {
 /// The roof's form and footprint. Rectangles are the outer wall faces,
 /// x by z.
 #[derive(Clone, Debug, PartialEq, Reflect)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_arch"]
 pub enum RoofShape {
     /// Two slopes meeting at a ridge; gable walls rise to them.
@@ -113,6 +115,35 @@ pub enum RoofShape {
         #[reflect(@Range { min: 2.0, max: 64.0 })]
         rings: u32,
     },
+}
+
+/// The default 5 × 4 m footprint for the sloped shapes; a 2 m cone of 32
+/// segments and a 3 m dome rising 2 m (32 segments, 8 rings) for towers.
+impl VariantDefaults for RoofShape {
+    fn variant_default(variant: &str) -> Option<Self> {
+        let size = Vec2::new(5.0, 4.0);
+        let ridge = RidgeAxis::Longer;
+        Some(match variant {
+            "Gable" => Self::Gable { size, ridge },
+            "Hip" => Self::Hip { size, ridge },
+            "Shed" => Self::Shed {
+                size,
+                ridge,
+                high_abuts: false,
+            },
+            "Cone" => Self::Cone {
+                radius: 2.0,
+                segments: 32,
+            },
+            "Dome" => Self::Dome {
+                radius: 3.0,
+                rise: 2.0,
+                segments: 32,
+                rings: 8,
+            },
+            _ => return None,
+        })
+    }
 }
 
 impl Default for RoofShape {

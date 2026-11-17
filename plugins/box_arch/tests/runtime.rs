@@ -39,6 +39,25 @@ fn generators_are_listed_under_architecture() {
     assert!(box_engine::engine_registry().generator("Wall").is_none());
 }
 
+/// A roof, platform or wall given with only some fields of a variant gets
+/// that variant's defaults (never zero sizes), and those are in range.
+#[test]
+fn partial_variants_take_variant_defaults() {
+    let game = Game::new().with_plugin(ArchPlugin);
+    let registry = game.registry();
+    assert_eq!(registry.variant_default_problems(), Vec::<String>::new());
+    let ty = registry.component("Roof").unwrap().type_id();
+    let mut json = serde_json::json!({ "shape": { "Dome": { "radius": 4.0 } } });
+    assert!(
+        registry
+            .complete_variants(ty, &mut json, "Roof")
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(json["shape"]["Dome"]["segments"], 32);
+    assert_eq!(json["shape"]["Dome"]["radius"], 4.0);
+}
+
 #[test]
 fn walls_regenerate_through_the_runtime() {
     let game = Game::new().with_plugin(ArchPlugin);

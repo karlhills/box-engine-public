@@ -605,6 +605,10 @@ fn load_resources(
                     warn_unknown_fields(&format!("resource `{name}`"), &extra);
                     extras.insert(name.to_string(), extra);
                 }
+                complete_variants(&registry, ty.type_id(), &mut value, name, || {
+                    format!("resource `{name}`")
+                })
+                .map_err(err)?;
                 let v = registry
                     .value_from_json(ty.type_id(), &value)
                     .map_err(err)?;
@@ -740,6 +744,10 @@ fn instantiate_into(
                         warn_unknown_fields(&format!("entity {uid}, component `{name}`"), &extra);
                         extras.insert(name.to_string(), extra);
                     }
+                    complete_variants(&registry, ty.type_id(), &mut value, name, || {
+                        format!("entity {uid}")
+                    })
+                    .map_err(err)?;
                     let v = registry
                         .value_from_json(ty.type_id(), &value)
                         .map_err(err)?;
@@ -797,6 +805,39 @@ fn take_unknown_fields(
         return serde_json::Map::new();
     }
     migrate::split_unknown_fields(registry, type_id, value.to_mut())
+}
+
+/// Fills the fields a value leaves out of an enum variant (see
+/// [`Registry::complete_variants`]), so a partial variant keeps its variant
+/// instead of falling back to the type's default one. Fields filled with
+/// their type's default (no `VariantDefaults`) are warned about. Clones only
+/// when something is missing.
+fn complete_variants(
+    registry: &Registry,
+    type_id: std::any::TypeId,
+    value: &mut Cow<'_, Json>,
+    name: &str,
+    what: impl FnOnce() -> String,
+) -> Result<(), ReflectError> {
+    let completion = registry.variant_completion(type_id, value, name)?;
+    if completion.is_empty() {
+        return Ok(());
+    }
+    if !completion.type_defaults.is_empty() {
+        tracing::warn!(
+            target: "box_core::scene",
+            "{}: {} not given: using the field type's default (give the field to choose a value)",
+            what(),
+            completion
+                .type_defaults
+                .iter()
+                .map(|f| format!("`{f}`"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
+    completion.apply(value.to_mut());
+    Ok(())
 }
 
 fn warn_unknown_fields(what: &str, extra: &serde_json::Map<String, Json>) {

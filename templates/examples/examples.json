@@ -19,6 +19,11 @@
       "name": "script_demo",
       "title": "Script Demo",
       "description": "A small scripted scene: a player, a follow camera, spinning gems and beacons."
+    },
+    {
+      "name": "guide_samples",
+      "title": "Guide Samples",
+      "description": "Every sample of the user guides, playing: scripts, physics, animation, UI, saves and procedural rules in three scenes."
     }
   ]
 }

@@ -22,6 +22,7 @@ box_engine.workspace = true
 box_editor.workspace = true
 box_render.workspace = true
 egui.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

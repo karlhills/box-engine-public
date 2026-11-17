@@ -1,0 +1,218 @@
+name: Release
+
+# Builds an engine release (docs/RELEASING.md) and creates a DRAFT GitHub
+# release from it. Nothing here publishes: the owner reviews the draft and
+# publishes it by hand.
+#
+# - Tag push `v*`: Windows player template, macOS release (zip, dmg),
+#   clean-machine test, then a draft release with the artefacts. Runs only in
+#   a public repository: macOS minutes cost ten times Linux minutes in a
+#   private one, where a pushed tag builds nothing.
+# - workflow_dispatch (any repository): a dry run of a tag. The same builds
+#   and tests; the results are workflow artifacts, and no release is created.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag (or branch) to build. Dry run: artifacts only, no release."
+        required: true
+        type: string
+
+# One run per tag; a second push of the same tag waits rather than racing.
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # The tag or ref being built, through env so it is never pasted into a script.
+  RELEASE_REF: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  # Cheap Linux check before any Windows or macOS minute: the tag names the
+  # workspace version (box_cli's, as package-macos.sh reads it).
+  version:
+    name: version
+    if: github.event_name == 'workflow_dispatch' || github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - name: Tag matches the workspace version
+        id: version
+        run: |
+          version="$(python3 -I - <<'EOF'
+          import tomllib
+          cli = tomllib.load(open("apps/cli/Cargo.toml", "rb"))["package"]["version"]
+          if isinstance(cli, dict):  # version.workspace = true
+              cli = tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"]
+          print(cli)
+          EOF
+          )"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "box-engine $version, ref $RELEASE_REF"
+          if [[ "$RELEASE_REF" == v* ]]; then
+            [[ "$RELEASE_REF" == "v$version" ]] || {
+              echo "::error::tag $RELEASE_REF does not match the workspace version $version (expected v$version)"
+              exit 1
+            }
+          elif [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            echo "::error::tag $RELEASE_REF does not start with v"
+            exit 1
+          else
+            echo "::notice::dry run of $RELEASE_REF (not a v* tag): version check skipped"
+          fi
+
+  # The Windows player template (docs/EXPORT.md §6): built on Windows, never
+  # cross-compiled. The macOS release bundles it so a Mac exports Windows games.
+  windows:
+    name: windows player template
+    needs: version
+    runs-on: windows-2022
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - name: Install toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+      # Caches are scoped to the ref: a tag's cache helps a re-run of that tag,
+      # not the next release (a cold Windows build takes about 45 minutes).
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release
+          cache-on-failure: true
+      - name: Build box-player.exe (release)
+        run: cargo build --release -p box_player_app
+      - name: Template version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          reported="$(target/release/box-player.exe --version | tr -d '\r')"
+          [[ "$reported" == "box-player $VERSION" ]] || {
+            echo "::error::box-player.exe --version printed '$reported', expected 'box-player $VERSION'"
+            exit 1
+          }
+          mkdir -p target/templates/windows
+          cp target/release/box-player.exe target/templates/windows/box-player.exe
+          ls -l target/templates/windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-player-template
+          path: target/templates/windows/box-player.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  # The macOS release with the Windows template inside, and the clean-machine
+  # test of its zip.
+  macos:
+    name: macos release
+    needs: [version, windows]
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - name: Install toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release
+          cache-on-failure: true
+      # Where package-macos.sh and bundle.sh pick it up.
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-player-template
+          path: target/templates/windows
+      - name: Package
+        run: |
+          scripts/release/package-macos.sh
+          app="target/release-dist/box-engine-$VERSION-macos/Box Editor.app"
+          test -f "$app/Contents/Resources/templates/windows/box-player.exe" || {
+            echo "::error::the release has no Windows player template"
+            exit 1
+          }
+      # First with the GPU steps (headless Metal: run, render, the exported
+      # game, the editor capture). A hosted runner is a virtual Mac whose Metal
+      # device is not dependable, so a failure here falls back to the same
+      # test without those steps and leaves a warning on the run: then do the
+      # GPU steps on a real Mac before publishing (docs/RELEASING.md).
+      - name: Clean-machine test
+        id: clean_gpu
+        continue-on-error: true
+        timeout-minutes: 15
+        run: scripts/release/clean-machine-test.sh "target/release-dist/box-engine-$VERSION-macos.zip"
+      # Uploaded before a fallback run, which starts by clearing the folder.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: clean-machine-captures
+          path: target/captures/clean-machine/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Clean-machine test without GPU steps (fallback)
+        if: steps.clean_gpu.outcome == 'failure'
+        timeout-minutes: 15
+        env:
+          BOX_CLEAN_MACHINE_NO_GPU: "1"
+        run: |
+          echo "::warning::the clean-machine test failed with its GPU steps on this runner; rerun without them. Run scripts/release/clean-machine-test.sh on a real Mac before publishing."
+          scripts/release/clean-machine-test.sh "target/release-dist/box-engine-$VERSION-macos.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: |
+            target/release-dist/box-engine-${{ needs.version.outputs.version }}-macos.zip
+            target/release-dist/box-engine-${{ needs.version.outputs.version }}-macos.dmg
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  # A draft release: tag pushes only. The owner reviews and publishes it.
+  release:
+    name: draft release
+    needs: [version, macos]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-release
+          path: dist
+      - name: Create or update the draft
+        run: |
+          [[ "$RELEASE_REF" == "v$VERSION" ]] || { echo "::error::tag $RELEASE_REF is not v$VERSION"; exit 1; }
+          files=("dist/box-engine-$VERSION-macos.zip")
+          [[ -f "${files[0]}" ]] || { echo "::error::missing ${files[0]}"; exit 1; }
+          [[ -f "dist/box-engine-$VERSION-macos.dmg" ]] && files+=("dist/box-engine-$VERSION-macos.dmg")
+          ls -l "${files[@]}"
+          notes="Built by the release workflow from $GITHUB_SHA. macOS (Apple Silicon) release with the Windows player template inside; ad-hoc signed, not notarised. Draft: review, test on a clean Mac, then publish by hand."
+          if draft="$(gh release view "$RELEASE_REF" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            [[ "$draft" == true ]] || { echo "::error::release $RELEASE_REF is already published; not touching it"; exit 1; }
+            gh release upload "$RELEASE_REF" "${files[@]}" --clobber
+            echo "Updated the draft release $RELEASE_REF"
+          else
+            gh release create "$RELEASE_REF" "${files[@]}" --draft --verify-tag \
+              --title "box-engine $VERSION" --notes "$notes" --generate-notes
+            echo "Created the draft release $RELEASE_REF"
+          fi

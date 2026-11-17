@@ -149,6 +149,16 @@ Adding a field is free: give it a default (`#[reflect(Default)]` on the
 type, which every saved type has) and old files load with that default. No
 step, no version.
 
+A field added to an enum variant (or left out of one in a hand-written
+file, a command or a script: `{ "Sphere": { "radius": 0.5 } }`, or just
+`"Sphere"`) is filled from the enum's per-variant defaults when it has them
+(`#[reflect(VariantDefaults)]` plus `impl VariantDefaults`, see
+`box_core::reflect::VariantDefaults`), else with the field type's default
+(0, false, empty), which scene loading and edit commands warn about. Give
+an enum `VariantDefaults` whenever a zero would be wrong (sizes, segment
+counts); `Registry::variant_default_problems` checks them in tests. The
+inspector uses the same defaults when switching a variant.
+
 Anything else needs a step, registered next to the type
 (`MigrationStep` is `box_core::migrate::Step`, in `box_engine::prelude`):
 

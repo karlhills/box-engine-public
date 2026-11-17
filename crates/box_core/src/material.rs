@@ -11,7 +11,10 @@ use glam::Vec2;
 
 use crate::asset_ref::AssetRef;
 use crate::color::Color;
-use crate::reflect::{Range, Reflect, ReflectComponent, ReflectDefault, Step, Unit};
+use crate::reflect::{
+    Range, Reflect, ReflectComponent, ReflectDefault, ReflectVariantDefaults, Step, Unit,
+    VariantDefaults,
+};
 
 /// How a material's alpha is used.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Reflect)]
@@ -82,7 +85,7 @@ impl WindSway {
 /// The per-vertex weight of [`WindSway`]: 0 pins a vertex, 1 lets it move
 /// fully.
 #[derive(Clone, Copy, Debug, PartialEq, Reflect)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_engine"]
 pub enum WindWeight {
     /// Rises smoothly from 0 at `bottom` to 1 at `top` along the mesh's own
@@ -104,6 +107,14 @@ impl Default for WindWeight {
             bottom: 0.0,
             top: 1.0,
         }
+    }
+}
+
+/// `HeightRamp` from 0 to 1 m, so a ramp given with only `bottom` or `top`
+/// is not flat.
+impl VariantDefaults for WindWeight {
+    fn variant_default(variant: &str) -> Option<Self> {
+        (variant == "HeightRamp").then(Self::default)
     }
 }
 

@@ -15,7 +15,8 @@ use box_core::color::Color;
 pub use box_core::material::{AlphaMode, StandardMaterial, WindSway, WindWeight};
 use box_core::mesh::MeshData;
 use box_core::reflect::{
-    Logarithmic, Range, Reflect, ReflectComponent, ReflectDefault, ReflectResource, Step, Unit,
+    Logarithmic, Range, Reflect, ReflectComponent, ReflectDefault, ReflectResource,
+    ReflectVariantDefaults, Step, Unit, VariantDefaults,
 };
 pub use box_core::shader_material::{ShaderMaterial, ShaderSource};
 use glam::{Vec2, Vec3};
@@ -461,7 +462,7 @@ impl Default for Sky {
 
 /// The sky's colour gradient.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Reflect)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_engine"]
 pub enum SkyGradient {
     /// `sky_horizon` to `sky_zenith` above the horizon, fading slowly to
@@ -478,6 +479,17 @@ pub enum SkyGradient {
         /// Colour just below the horizon (linear).
         below_horizon: Color,
     },
+}
+
+/// `Layered` in the default day sky's blues (not black): an upper sky
+/// between the default horizon and zenith, the horizon colour below.
+impl VariantDefaults for SkyGradient {
+    fn variant_default(variant: &str) -> Option<Self> {
+        (variant == "Layered").then(|| Self::Layered {
+            upper: Color::linear(0.25, 0.42, 0.75),
+            below_horizon: Color::linear(0.55, 0.68, 0.85),
+        })
+    }
 }
 
 /// Aerial perspective: surfaces fade toward `color` with distance,

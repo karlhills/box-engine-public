@@ -3,7 +3,9 @@
 //! its edge. Its walking surface is at y = 0; the slab hangs below.
 
 use bevy_reflect::Reflect;
-use box_core::reflect::{Range, ReflectComponent, ReflectDefault, Step, Unit};
+use box_core::reflect::{
+    Range, ReflectComponent, ReflectDefault, ReflectVariantDefaults, Step, Unit, VariantDefaults,
+};
 use box_proc::generator::{GenContext, GenOutput, Generator};
 use box_proc::poly::{self, Join, Polygon};
 use glam::{Vec2, Vec3};
@@ -23,7 +25,7 @@ const LIP_AO_WIDTH: f32 = 0.45;
 
 /// A platform's outline in plan (x, z), centred on the entity's origin.
 #[derive(Clone, Debug, PartialEq, Reflect)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_arch"]
 pub enum Footprint {
     Rectangle {
@@ -38,6 +40,20 @@ pub enum Footprint {
     },
     /// Your own outline: plan points (x, z), any winding.
     Polygon { points: Vec<Vec2> },
+}
+
+/// The default 4 × 3 m rectangle, a 2 m circle of 32 segments.
+impl VariantDefaults for Footprint {
+    fn variant_default(variant: &str) -> Option<Self> {
+        Some(match variant {
+            "Rectangle" => Self::default(),
+            "Circle" => Self::Circle {
+                radius: 2.0,
+                segments: 32,
+            },
+            _ => return None,
+        })
+    }
 }
 
 impl Default for Footprint {
@@ -84,7 +100,7 @@ impl Footprint {
 
 /// What runs round the platform's edge.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Reflect)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_arch"]
 pub enum PlatformEdge {
     #[default]
@@ -103,6 +119,23 @@ pub enum PlatformEdge {
         #[reflect(@Range { min: 0.01, max: 5.0 }, @Unit("m"), @Step(0.01))]
         width: f32,
     },
+}
+
+/// A 0.12 m trim 0.04 m proud; a 0.55 m lip 0.22 m wide (a low parapet).
+impl VariantDefaults for PlatformEdge {
+    fn variant_default(variant: &str) -> Option<Self> {
+        Some(match variant {
+            "Trim" => Self::Trim {
+                height: 0.12,
+                proud: 0.04,
+            },
+            "Lip" => Self::Lip {
+                height: 0.55,
+                width: 0.22,
+            },
+            _ => return None,
+        })
+    }
 }
 
 /// A slab from a footprint: floors, terraces, landings. The top is at

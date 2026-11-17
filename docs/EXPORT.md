@@ -196,11 +196,12 @@ memory or load time asks for it (R22 stays open).
 
 ## 8. What needs Windows or CI
 
-- Building the Windows `box-player.exe` template (CI job on
-  `windows-latest`). The macOS release packaging
-  (`scripts/release/package-macos.sh`) puts it next to the macOS one when it
-  is in `target/templates/windows/`; a Windows release package is built on
-  Windows.
+- Building the Windows `box-player.exe` template (the `windows` job of
+  `.github/workflows/release.yml`, on `windows-2022`; RELEASING.md §5). The
+  macOS release packaging (`scripts/release/package-macos.sh`) puts it next
+  to the macOS one when it is in `target/templates/windows/`; the workflow
+  puts it there. A Windows release package (editor and CLI for Windows
+  users) would be built on Windows; no script builds one yet.
 - Running an exported Windows game: that the patched exe starts, finds
   `game.pak`, shows its icon in Explorer and the taskbar and its version in
   Properties, and that release builds show no console window. On macOS the

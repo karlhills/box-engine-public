@@ -741,9 +741,10 @@ fn is_asset_list(value: &dyn PartialReflect) -> bool {
 }
 
 /// A value of the enum `info` switched to `variant`. Fields that exist in the
-/// current variant with the same name and type are kept; others get a
-/// sensible default (1 for lengths, 16 for counts, the type's default
-/// otherwise), clamped into their declared range.
+/// current variant with the same name and type are kept; others take the
+/// enum's `VariantDefaults` for that variant, else a sensible default (1 for
+/// lengths, 16 for counts, the type's default otherwise), clamped into their
+/// declared range.
 pub fn switch_variant(
     registry: &Registry,
     current: &dyn PartialReflect,
@@ -765,13 +766,17 @@ pub fn switch_variant(
         VariantInfo::Struct(s) => {
             let mut d = DynamicStruct::default();
             for f in s.iter() {
-                let v = keep(f.name(), f.type_id()).or_else(|| {
-                    let range = f
-                        .custom_attributes()
-                        .get::<box_core::reflect::Range>()
-                        .copied();
-                    default_value(registry, f.type_info()?, range)
-                })?;
+                let v = keep(f.name(), f.type_id())
+                    .or_else(|| {
+                        registry.variant_field_default(type_info.type_id(), variant, f.name())
+                    })
+                    .or_else(|| {
+                        let range = f
+                            .custom_attributes()
+                            .get::<box_core::reflect::Range>()
+                            .copied();
+                        default_value(registry, f.type_info()?, range)
+                    })?;
                 d.insert_boxed(f.name(), v);
             }
             DynamicVariant::Struct(d)
@@ -1083,7 +1088,7 @@ mod tests {
             Shape::Cylinder {
                 radius: 2.0,
                 height: 1.0,
-                segments: 16
+                segments: 32
             }
         );
     }

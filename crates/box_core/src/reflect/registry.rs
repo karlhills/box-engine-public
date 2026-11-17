@@ -14,7 +14,7 @@ use serde::de::DeserializeSeed;
 
 use super::meta::{self, FieldMeta};
 use super::schema::SchemaType;
-use super::{Hidden, NotSaved, ReflectDefault, ReflectError, Value};
+use super::{Hidden, NotSaved, ReflectDefault, ReflectError, ReflectVariantDefaults, Value};
 use crate::world::{Component, Entity, Ref, World};
 
 /// A shared borrow of one component, type-erased.
@@ -648,29 +648,157 @@ impl Registry {
         meta::explain_missing_field(self.info_of(path.target())?, path.target(), path.parsed())
     }
 
+    /// The default value of `variant` of the registered enum `type_id`, from
+    /// its [`VariantDefaults`](super::VariantDefaults) (`None` without one).
+    pub fn variant_default(&self, type_id: TypeId, variant: &str) -> Option<Box<dyn Reflect>> {
+        self.types
+            .get(type_id)?
+            .data::<ReflectVariantDefaults>()?
+            .get(variant)
+    }
+
+    /// The default of the field `field` of `variant` of the enum `type_id`,
+    /// from [`variant_default`](Self::variant_default).
+    pub fn variant_field_default(
+        &self,
+        type_id: TypeId,
+        variant: &str,
+        field: &str,
+    ) -> Option<Value> {
+        let value = self.variant_default(type_id, variant)?;
+        let bevy_reflect::ReflectRef::Enum(e) = value.reflect_ref() else {
+            return None;
+        };
+        if e.variant_name() != variant {
+            return None;
+        }
+        super::clone_value(e.field(field)?).ok()
+    }
+
+    /// Mistakes in the registered enums' [`VariantDefaults`](super::VariantDefaults),
+    /// one line each: a default of another variant than the one asked for, or
+    /// a number outside its field's `@Range`. Empty when all are fine; for
+    /// tests.
+    pub fn variant_default_problems(&self) -> Vec<String> {
+        use bevy_reflect::ReflectRef;
+        let mut problems = Vec::new();
+        for registration in self.types.iter() {
+            let (Some(_), TypeInfo::Enum(info)) = (
+                registration.data::<ReflectVariantDefaults>(),
+                registration.type_info(),
+            ) else {
+                continue;
+            };
+            let ty = info.type_path_table().short_path();
+            for variant in info.iter() {
+                let name = variant.name();
+                let Some(value) = self.variant_default(registration.type_id(), name) else {
+                    continue;
+                };
+                let ReflectRef::Enum(e) = value.reflect_ref() else {
+                    continue;
+                };
+                if e.variant_name() != name {
+                    problems.push(format!(
+                        "{ty}::{name}: the default is variant `{}`",
+                        e.variant_name()
+                    ));
+                    continue;
+                }
+                let bevy_reflect::enums::VariantInfo::Struct(s) = variant else {
+                    continue;
+                };
+                for f in s.iter() {
+                    let (Some(range), Some(field)) = (
+                        f.custom_attributes().get::<super::Range>(),
+                        e.field(f.name()),
+                    ) else {
+                        continue;
+                    };
+                    let number = field
+                        .try_downcast_ref::<f32>()
+                        .map(|v| f64::from(*v))
+                        .or_else(|| field.try_downcast_ref::<f64>().copied())
+                        .or_else(|| field.try_downcast_ref::<u32>().map(|v| f64::from(*v)))
+                        .or_else(|| field.try_downcast_ref::<i32>().map(|v| f64::from(*v)));
+                    if let Some(n) = number
+                        && !(range.min..=range.max).contains(&n)
+                    {
+                        problems.push(format!(
+                            "{ty}::{name}.{}: {n} is outside {}..={}",
+                            f.name(),
+                            range.min,
+                            range.max
+                        ));
+                    }
+                }
+            }
+        }
+        problems.sort();
+        problems
+    }
+
     /// Fills the fields a JSON value leaves out of an enum variant it switches
-    /// to (`{ "Sphere": { "radius": 0.5 } }`) with each field type's default,
-    /// recursing through structs, newtypes, lists and variant payloads.
+    /// to (`{ "Sphere": { "radius": 0.5 } }`), recursing through structs,
+    /// newtypes, lists and variant payloads: from the enum's
+    /// [`VariantDefaults`](super::VariantDefaults) when it has them for that
+    /// variant, else with each field type's default. A bare variant name
+    /// (`"Sphere"`) for a variant with fields becomes its variant default.
     /// Without this, building the value falls back to the type's default
-    /// variant. Returns the paths of the fields it filled (`prefix.shape.sectors`);
-    /// a missing field whose type has no default is an error.
+    /// variant. Returns the paths of the fields filled with their *type's*
+    /// default (`prefix.shape.Sphere.sectors`), which may not be what the
+    /// author meant; a missing field without any default is an error.
     pub fn complete_variants(
         &self,
         type_id: TypeId,
         json: &mut serde_json::Value,
         prefix: &str,
     ) -> Result<Vec<String>, ReflectError> {
-        let mut filled = Vec::new();
-        self.complete_at(type_id, json, prefix, &mut filled)?;
+        let completion = self.variant_completion(type_id, json, prefix)?;
+        let filled = completion.type_defaults.clone();
+        completion.apply(json);
         Ok(filled)
+    }
+
+    /// What [`complete_variants`](Self::complete_variants) would change in
+    /// `json`, without changing it (so a caller holding a borrowed value
+    /// clones it only when something is missing).
+    pub fn variant_completion(
+        &self,
+        type_id: TypeId,
+        json: &serde_json::Value,
+        prefix: &str,
+    ) -> Result<VariantCompletion, ReflectError> {
+        let mut out = VariantCompletion::default();
+        let mut pointer = String::new();
+        let mut path = prefix.to_string();
+        self.complete_at(type_id, json, &mut pointer, &mut path, &mut out)?;
+        Ok(out)
+    }
+
+    /// The payload of `variant`'s default as scene JSON (its field object).
+    fn variant_payload_default(
+        &self,
+        type_id: TypeId,
+        variant: &str,
+    ) -> Result<Option<serde_json::Map<String, serde_json::Value>>, ReflectError> {
+        let Some(value) = self.variant_default(type_id, variant) else {
+            return Ok(None);
+        };
+        let json = self.value_to_json(value.as_partial_reflect())?;
+        Ok(json
+            .get(variant)
+            .and_then(serde_json::Value::as_object)
+            .cloned())
     }
 
     fn complete_at(
         &self,
         type_id: TypeId,
-        json: &mut serde_json::Value,
-        path: &str,
-        filled: &mut Vec<String>,
+        json: &serde_json::Value,
+        pointer: &mut String,
+        path: &mut String,
+        out: &mut VariantCompletion,
     ) -> Result<(), ReflectError> {
         use bevy_reflect::enums::VariantInfo;
         use serde_json::Value as Json;
@@ -679,64 +807,97 @@ impl Registry {
         };
         match (info, json) {
             (TypeInfo::Struct(s), Json::Object(o)) => {
-                for (key, value) in o.iter_mut() {
+                for (key, value) in o {
                     if let Some(f) = s.field(key) {
-                        self.complete_at(f.type_id(), value, &format!("{path}.{key}"), filled)?;
+                        descend(pointer, path, key, true, |pointer, path| {
+                            self.complete_at(f.type_id(), value, pointer, path, out)
+                        })?;
                     }
                 }
             }
             (TypeInfo::TupleStruct(t), json) if t.field_len() == 1 => {
                 if let Some(f) = t.field_at(0) {
-                    self.complete_at(f.type_id(), json, path, filled)?;
+                    self.complete_at(f.type_id(), json, pointer, path, out)?;
                 }
             }
             (TypeInfo::List(l), Json::Array(items)) => {
-                for (i, item) in items.iter_mut().enumerate() {
-                    self.complete_at(l.item_ty().id(), item, &format!("{path}[{i}]"), filled)?;
+                for (i, item) in items.iter().enumerate() {
+                    descend(pointer, path, &i.to_string(), false, |pointer, path| {
+                        self.complete_at(l.item_ty().id(), item, pointer, path, out)
+                    })?;
+                }
+            }
+            (TypeInfo::Enum(e), Json::String(name)) => {
+                if let Some(VariantInfo::Struct(_)) = e.variant(name)
+                    && let Some(payload) = self.variant_payload_default(type_id, name)?
+                {
+                    let mut value = serde_json::Map::new();
+                    value.insert(name.clone(), Json::Object(payload));
+                    out.fixes.push(Fix::Replace {
+                        at: pointer.clone(),
+                        value: Json::Object(value),
+                    });
                 }
             }
             (TypeInfo::Enum(e), Json::Object(o)) if o.len() == 1 => {
-                let Some((name, payload)) = o.iter_mut().next() else {
+                let Some((name, payload)) = o.iter().next() else {
                     return Ok(());
                 };
                 let Some(variant) = e.variant(name) else {
                     return Ok(());
                 };
-                let at = format!("{path}.{name}");
-                match (variant, payload) {
-                    (VariantInfo::Struct(v), Json::Object(fields)) => {
-                        for f in v.iter() {
-                            let field_path = format!("{at}.{}", f.name());
-                            match fields.get_mut(f.name()) {
-                                Some(value) => {
-                                    self.complete_at(f.type_id(), value, &field_path, filled)?
+                descend(pointer, path, name, true, |pointer, path| {
+                    match (variant, payload) {
+                        (VariantInfo::Struct(v), Json::Object(fields)) => {
+                            let mut defaults = None;
+                            for f in v.iter() {
+                                if let Some(value) = fields.get(f.name()) {
+                                    descend(pointer, path, f.name(), true, |pointer, path| {
+                                        self.complete_at(f.type_id(), value, pointer, path, out)
+                                    })?;
+                                    continue;
                                 }
-                                None => {
-                                    let default = self
-                                        .types
-                                        .get(f.type_id())
-                                        .and_then(default_of)
-                                        .ok_or_else(|| {
-                                            ReflectError::NoDefault(format!(
-                                                "{field_path} (give it in the value)"
-                                            ))
-                                        })?;
-                                    fields.insert(
-                                        f.name().to_string(),
-                                        self.value_to_json(default.as_ref())?,
-                                    );
-                                    filled.push(field_path);
+                                if defaults.is_none() {
+                                    defaults = Some(self.variant_payload_default(type_id, name)?);
                                 }
+                                let from_variant = defaults
+                                    .as_ref()
+                                    .and_then(Option::as_ref)
+                                    .and_then(|d| d.get(f.name()))
+                                    .cloned();
+                                let value = match from_variant {
+                                    Some(v) => v,
+                                    None => {
+                                        let field_path = format!("{path}.{}", f.name());
+                                        let default = self
+                                            .types
+                                            .get(f.type_id())
+                                            .and_then(default_of)
+                                            .ok_or_else(|| {
+                                                ReflectError::NoDefault(format!(
+                                                    "{field_path} (give it in the value)"
+                                                ))
+                                            })?;
+                                        out.type_defaults.push(field_path);
+                                        self.value_to_json(default.as_ref())?
+                                    }
+                                };
+                                out.fixes.push(Fix::Insert {
+                                    object: pointer.clone(),
+                                    key: f.name().to_string(),
+                                    value,
+                                });
                             }
                         }
-                    }
-                    (VariantInfo::Tuple(t), payload) if t.field_len() == 1 => {
-                        if let Some(f) = t.field_at(0) {
-                            self.complete_at(f.type_id(), payload, &at, filled)?;
+                        (VariantInfo::Tuple(t), payload) if t.field_len() == 1 => {
+                            if let Some(f) = t.field_at(0) {
+                                self.complete_at(f.type_id(), payload, pointer, path, out)?;
+                            }
                         }
+                        _ => {}
                     }
-                    _ => {}
-                }
+                    Ok(())
+                })?;
             }
             _ => {}
         }
@@ -797,6 +958,85 @@ fn default_of(registration: &TypeRegistration) -> Option<Value> {
     registration
         .data::<ReflectDefault>()
         .map(|d| d.default().into_partial_reflect())
+}
+
+/// Runs `f` with `pointer` (a JSON pointer) and `path` (a field path)
+/// extended by `key`, restoring both afterwards.
+fn descend<R>(
+    pointer: &mut String,
+    path: &mut String,
+    key: &str,
+    field: bool,
+    f: impl FnOnce(&mut String, &mut String) -> R,
+) -> R {
+    let (p, q) = (pointer.len(), path.len());
+    pointer.push('/');
+    if key.contains(['~', '/']) {
+        pointer.push_str(&key.replace('~', "~0").replace('/', "~1"));
+    } else {
+        pointer.push_str(key);
+    }
+    if field {
+        path.push('.');
+        path.push_str(key);
+    } else {
+        path.push('[');
+        path.push_str(key);
+        path.push(']');
+    }
+    let r = f(pointer, path);
+    pointer.truncate(p);
+    path.truncate(q);
+    r
+}
+
+/// The changes [`Registry::variant_completion`] found.
+#[derive(Clone, Debug, Default)]
+pub struct VariantCompletion {
+    fixes: Vec<Fix>,
+    /// Paths of the fields filled with their type's default (no variant
+    /// default covered them).
+    pub type_defaults: Vec<String>,
+}
+
+#[derive(Clone, Debug)]
+enum Fix {
+    /// Insert `key` into the object at the JSON pointer `object`.
+    Insert {
+        object: String,
+        key: String,
+        value: serde_json::Value,
+    },
+    /// Replace the value at the JSON pointer `at`.
+    Replace {
+        at: String,
+        value: serde_json::Value,
+    },
+}
+
+impl VariantCompletion {
+    /// True when the value is complete.
+    pub fn is_empty(&self) -> bool {
+        self.fixes.is_empty()
+    }
+
+    /// Applies the changes to the value they were found in.
+    pub fn apply(self, json: &mut serde_json::Value) {
+        for fix in self.fixes {
+            match fix {
+                Fix::Insert { object, key, value } => {
+                    if let Some(o) = json.pointer_mut(&object).and_then(|o| o.as_object_mut()) {
+                        o.insert(key, value);
+                    }
+                }
+                Fix::Replace { at, value } => {
+                    if let Some(slot) = json.pointer_mut(&at) {
+                        *slot = value;
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// A registered component type.
@@ -1046,5 +1286,125 @@ mod tests {
         assert!(registry.register::<other::Hit>().is_err());
         assert!(registry.register_event::<other::Name>().is_err());
         assert_eq!(registry.take_errors().len(), 2);
+    }
+
+    /// A component whose enum has variant defaults for one variant only.
+    #[derive(Reflect, Clone, Debug, Default, PartialEq)]
+    #[reflect(Component, Default, Clone)]
+    struct Spawner {
+        pattern: Pattern,
+    }
+
+    #[derive(Reflect, Clone, Debug, PartialEq)]
+    #[reflect(Default, Clone, super::super::VariantDefaults)]
+    enum Pattern {
+        Ring { radius: f32, count: u32 },
+        Line { length: f32, count: u32 },
+    }
+
+    impl Default for Pattern {
+        fn default() -> Self {
+            Self::Ring {
+                radius: 2.0,
+                count: 8,
+            }
+        }
+    }
+
+    impl super::super::VariantDefaults for Pattern {
+        fn variant_default(variant: &str) -> Option<Self> {
+            (variant == "Ring").then(Self::default)
+        }
+    }
+
+    fn primitive(registry: &Registry, json: serde_json::Value) -> crate::primitive::Primitive {
+        let ty = registry.component("Primitive").unwrap().type_id();
+        let mut json = json;
+        let filled = registry
+            .complete_variants(ty, &mut json, "Primitive")
+            .unwrap();
+        assert!(filled.is_empty(), "type defaults used: {filled:?}");
+        let value = registry.value_from_json(ty, &json).unwrap();
+        crate::primitive::Primitive::from_reflect(value.as_ref()).unwrap()
+    }
+
+    #[test]
+    fn partial_variants_take_the_variant_defaults() {
+        use crate::primitive::{Primitive, Shape};
+        let registry = Registry::with_core_types();
+        let p = primitive(
+            &registry,
+            serde_json::json!({ "shape": { "Sphere": { "radius": 0.25 } } }),
+        );
+        assert_eq!(p, Primitive::sphere(0.25));
+        let p = primitive(
+            &registry,
+            serde_json::json!({ "shape": { "Capsule": { "rings": 3 } } }),
+        );
+        assert_eq!(
+            p.shape,
+            Shape::Capsule {
+                radius: 0.4,
+                half_height: 0.4,
+                segments: 24,
+                rings: 3
+            }
+        );
+        // A bare variant name is the whole variant default.
+        let p = primitive(&registry, serde_json::json!({ "shape": "Cylinder" }));
+        assert_eq!(p, Primitive::cylinder(0.5, 1.0));
+        let p = primitive(&registry, serde_json::json!({ "shape": { "Plane": {} } }));
+        assert_eq!(p, Primitive::plane(glam::Vec2::splat(10.0)));
+    }
+
+    #[test]
+    fn variants_without_defaults_use_field_type_defaults_and_say_so() {
+        let mut registry = Registry::new();
+        registry.register::<Spawner>().unwrap();
+        let ty = TypeId::of::<Spawner>();
+        let mut json = serde_json::json!({ "pattern": { "Line": { "length": 3.0 } } });
+        let filled = registry
+            .complete_variants(ty, &mut json, "Spawner")
+            .unwrap();
+        assert_eq!(filled, ["Spawner.pattern.Line.count"]);
+        assert_eq!(json["pattern"]["Line"]["count"], 0);
+        let mut json = serde_json::json!({ "pattern": { "Ring": { "count": 3 } } });
+        assert!(
+            registry
+                .complete_variants(ty, &mut json, "Spawner")
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(json["pattern"]["Ring"]["radius"], 2.0);
+        let count = registry
+            .variant_field_default(TypeId::of::<Pattern>(), "Ring", "count")
+            .and_then(|v| v.try_downcast_ref::<u32>().copied());
+        assert_eq!(count, Some(8));
+        assert!(
+            registry
+                .variant_field_default(TypeId::of::<Pattern>(), "Line", "count")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn a_complete_value_needs_no_completion() {
+        let registry = Registry::with_core_types();
+        let ty = registry.component("Primitive").unwrap().type_id();
+        let full = registry
+            .value_to_json(&crate::primitive::Primitive::sphere(1.0))
+            .unwrap();
+        assert!(
+            registry
+                .variant_completion(ty, &full, "Primitive")
+                .unwrap()
+                .is_empty()
+        );
+        let partial = serde_json::json!({ "shape": { "Sphere": {} } });
+        let completion = registry
+            .variant_completion(ty, &partial, "Primitive")
+            .unwrap();
+        assert!(!completion.is_empty());
+        assert!(completion.type_defaults.is_empty());
     }
 }

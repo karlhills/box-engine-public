@@ -2,9 +2,11 @@
 
 How an engine release is built and tested (M9: "a user can install
 box-engine, create a project, write a script, and export a runnable game"
-without Rust). The scripts build releases **locally**: nothing in this
-repository publishes, tags, uploads, or signs with a real identity. Those
-steps belong to whoever publishes a release.
+without Rust). The scripts build releases **locally**; the release workflow
+(section 5) runs the same scripts on GitHub and creates a **draft** release
+when a `v*` tag is pushed. Nothing in this repository creates tags,
+publishes a release, or signs with a real identity: the owner tags, reviews
+the draft and publishes it by hand.
 
 ## 1. Version
 
@@ -72,8 +74,11 @@ Application: …"`, programs first), notarises the zip or dmg with
 | `Resources/templates/projects/` | the repository's `templates/projects/` folder (the variable `project_templates` in `package-macos.sh`) | Reported; `box new` makes its built-in default project |
 
 The Windows template must be built from the same commit (same version):
-`templates/VERSION` covers both platforms. How CI builds it and how a
-Windows release is packaged is documented separately with the Windows work.
+`templates/VERSION` covers both platforms. The release workflow (section 5)
+builds it on Windows and puts it there before packaging; locally, download
+its `windows-player-template` artifact from a run of the same commit into
+`target/templates/windows/`. There is no Windows release package (editor and
+CLI for Windows users) yet: no script builds one.
 
 ## 3. What `install.sh` does
 
@@ -127,6 +132,13 @@ failure the test folder is kept and its path printed. The PNG and library
 checks run outside the clean environment with the host's `python3`
 (`scripts/release/png_check.py`, standard library only) and `otool`.
 
+`BOX_CLEAN_MACHINE_NO_GPU=1` skips the steps that start a GPU device
+(`box run`, `box render`, the exported game's two runs, the editor capture)
+and says so at the end; every other step runs, including the export and the
+exported app's signature. It exists for the release workflow's fallback on a
+hosted runner, a virtual Mac whose Metal device is not dependable. A release
+is not tested until the full script has passed on a real Mac.
+
 Measured (Apple M3 Ultra, macOS 26.6, warm caches, three runs): the script
 takes 7-12 s: 0.2-0.3 s to unpack, 0.7-0.8 s to install, about 50 ms for
 `box new`, 20-30 ms for `box check`, 0.4-2.4 s for `box run --frames 120`
@@ -142,14 +154,71 @@ the build machine's). Do that by hand before publishing: download the
 artefact, follow [the getting-started guide](guide/getting-started.md)
 from "Install a release" to "Export your game".
 
-## 5. Checklist
+## 5. The release workflow
+
+`.github/workflows/release.yml` builds a release on GitHub and leaves it as
+a **draft**. Releases are published from the public repository
+(github.com/karlhills/box-engine-public). The private source repository
+carries the same workflow, but a tag pushed there builds nothing (the
+`version` job runs only when `github.event.repository.private` is false), so
+private macOS minutes (ten times Linux minutes) are not spent.
+
+| Job | Runner | What |
+|---|---|---|
+| `version` | ubuntu-24.04 | the tag must be `v` + box_cli's version (the workspace version); runs before any Windows or macOS minute |
+| `windows` | windows-2022 | `cargo build --release -p box_player_app`, checks `box-player.exe --version`; artifact `windows-player-template` |
+| `macos` | macos-26 | the Windows template into `target/templates/windows/`, `package-macos.sh` (fails if the template is not in the app), the clean-machine test on the zip; artifacts `macos-release` (zip, dmg) and `clean-machine-captures` |
+| `release` | ubuntu-24.04 | tag pushes only, and the only job with `contents: write`: `gh release create --draft --verify-tag --generate-notes` with the zip and dmg; a re-run replaces the assets of an existing draft and refuses to touch a published release |
+
+The clean-machine test runs first in full. If it fails on the runner (the
+hosted Mac's Metal device), it runs again with `BOX_CLEAN_MACHINE_NO_GPU=1`
+and the run carries a warning: then run the full script on a real Mac before
+publishing. Workflow artifacts are kept 14 days.
+
+**Dry run:** Actions ▸ Release ▸ Run workflow, with a tag (or a branch: the
+version check is then skipped). Every job but `release` runs; the results
+are workflow artifacts and no release is created. Dry runs work in the
+private repository too, where their macOS minutes count.
+
+Caches (`Swatinem/rust-cache`, as in CI) are scoped to the ref: a tag's
+cache speeds up a re-run of that tag, not the next release. Expect a cold
+run of about an hour, most of it the Windows build.
+
+### Cutting a release
+
+1. In the source repository: bump `[workspace.package] version` in
+   `Cargo.toml`, write the release notes (unstable Rust API changes, per
+   STABILITY.md), commit, and do the checklist's local steps.
+2. Sync the commit to the public repository (the maintainers' export, which
+   runs the leak check and the CPU test suite) and push its `main`; CI runs
+   there.
+3. In the public repository, tag the synced commit and push the tag:
+   `git tag -a v<version> -m "box-engine <version>"`, then
+   `git push origin v<version>`.
+4. The workflow attaches `box-engine-<version>-macos.zip` and `.dmg` to a
+   draft release titled `box-engine <version>`, with generated notes.
+5. Review the draft: download the zip and do the manual clean-Mac test
+   (section 4); look at the `clean-machine-captures` artifact and check
+   whether the run fell back to the no-GPU test; edit the notes.
+6. Publish the draft by hand. Developer ID signing and notarisation
+   (section 2), if any, happen before replacing the assets; the workflow
+   never signs with a real identity.
+
+A tag that does not match the version fails the `version` job: delete the
+tag (and any draft), fix, and tag again.
+
+## 6. Checklist
 
 1. Version bumped; release notes written (unstable Rust API
    changes listed, per STABILITY.md).
 2. `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`,
    `cargo test --workspace` pass.
-3. CI's Windows template in `target/templates/windows/` (same commit).
+3. The Windows template in `target/templates/windows/` (same commit) for a
+   local package: the release workflow's `windows-player-template` artifact.
 4. `scripts/release/package-macos.sh`: both slots reported as expected.
-5. `scripts/release/clean-machine-test.sh` passes; captures reviewed.
+5. `scripts/release/clean-machine-test.sh` passes on a real Mac (without
+   `BOX_CLEAN_MACHINE_NO_GPU`); captures reviewed.
 6. Manual test on a clean Mac (above) and the Windows clean-machine test.
-7. The publisher signs, notarises and uploads; nothing here does.
+7. Tag pushed in the public repository (section 5); the draft release
+   reviewed and published by hand. Developer ID signing and notarisation,
+   if any, are the publisher's; nothing here does them.

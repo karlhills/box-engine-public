@@ -9,6 +9,11 @@
 #   (default: the newest target/release-dist/box-engine-*-macos.zip)
 #
 # BOX_TEST_TEMPLATE=<name>  create the project with `box new --template <name>`
+# BOX_CLEAN_MACHINE_NO_GPU=1  skip the steps that start a GPU device (`box run`,
+#                           `box render`, the exported game's runs, the editor
+#                           capture): for a machine without a usable Metal
+#                           device (the release workflow's fallback on a
+#                           hosted runner). Every other step still runs.
 #
 # Every step runs under `env -i` with HOME set to a new folder and PATH set to
 # the system folders plus the install's ~/.local/bin. The checks around the
@@ -57,6 +62,19 @@ step() {
 }
 fail() { echo "FAIL: $*" >&2; exit 1; }
 not_blank() { python3 -I "$here/png_check.py" blank "$1" || fail "$1 is blank"; }
+gpu=1
+[[ "${BOX_CLEAN_MACHINE_NO_GPU:-}" == 1 ]] && gpu=0
+# Like `step`, for a step that needs a GPU: reported as skipped without one.
+gpu_step() {
+  if [[ $gpu == 1 ]]; then
+    step "$@"
+  else
+    echo
+    echo "== $1: skipped (BOX_CLEAN_MACHINE_NO_GPU=1)"
+    skipped="$skipped $1;"
+  fi
+}
+skipped=""
 
 echo "Release: $zip"
 echo "Clean HOME: $home"
@@ -151,12 +169,12 @@ else
 fi
 
 step "box check" in_projects box check my-game
-step "box run --frames 120" in_projects box run my-game --frames 120
+gpu_step "box run --frames 120" in_projects box run my-game --frames 120
 render() {
   in_projects box render my-game --out "$captures/render.png" --size 1280x720
   not_blank "$captures/render.png"
 }
-step "box render" render
+gpu_step "box render" render
 
 export_macos() {
   in_projects box export --project my-game --target macos --profile release --out my-game/export
@@ -167,13 +185,17 @@ exported="$(ls -d "$game"/export/*.app 2>/dev/null | head -1 || true)"
 
 # The exported game, moved away from the project and the engine, as a player
 # would get it.
-run_exported() {
-  local shipped="$home/Desktop"
+shipped="$home/Desktop"
+ship_exported() {
   mkdir -p "$shipped"
   ditto "$exported" "$shipped/$(basename "$exported")"
+  codesign --verify --strict "$shipped/$(basename "$exported")"
+  echo "$(basename "$exported"): copied to another folder, signature valid"
+}
+step "Copy the exported game away" ship_exported
+run_exported() {
   local bin
   bin="$shipped/$(basename "$exported")/Contents/MacOS/$(basename "$exported" .app)"
-  codesign --verify --strict "$shipped/$(basename "$exported")"
   (cd "$shipped" && clean "$bin" --frames 5 --size 1280x720 --capture "$captures/exported_f5.png")
   (cd "$shipped" && clean "$bin" --frames 35 --size 1280x720 --capture "$captures/exported_f35.png")
   not_blank "$captures/exported_f5.png"
@@ -184,7 +206,7 @@ run_exported() {
       || fail "the exported game's frames 5 and 35 are equal: the script did not run"
   fi
 }
-step "Run the exported game (headless)" run_exported
+gpu_step "Run the exported game (headless)" run_exported
 
 windows_template="$app/Contents/Resources/templates/windows/box-player.exe"
 if [[ -f "$windows_template" ]]; then
@@ -202,7 +224,7 @@ editor() {
   in_projects box-editor my-game --capture "$captures/editor.png"
   not_blank "$captures/editor.png"
 }
-step "box-editor --capture" editor
+gpu_step "box-editor --capture" editor
 
 uninstall() {
   (cd "$release" && clean ./install.sh --uninstall)
@@ -215,11 +237,18 @@ uninstall() {
 step "install.sh --uninstall" uninstall
 
 mkdir -p "$out"
-cp "$captures"/*.png "$out/"
+if compgen -G "$captures/*.png" >/dev/null; then
+  cp "$captures"/*.png "$out/"
+fi
 keep_work=0
 rm -rf "$work"
 
 echo
-echo "Clean-machine test passed: box-engine $version"
+if [[ $gpu == 1 ]]; then
+  echo "Clean-machine test passed: box-engine $version"
+else
+  echo "Clean-machine test passed without the GPU steps: box-engine $version"
+  echo "Not run (BOX_CLEAN_MACHINE_NO_GPU=1):$skipped"
+fi
 printf '%s' "$timings"
 echo "Captures: $out"

@@ -10,12 +10,12 @@ use box_core::identity::{Name, Uid};
 use box_core::math::Aabb;
 use box_core::mesh::MeshData;
 use box_core::prelude::{Assets, Entity, GlobalTransform, Primitive, Shape, Transform, World};
-use box_core::reflect::{FieldPath, PartialReflect, Value};
+use box_core::reflect::{FieldPath, PartialReflect, Value, VariantDefaults};
 use box_core::world::Placement;
 use box_engine::Game;
 use box_engine::control::ControlServer;
 use box_render::MeshRenderer;
-use glam::{Quat, UVec2, Vec2, Vec3};
+use glam::{Quat, Vec2, Vec3};
 
 use crate::camera::EditorCamera;
 use crate::gizmo::GizmoState;
@@ -552,29 +552,15 @@ impl NewEntity {
         }
     }
 
+    /// The shape it adds: the variant default of `Shape` (also what a
+    /// scene or command gets for a variant given without its fields).
     fn shape(self) -> Option<Shape> {
-        Some(match self {
-            Self::Cube => Shape::Cuboid { size: Vec3::ONE },
-            Self::Sphere => Shape::Sphere {
-                radius: 0.5,
-                sectors: 32,
-                stacks: 16,
-            },
-            Self::Cylinder => Shape::Cylinder {
-                radius: 0.5,
-                height: 1.0,
-                segments: 32,
-            },
-            Self::Capsule => Shape::Capsule {
-                radius: 0.4,
-                half_height: 0.4,
-                segments: 24,
-                rings: 8,
-            },
-            Self::Plane => Shape::Plane {
-                size: Vec2::splat(10.0),
-                cells: UVec2::ONE,
-            },
+        Shape::variant_default(match self {
+            Self::Cube => "Cuboid",
+            Self::Sphere => "Sphere",
+            Self::Cylinder => "Cylinder",
+            Self::Capsule => "Capsule",
+            Self::Plane => "Plane",
             _ => return None,
         })
     }

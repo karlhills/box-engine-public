@@ -26,7 +26,9 @@
 use bevy_reflect::Reflect;
 use box_core::identity::Uid;
 use box_core::pmath;
-use box_core::reflect::{Range, ReflectComponent, ReflectDefault, Step, Unit};
+use box_core::reflect::{
+    Range, ReflectComponent, ReflectDefault, ReflectVariantDefaults, Step, Unit, VariantDefaults,
+};
 use box_proc::generator::{ColliderHint, GenContext, GenOutput, Generator, HintBox};
 use box_proc::inputs::Inputs;
 use box_proc::spline::{Sampling, Spline};
@@ -86,7 +88,7 @@ impl WallPoint {
 
 /// Where a wall's centreline comes from.
 #[derive(Clone, Debug, PartialEq, Reflect)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_arch"]
 pub enum WallPath {
     /// A polyline with optional arcs, in the entity's local space.
@@ -103,6 +105,20 @@ pub enum WallPath {
         #[reflect(@Range { min: 0.001, max: 1.0 }, @Unit("m"))]
         tolerance: f32,
     },
+}
+
+/// The default two-point wall; this entity's spline sampled within 1 cm.
+impl VariantDefaults for WallPath {
+    fn variant_default(variant: &str) -> Option<Self> {
+        Some(match variant {
+            "Points" => Self::default(),
+            "Spline" => Self::Spline {
+                entity: None,
+                tolerance: 0.01,
+            },
+            _ => return None,
+        })
+    }
 }
 
 impl Default for WallPath {

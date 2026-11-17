@@ -41,6 +41,7 @@
 //! | `#[reflect(Component)]` | type | Storable as a component; required by [`Registry::register`] |
 //! | `#[reflect(Resource)]` | type | Storable as a world resource; required by [`Registry::register_resource`] |
 //! | `#[reflect(Default)]` | type | Enables "add component" with a default value |
+//! | `#[reflect(VariantDefaults)]` | enum | Per-variant defaults for fields a value leaves out ([`VariantDefaults`]) |
 //! | `#[reflect(@Range { min, max })]` | field | Slider range and clamping hint |
 //! | `#[reflect(@Unit("m"))]` | field | Display unit |
 //! | `#[reflect(@Step(0.1))]` | field | Drag step; also the decimals shown |
@@ -70,7 +71,7 @@ pub use meta::FieldMeta;
 pub use path::FieldPath;
 pub use registry::{
     ComponentRef, ComponentType, ComponentTypes, EventType, ReflectComponent, ReflectEvent,
-    ReflectResource, Registry, ResourceType,
+    ReflectResource, Registry, ResourceType, VariantCompletion,
 };
 pub use schema::{Checked, SchemaType};
 
@@ -152,6 +153,70 @@ pub struct Hidden;
 #[derive(Reflect, Clone, Copy, Debug, PartialEq)]
 #[type_path = "box_engine"]
 pub struct NotSaved;
+
+/// Per-variant defaults of a reflected enum: the value a variant starts as
+/// when a scene file, an edit command, a script or the inspector switches to
+/// it without giving every field. `{ "Sphere": { "radius": 0.5 } }` takes
+/// `sectors` and `stacks` from `variant_default("Sphere")` instead of each
+/// field type's default (0). Enable it with `#[reflect(VariantDefaults)]`
+/// next to `#[reflect(Default)]`:
+///
+/// ```
+/// use box_core::reflect::{Reflect, ReflectDefault, ReflectVariantDefaults, VariantDefaults};
+///
+/// #[derive(Reflect, Clone, Debug, PartialEq)]
+/// #[reflect(Default, VariantDefaults)]
+/// pub enum Spawner {
+///     Ring { radius: f32, count: u32 },
+///     Line { length: f32, count: u32 },
+/// }
+///
+/// impl Default for Spawner {
+///     fn default() -> Self {
+///         Self::Ring { radius: 2.0, count: 8 }
+///     }
+/// }
+///
+/// impl VariantDefaults for Spawner {
+///     fn variant_default(variant: &str) -> Option<Self> {
+///         Some(match variant {
+///             "Ring" => Self::default(),
+///             "Line" => Self::Line { length: 4.0, count: 8 },
+///             _ => return None,
+///         })
+///     }
+/// }
+/// ```
+///
+/// A variant for which it returns `None` (or a type without it) fills each
+/// missing field with its type's default, and edit commands warn about it.
+pub trait VariantDefaults: Reflect + Sized {
+    /// The default value of the variant named `variant` (its Rust name), or
+    /// `None` when it has none.
+    fn variant_default(variant: &str) -> Option<Self>;
+}
+
+/// Type data for [`VariantDefaults`], added by `#[reflect(VariantDefaults)]`.
+/// Read it through [`Registry::variant_default`].
+#[derive(Clone)]
+pub struct ReflectVariantDefaults {
+    get: fn(&str) -> Option<Box<dyn Reflect>>,
+}
+
+impl ReflectVariantDefaults {
+    /// The default value of `variant`, if the type has one.
+    pub fn get(&self, variant: &str) -> Option<Box<dyn Reflect>> {
+        (self.get)(variant)
+    }
+}
+
+impl<T: VariantDefaults> bevy_reflect::CreateTypeData<T> for ReflectVariantDefaults {
+    fn create_type_data(_: ()) -> Self {
+        Self {
+            get: |variant| T::variant_default(variant).map(|v| Box::new(v) as Box<dyn Reflect>),
+        }
+    }
+}
 
 /// Errors from the registry and from reflective world access.
 #[derive(Debug, thiserror::Error)]

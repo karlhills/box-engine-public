@@ -4,7 +4,7 @@
 
 A lightweight, open game engine for creating beautiful, interactive 3D worlds. Draw, shape, and build directly in the editor with procedural tools that understand what you're creating — then bring it to life with gameplay.
 
-> **Status: Milestone 8 (second game validation) built and verified headlessly on macOS: `examples/cinder_keep`, a third-person action-platformer written only in Luau on imported glTF levels (a 120-enemy wave, dialogue, checkpoints, a scene transition), completable in the player and the editor; native games can leave out rigid bodies and scripting; gaps in [docs/M8_GAP_REPORT.md](docs/M8_GAP_REPORT.md). M7 brought Luau scripting, dynamics, skinned animation, game UI and saves; M6 a construction vertical slice; M5 procedural generators. M1–M8 Windows runs pending.** See [AGENTS.md](AGENTS.md) for how to build, run and verify, and for the `box` CLI that agents can use to create, edit and render scenes.
+> **Status: Milestone 9 (external developer readiness) built and verified headlessly on macOS: `box export` and File ▸ Export make a macOS `.app` or a Windows folder with the game in one pak; project templates and an examples gallery; user guides and a generated script API reference; project upgrades with backups; crash reports and actionable errors; a macOS release package tested on a clean machine. M8 brought a second game in Luau only, M7 scripting, dynamics, animation, game UI and saves, M5–M6 procedural generators and architecture. Windows runs pending.** See [AGENTS.md](AGENTS.md) for how to build, run and verify, and for the `box` CLI that agents can use to create, edit and render scenes.
 
 ## What it will be
 

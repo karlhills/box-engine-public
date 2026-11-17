@@ -12,7 +12,9 @@ use std::borrow::Cow;
 
 use bevy_reflect::Reflect;
 use box_core::identity::Uid;
-use box_core::reflect::{Range, ReflectComponent, ReflectDefault, Unit};
+use box_core::reflect::{
+    Range, ReflectComponent, ReflectDefault, ReflectVariantDefaults, Unit, VariantDefaults,
+};
 use glam::{Affine3A, Vec2, Vec3};
 
 use crate::generator::{GenContext, GenOutput, Generator};
@@ -23,7 +25,7 @@ use crate::sweep::{JointEnd, Profile, SweepParams, sweep};
 /// The cross-section a [`Sweep`] carries along its spline (x across the
 /// path, y up).
 #[derive(Clone, Debug, PartialEq, Reflect)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_engine"]
 pub enum SweepProfile {
     /// A rectangle standing on the path, centred across it: a wall, a kerb,
@@ -55,6 +57,20 @@ impl Default for SweepProfile {
             radius: 0.15,
             segments: 16,
         }
+    }
+}
+
+/// A 0.3 × 0.15 m kerb, the default 0.15 m circle.
+impl VariantDefaults for SweepProfile {
+    fn variant_default(variant: &str) -> Option<Self> {
+        Some(match variant {
+            "Rect" => Self::Rect {
+                width: 0.3,
+                height: 0.15,
+            },
+            "Circle" => Self::default(),
+            _ => return None,
+        })
     }
 }
 

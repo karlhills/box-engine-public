@@ -6,7 +6,10 @@ use box_core::assets::{AssetLookup, Assets};
 use box_core::mesh::MeshData;
 use box_core::mesh_asset::MeshAsset;
 use box_core::primitive::Shape;
-use box_core::reflect::{Range, Reflect, ReflectComponent, ReflectDefault, Step, Unit};
+use box_core::reflect::{
+    Range, Reflect, ReflectComponent, ReflectDefault, ReflectVariantDefaults, Step, Unit,
+    VariantDefaults,
+};
 use box_core::world::World;
 use glam::Vec3;
 use parry3d::shape::{SharedShape, TriMeshFlags};
@@ -53,7 +56,7 @@ pub struct Collider {
 
 /// The shape of a [`Collider`]. Round shapes are aligned with Y.
 #[derive(Reflect, Clone, Debug, Default, PartialEq)]
-#[reflect(Default, Clone, Debug, PartialEq)]
+#[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
 #[type_path = "box_engine"]
 pub enum ColliderShape {
     /// The shape of the entity's `Primitive` component, kept in step with it
@@ -106,6 +109,27 @@ pub enum ColliderShape {
     /// `AssetLookup` like `Mesh`; rebuilt when the mesh asset changes. Holes
     /// and concave parts are filled in. `offset` is ignored.
     ConvexHull,
+}
+
+/// The sizes of the matching `Primitive` shapes the editor adds (a 1 m cube,
+/// a 0.5 m sphere, a 0.4 m capsule with a 0.4 m half height, a 0.5 × 1 m
+/// cylinder), so a shape given with only some fields is never zero-sized.
+impl VariantDefaults for ColliderShape {
+    fn variant_default(variant: &str) -> Option<Self> {
+        Some(match variant {
+            "Cuboid" => Self::Cuboid { size: Vec3::ONE },
+            "Sphere" => Self::Sphere { radius: 0.5 },
+            "Capsule" => Self::Capsule {
+                radius: 0.4,
+                half_height: 0.4,
+            },
+            "Cylinder" => Self::Cylinder {
+                radius: 0.5,
+                height: 1.0,
+            },
+            _ => return None,
+        })
+    }
 }
 
 impl ColliderShape {

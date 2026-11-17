@@ -530,11 +530,13 @@ fn construct(
     Ok(value)
 }
 
-/// The fields of a new enum variant: each field's default, patched from
-/// `payload`.
+/// The fields of a new variant of the enum `enum_type`: each field's
+/// default (the enum's `VariantDefaults` for that variant, else the field
+/// type's), patched from `payload`.
 fn build_variant(
     lua: &Lua,
     registry: &Registry,
+    enum_type: TypeId,
     variant: &VariantInfo,
     payload: &Value,
     path: &str,
@@ -583,7 +585,9 @@ fn build_variant(
                 };
                 let sub = format!("{path}.{}", field.name());
                 let value = if item.is_nil() {
-                    default_of(registry, field.type_id())
+                    registry
+                        .variant_field_default(enum_type, s.name(), field.name())
+                        .or_else(|| default_of(registry, field.type_id()))
                         .ok_or_else(|| err(&sub, "this field has no default"))?
                 } else {
                     construct(lua, registry, field.type_id(), &item, &sub)?
@@ -709,7 +713,7 @@ pub fn apply_lua(
                 let some = info
                     .variant("Some")
                     .ok_or_else(|| err(path, "Option without Some"))?;
-                let variant = build_variant(lua, registry, some, v, path)?;
+                let variant = build_variant(lua, registry, info.type_id(), some, v, path)?;
                 return e
                     .try_apply(&DynamicEnum::new("Some", variant))
                     .map_err(|x| err(path, x.to_string()));
@@ -776,7 +780,7 @@ pub fn apply_lua(
                     }
                 };
             }
-            let built = build_variant(lua, registry, variant, &payload, path)?;
+            let built = build_variant(lua, registry, info.type_id(), variant, &payload, path)?;
             e.try_apply(&DynamicEnum::new(name, built))
                 .map_err(|x| err(path, x.to_string()))
         }
@@ -1001,7 +1005,7 @@ mod tests {
     fn enums_options_and_lists_convert() {
         let lua = lua();
         let registry = Registry::with_core_types();
-        use box_core::primitive::{Primitive, Shape};
+        use box_core::primitive::Primitive;
         let p = Primitive::cuboid(Vec3::ONE);
         let v = reflect_to_lua(&lua, &registry, &p).unwrap();
         let mut target = Primitive::sphere(1.0);
@@ -1012,7 +1016,11 @@ mod tests {
             .eval()
             .unwrap();
         apply_lua(&lua, &registry, &mut target, &sphere, "Primitive").unwrap();
-        assert!(matches!(target.shape, Shape::Sphere { radius, .. } if radius == 2.0));
+        // Fields left out of a new variant take its `VariantDefaults`.
+        assert_eq!(target, Primitive::sphere(2.0));
+        let capsule: Value = lua.load("return { shape = 'Capsule' }").eval().unwrap();
+        apply_lua(&lua, &registry, &mut target, &capsule, "Primitive").unwrap();
+        assert_eq!(target.shape, Primitive::capsule(0.4, 0.4).shape);
         let mut list = vec![1.0f32, 2.0, 3.0];
         let short: Value = lua.load("return { 9 }").eval().unwrap();
         // Lists need registered item types; f32 is.
