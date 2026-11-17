@@ -14,7 +14,7 @@ use box_core::shader_material::{ShaderMaterial, ShaderSource};
 use crate::gpu_mesh::UploadStats;
 use crate::material_shader::{CustomShaders, pack_params};
 use crate::pipelines::{
-    AlphaKey, EngineModules, Layouts, PipelineCache, PipelineKey, ShaderKey,
+    AlphaKey, EngineModules, Layouts, MaterialDepth, PipelineCache, PipelineKey, ShaderKey,
     create_material_pipeline, engine_module,
 };
 use crate::renderer::catch_errors;
@@ -46,16 +46,25 @@ pub(crate) struct MaterialEntry {
     /// shaders).
     pub shadow_binds_material: bool,
     /// Depth + normal prepass pipeline per winding; `None` for transparent
-    /// modes. It reads group 2 when the shadow pipeline does.
+    /// modes and for materials that do not write and test depth. It reads
+    /// group 2 when the shadow pipeline does.
     pub prepass: Option<[u32; 2]>,
+    /// Depth-only pipeline per winding drawn just before the colour draw
+    /// (`prewrite_depth` of a transparent material); `None` otherwise.
+    pub prewrite: Option<[u32; 2]>,
     /// Selection outline mask pipeline per winding for materials that move
     /// vertices (wind sway, a material shader's `vertex` hook); `None` uses
     /// the fixed outline mask pipelines. It reads group 2.
     pub outline: Option<[u32; 2]>,
     pub transparent: bool,
     pub double_sided: bool,
-    /// A transparent material with a depth fade: needs the prepass depth.
-    pub depth_fade: bool,
+    /// Transparent draw order bias (`sort_bias`): higher draws later.
+    pub sort_bias: i32,
+    /// Needs the prepass depth while visible: a transparent material with a
+    /// depth fade, or a material shader that reads the scene depth.
+    pub scene_depth: bool,
+    /// Culling bounds margin in metres (`ShaderMaterial::bounds_padding`).
+    pub bounds_padding: f32,
     /// `WindSway::strength` of a standard material (0 without wind): the
     /// sway is at most `WIND_REACH * strength * Wind::strength`, by which
     /// object bounds are widened for culling and the outline scissor.
@@ -76,6 +85,7 @@ pub(crate) struct SkinnedPipelines {
     pub main: Option<[u32; 2]>,
     pub shadow: Option<[u32; 2]>,
     pub prepass: Option<[u32; 2]>,
+    pub prewrite: Option<[u32; 2]>,
     /// Skinned vertices move: always a material outline pipeline (except
     /// the error material, which outlines in bind pose).
     pub outline: Option<[u32; 2]>,
@@ -88,6 +98,7 @@ struct Recipe {
     alpha: AlphaMode,
     double_sided: bool,
     moves: Moves,
+    depth: MaterialDepth,
 }
 
 /// Inputs an entry was built from. A field that does not apply is 0.
@@ -162,16 +173,16 @@ impl MaterialContext<'_> {
         Ok(self.pipelines.insert(key, pipeline))
     }
 
-    /// Main, shadow, prepass and (for materials that move vertices, and
-    /// skinned variants) outline pipelines for both windings.
-    fn pipelines_for(
-        &mut self,
-        shader: ShaderKey,
-        alpha: AlphaMode,
-        double_sided: bool,
-        moves: Moves,
-        skinned: bool,
-    ) -> Result<MaterialPipelines, String> {
+    /// Main, shadow, prepass, depth pre-write and (for materials that move
+    /// vertices, and skinned variants) outline pipelines for both windings.
+    fn pipelines_for(&mut self, r: &Recipe, skinned: bool) -> Result<MaterialPipelines, String> {
+        let Recipe {
+            shader,
+            alpha,
+            double_sided,
+            moves,
+            depth,
+        } = *r;
         let layout = |k: PipelineKey| if skinned { k.skinned() } else { k };
         let key = AlphaKey::from(alpha);
         let cutoff = match (shader, alpha) {
@@ -188,11 +199,26 @@ impl MaterialContext<'_> {
                 PipelineKey::main(shader, key, double_sided, mirrored, self.hdr_format)
                     .with_cutoff(cutoff)
                     .with_depth_fade(fade)
-                    .with_wind(wind),
+                    .with_wind(wind)
+                    .with_depth(depth.main),
             )
         };
         let (m0, m1) = (main(false), main(true));
         let main = [self.pipeline(m0)?, self.pipeline(m1)?];
+        let prewrite = if depth.prewrite {
+            let prewrite = |mirrored| {
+                layout(
+                    PipelineKey::prewrite(shader, key, double_sided, mirrored, self.hdr_format)
+                        .with_cutoff(cutoff)
+                        .with_depth_fade(fade)
+                        .with_wind(wind),
+                )
+            };
+            let (p0, p1) = (prewrite(false), prewrite(true));
+            Some([self.pipeline(p0)?, self.pipeline(p1)?])
+        } else {
+            None
+        };
         let shadow = if key.is_transparent() {
             None
         } else {
@@ -206,7 +232,7 @@ impl MaterialContext<'_> {
             };
             Some([self.pipeline(shadow(false))?, self.pipeline(shadow(true))?])
         };
-        let prepass = if key.is_transparent() {
+        let prepass = if key.is_transparent() || !depth.in_prepass() {
             None
         } else {
             let mask = key == AlphaKey::Mask;
@@ -241,6 +267,7 @@ impl MaterialContext<'_> {
             main,
             shadow,
             prepass,
+            prewrite,
             outline,
         })
     }
@@ -269,6 +296,7 @@ struct MaterialPipelines {
     main: [u32; 2],
     shadow: Option<[u32; 2]>,
     prepass: Option<[u32; 2]>,
+    prewrite: Option<[u32; 2]>,
     outline: Option<[u32; 2]>,
 }
 
@@ -278,6 +306,8 @@ pub(crate) struct MaterialCache {
     scratch: Vec<u8>,
     /// Some entry sways in the wind (`wind_reach` > 0).
     any_wind: bool,
+    /// Some entry pads its culling bounds (`bounds_padding` > 0).
+    any_padding: bool,
 }
 
 impl MaterialCache {
@@ -289,6 +319,11 @@ impl MaterialCache {
     /// widening by their sway.
     pub(crate) fn any_wind(&self) -> bool {
         self.any_wind
+    }
+
+    /// True when some material pads its culling bounds.
+    pub(crate) fn any_padding(&self) -> bool {
+        self.any_padding
     }
 
     /// Builds the default material (and its pipelines) if missing.
@@ -371,6 +406,7 @@ impl MaterialCache {
         }
         if rebuilt || self.entries.len() != before {
             self.any_wind = self.entries.values().any(|e| e.wind_reach > 0.0);
+            self.any_padding = self.entries.values().any(|e| e.bounds_padding > 0.0);
         }
     }
 
@@ -485,30 +521,29 @@ impl MaterialCache {
             alpha: m.alpha_mode,
             double_sided: m.double_sided,
             moves,
+            depth: MaterialDepth::resolve(alpha, m.depth_write, m.depth_test, m.prewrite_depth),
         };
-        let pipelines = cx.pipelines_for(
-            ShaderKey::Standard,
-            m.alpha_mode,
-            m.double_sided,
-            moves,
-            false,
-        );
+        let pipelines = cx.pipelines_for(&recipe, false);
         if let Err(e) = &pipelines {
             tracing::error!("standard material pipeline creation failed: {e}");
         }
-        let (main, shadow, prepass, outline) = pipelines.map_or((None, None, None, None), |p| {
-            (Some(p.main), p.shadow, p.prepass, p.outline)
-        });
+        let (main, shadow, prepass, prewrite, outline) = pipelines
+            .map_or((None, None, None, None, None), |p| {
+                (Some(p.main), p.shadow, p.prepass, p.prewrite, p.outline)
+            });
         MaterialEntry {
             bind_group: Some(bind_group),
             main,
             shadow,
             shadow_binds_material: alpha == AlphaKey::Mask || wind,
             prepass,
+            prewrite,
             outline,
             transparent: alpha.is_transparent(),
             double_sided: m.double_sided,
-            depth_fade: depth_fade > 0.0,
+            sort_bias: m.sort_bias,
+            scene_depth: depth_fade > 0.0,
+            bounds_padding: 0.0,
             wind_reach: if wind { m.wind.strength } else { 0.0 },
             skinned: None,
             recipe: Some(recipe),
@@ -570,24 +605,27 @@ impl MaterialCache {
             alpha: m.alpha_mode,
             double_sided: m.double_sided,
             moves,
+            depth: MaterialDepth::resolve(alpha, m.depth_write, m.depth_test, m.prewrite_depth),
         };
-        match cx.pipelines_for(
-            ShaderKey::Custom(id),
-            m.alpha_mode,
-            m.double_sided,
-            moves,
-            false,
-        ) {
+        let padding = m.bounds_padding;
+        match cx.pipelines_for(&recipe, false) {
             Ok(p) => MaterialEntry {
                 bind_group: Some(bind_group),
                 main: Some(p.main),
                 shadow: p.shadow,
                 shadow_binds_material: true,
                 prepass: p.prepass,
+                prewrite: p.prewrite,
                 outline: p.outline,
                 transparent: alpha.is_transparent(),
                 double_sided: m.double_sided,
-                depth_fade: depth_fade > 0.0,
+                sort_bias: m.sort_bias,
+                scene_depth: depth_fade > 0.0 || m.scene_depth || compiled.reads_scene_depth,
+                bounds_padding: if padding.is_finite() {
+                    padding.max(0.0)
+                } else {
+                    0.0
+                },
                 wind_reach: 0.0,
                 skinned: None,
                 recipe: Some(recipe),
@@ -605,13 +643,14 @@ impl MaterialCache {
 
     /// The magenta error material; it casts opaque shadows.
     fn error_entry(&mut self, cx: &mut MaterialContext<'_>, double_sided: bool) -> MaterialEntry {
-        let pipelines = cx.pipelines_for(
-            ShaderKey::Error,
-            AlphaMode::Opaque,
+        let recipe = Recipe {
+            shader: ShaderKey::Error,
+            alpha: AlphaMode::Opaque,
             double_sided,
-            Moves::default(),
-            false,
-        );
+            moves: Moves::default(),
+            depth: MaterialDepth::default_for(AlphaKey::Opaque),
+        };
+        let pipelines = cx.pipelines_for(&recipe, false);
         let shadow = [false, true].map(|mirrored| {
             cx.pipeline(PipelineKey::shadow(
                 ShaderKey::Standard,
@@ -631,18 +670,16 @@ impl MaterialCache {
             shadow,
             shadow_binds_material: false,
             prepass: pipelines.and_then(|p| p.prepass),
+            prewrite: None,
             outline: None,
             transparent: false,
             double_sided,
-            depth_fade: false,
+            sort_bias: 0,
+            scene_depth: false,
+            bounds_padding: 0.0,
             wind_reach: 0.0,
             skinned: None,
-            recipe: Some(Recipe {
-                shader: ShaderKey::Error,
-                alpha: AlphaMode::Opaque,
-                double_sided,
-                moves: Moves::default(),
-            }),
+            recipe: Some(recipe),
             stamp: Stamp::default(),
             buffer: None,
         }
@@ -661,12 +698,13 @@ impl MaterialCache {
             entry.skinned = Some(SkinnedPipelines::default());
             return;
         };
-        let built = cx.pipelines_for(r.shader, r.alpha, r.double_sided, r.moves, true);
+        let built = cx.pipelines_for(&r, true);
         let mut skinned = match built {
             Ok(p) => SkinnedPipelines {
                 main: Some(p.main),
                 shadow: p.shadow,
                 prepass: p.prepass,
+                prewrite: p.prewrite,
                 outline: p.outline,
             },
             Err(e) => {

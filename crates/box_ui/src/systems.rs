@@ -378,7 +378,7 @@ fn resolve_named(world: &World, name: &str) -> Option<Entity> {
 }
 
 /// A world point in target pixels, or `None` behind the camera or beyond
-/// `max_distance`.
+/// `max_distance` (metres from the camera).
 pub(crate) fn project(
     p: Vec3,
     cam: &Camera,
@@ -387,17 +387,9 @@ pub(crate) fn project(
     h: f32,
     max_distance: Option<f32>,
 ) -> Option<Vec2> {
-    let v = g.affine().inverse().transform_point3(p);
-    let depth = -v.z;
-    if depth <= cam.near.max(1e-4) {
+    let vp = cam.world_to_viewport(g, glam::Vec2::new(w, h), p)?;
+    if max_distance.is_some_and(|d| (p - g.translation()).length() > d) {
         return None;
     }
-    if max_distance.is_some_and(|d| v.length() > d) {
-        return None;
-    }
-    let f = 1.0 / (cam.fov_y * 0.5).tan();
-    let aspect = w / h;
-    let ndc_x = f / aspect * v.x / depth;
-    let ndc_y = f * v.y / depth;
-    Some(Vec2::new((ndc_x * 0.5 + 0.5) * w, (0.5 - ndc_y * 0.5) * h))
+    Some(Vec2::new(vp.pixels.x, vp.pixels.y))
 }

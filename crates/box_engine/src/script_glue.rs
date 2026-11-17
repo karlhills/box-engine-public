@@ -11,11 +11,13 @@
 //!   entry, so a save restores script state (`on_save` / `on_load`).
 //! - `data` ([`data`]): data tables as read-only Luau tables.
 //! - `particles` ([`particles`]): bursts, start, stop, restart.
+//! - `camera` ([`camera`]): world to screen, screen and cursor rays.
 //!
 //! box_script adds `physics` and `character`; box_ui adds `ui` and
 //! `strings`.
 
 pub mod animation;
+pub mod camera;
 pub mod data;
 pub mod particles;
 pub mod save;
@@ -177,7 +179,8 @@ pub fn add_scripts(app: &mut App) {
         .add(animation::AnimationApi)
         .add(save::SaveApi)
         .add(data::DataApi)
-        .add(particles::ParticlesApi);
+        .add(particles::ParticlesApi)
+        .add(camera::CameraApi);
     save::install(app);
     app.add_plugin(&ScriptPlugin);
 }

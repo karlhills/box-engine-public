@@ -23,7 +23,9 @@
       "bloom": {
         "enabled": true,
         "intensity": 0.025,
-        "scatter": 0.7
+        "scatter": 0.7,
+        "threshold": 0.0,
+        "knee": 0.5
       },
       "color_grading": {
         "temperature": 0.0,
@@ -162,7 +164,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-10.0, -0.25, 0.0],
@@ -215,7 +221,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, -0.25, 0.0],
@@ -268,7 +278,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [10.0, -0.25, 0.0],
@@ -321,7 +335,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, 1.0, -8.25],
@@ -374,7 +392,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, 1.0, 8.25],
@@ -427,7 +449,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [15.25, 1.0, 0.0],
@@ -480,7 +506,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-15.25, 1.0, 0.0],
@@ -535,7 +565,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-4.0, 1.5, -1.5],
@@ -590,7 +624,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, 1.5, 2.0],
@@ -645,7 +683,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [3.0, 1.5, 0.0],
@@ -698,7 +740,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-8.0, 1.5, -4.0],
@@ -751,7 +797,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [6.524464, 0.655111, -4.0],
@@ -804,7 +854,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [11.471281, 0.8, -4.0],
@@ -867,7 +921,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-9.0, 0.92, 5.0],
@@ -957,7 +1015,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-6.0, 0.9, 5.0],
@@ -1022,7 +1084,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [1.0, 0.9, 6.0],
@@ -1087,7 +1153,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-13.0, 0.9, -6.0],
@@ -1152,7 +1222,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, 0.9, -6.0],
@@ -1217,7 +1291,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [11.471281, 2.5, -4.0],
@@ -1282,7 +1360,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [13.0, 0.9, 6.0],
@@ -1347,7 +1429,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [6.0, 0.9, 1.0],

@@ -316,7 +316,13 @@ struct DrawItem {
     /// object is outlined; [`NO_PIPELINE`] uses the fixed `outline` variant.
     /// It binds `material`.
     outline_pipeline: u32,
+    /// Depth-only pipeline drawn right before `main_pipeline` (a transparent
+    /// material with `prewrite_depth`), else [`NO_PIPELINE`]. It binds
+    /// `material`.
+    prewrite_pipeline: u32,
     transparent: bool,
+    /// Transparent draw order bias: higher draws later.
+    sort_bias: i32,
     /// Bit `i`: drawn into shadow cascade `i`.
     cascades: u8,
     /// Bit `i`: drawn into view `i` of the shadowed local light.
@@ -331,9 +337,15 @@ struct DrawItem {
     skinned: bool,
 }
 
-/// Back to front by view depth; ties keep their order (stable sort).
+/// By sort bias (lower first), then back to front by view depth; ties keep
+/// their order (stable sort).
 fn sort_transparent(order: &mut [u32], draws: &[DrawItem]) {
-    order.sort_by(|&a, &b| draws[b as usize].depth.total_cmp(&draws[a as usize].depth));
+    order.sort_by(|&a, &b| {
+        let (a, b) = (&draws[a as usize], &draws[b as usize]);
+        a.sort_bias
+            .cmp(&b.sort_bias)
+            .then(b.depth.total_cmp(&a.depth))
+    });
 }
 
 /// The batching key of a draw: draws with equal keys are one instanced
@@ -1758,12 +1770,13 @@ impl Renderer {
         // draw item per material group of each object drawn in any pass.
         self.draw_list.clear();
         self.instances.begin_frame();
-        let mut depth_fade_visible = false;
+        let mut scene_depth_visible = false;
         let wind_scale = if self.materials.any_wind() && env.wind.direction != glam::Vec2::ZERO {
             env.wind.strength.max(0.0) * crate::materials::WIND_REACH
         } else {
             0.0
         };
+        let widen = wind_scale > 0.0 || self.materials.any_padding();
         if camera.is_some() {
             type Drawn<'a> = box_core::world::Without<
                 (Entity, &'a GlobalTransform, &'a MeshRenderer),
@@ -1793,19 +1806,18 @@ impl Renderer {
                         .slot(entity, &gt.0, outline_id, skinned.map_or(0, |s| s.base));
                 let local_bounds = skinned.map_or(gpu.bounds, |s| s.bounds);
                 let mut world_bounds = local_bounds.transformed(&gt.0);
-                if wind_scale > 0.0 {
-                    // Swaying vertices leave the mesh bounds by up to this.
+                if widen {
+                    // Swaying or displaced vertices leave the mesh bounds by
+                    // up to this (camera, shadow and outline culling).
                     let reach = gpu
                         .groups
                         .iter()
                         .filter_map(|g| mr.materials.get(g.material_slot as usize))
                         .filter_map(|m| self.materials.get(m.id()))
-                        .fold(0.0f32, |r, e| r.max(e.wind_reach))
-                        * wind_scale;
-                    if reach > 0.0 {
-                        let pad = Vec3::splat(reach);
-                        world_bounds = Aabb::new(world_bounds.min - pad, world_bounds.max + pad);
-                    }
+                        .fold(0.0f32, |r, e| {
+                            r.max(e.wind_reach * wind_scale + e.bounds_padding)
+                        });
+                    world_bounds = crate::culling::padded(world_bounds, reach);
                 }
                 let visible = frustum.intersects_aabb(&world_bounds);
                 let cascades = match &culler {
@@ -1844,12 +1856,18 @@ impl Renderer {
                     }) else {
                         continue;
                     };
-                    let (main, shadow, prepass, outline) = match skinned {
+                    let (main, shadow, prepass, prewrite, outline) = match skinned {
                         Some(_) => {
                             let s = entry.skinned.unwrap_or_default();
-                            (s.main, s.shadow, s.prepass, s.outline)
+                            (s.main, s.shadow, s.prepass, s.prewrite, s.outline)
                         }
-                        None => (entry.main, entry.shadow, entry.prepass, entry.outline),
+                        None => (
+                            entry.main,
+                            entry.shadow,
+                            entry.prepass,
+                            entry.prewrite,
+                            entry.outline,
+                        ),
                     };
                     let main_pipeline = match (visible, main) {
                         (true, Some(p)) => p[mirrored as usize],
@@ -1870,7 +1888,11 @@ impl Renderer {
                         (true, Some(p)) => p[mirrored as usize],
                         _ => NO_PIPELINE,
                     };
-                    depth_fade_visible |= visible && entry.depth_fade;
+                    let prewrite_pipeline = match (main_pipeline != NO_PIPELINE, prewrite) {
+                        (true, Some(p)) => p[mirrored as usize],
+                        _ => NO_PIPELINE,
+                    };
+                    scene_depth_visible |= visible && entry.scene_depth;
                     casts |= shadow_pipeline != NO_PIPELINE;
                     self.draw_list.push(DrawItem {
                         slot,
@@ -1887,7 +1909,9 @@ impl Renderer {
                         shadow_pipeline,
                         prepass_pipeline,
                         outline_pipeline,
+                        prewrite_pipeline,
                         transparent: entry.transparent,
+                        sort_bias: entry.sort_bias,
                         cascades,
                         local_views,
                         depth,
@@ -1938,8 +1962,9 @@ impl Renderer {
         };
         self.stats.particles = particle_frame.particles;
         self.stats.particle_emitters = particle_frame.emitters;
-        // The prepass runs for ambient occlusion and for soft transparency.
-        let prepass_on = ao_on || depth_fade_visible || particle_frame.soft;
+        // The prepass runs for ambient occlusion, soft transparency and
+        // material shaders that read the scene depth.
+        let prepass_on = ao_on || scene_depth_visible || particle_frame.soft;
         // Pass orders: opaque and shadows by state, transparent back to front.
         self.main_order.clear();
         self.transparent_order.clear();
@@ -2097,6 +2122,7 @@ impl Renderer {
             Tonemapper::AgX => 0.0,
             Tonemapper::AcesFitted => 1.0,
             Tonemapper::None => 2.0,
+            Tonemapper::Neutral => 3.0,
         };
         globals.post = [env.exposure, tonemapper, 0.0, 0.0];
         globals.shadow = [
@@ -2135,7 +2161,15 @@ impl Renderer {
             ];
         }
         if bloom_on {
-            globals.bloom = [bloom.intensity.clamp(0.0, 1.0), 0.0, 0.0, 0.0];
+            // The threshold is on exposed luminance; the bloom passes see
+            // the scene before exposure.
+            let threshold = bloom.threshold.max(0.0) / env.exposure.max(1e-6);
+            globals.bloom = [
+                bloom.intensity.clamp(0.0, 1.0),
+                threshold,
+                threshold * bloom.knee.clamp(0.0, 1.0),
+                0.0,
+            ];
         }
         post::write_grading(&env.color_grading, &mut globals);
         post::write_look(&env, aspect, &mut globals);
@@ -2456,20 +2490,21 @@ impl Renderer {
 
             // Transparent surfaces and particle emitters, back to front,
             // after the sky: depth tested against opaque geometry, not
-            // written. Both lists are sorted; merge them by depth (meshes
-            // first on ties).
+            // written (unless a material says otherwise). Both lists are
+            // sorted; merge them by sort bias (particles have 0), then depth
+            // (meshes first on ties).
             let mut state = DrawState::default();
             let particle_draws = &self.particles.draws;
             let (mut m, mut p) = (0, 0);
             let mut particle_group = false;
             while m < self.transparent_batches.len() || p < particle_draws.len() {
-                let mesh_depth = self
+                let mesh = self
                     .transparent_batches
                     .get(m)
-                    .map(|b| self.draw_list[b.item as usize].depth);
+                    .map(|b| &self.draw_list[b.item as usize]);
                 let particle_depth = particle_draws.get(p).map(|d| d.depth);
-                let mesh_next = match (mesh_depth, particle_depth) {
-                    (Some(a), Some(b)) => a >= b,
+                let mesh_next = match (mesh, particle_depth) {
+                    (Some(a), Some(b)) => a.sort_bias < 0 || (a.sort_bias == 0 && a.depth >= b),
                     (Some(_), None) => true,
                     _ => false,
                 };
@@ -2480,6 +2515,14 @@ impl Renderer {
                         // Group 1 back to the instance data.
                         pass.set_bind_group(1, &self.instances.bind_group, &[]);
                         particle_group = false;
+                    }
+                    if self.draw_list[b.item as usize].prewrite_pipeline != NO_PIPELINE
+                        && self
+                            .draw_batch(&mut pass, b, Pass::Prewrite, &mut state)
+                            .is_some()
+                    {
+                        draws += 1;
+                        transparent_draws += 1;
                     }
                     if let Some(tris) = self.draw_batch(&mut pass, b, Pass::Main, &mut state) {
                         draws += 1;
@@ -2760,6 +2803,7 @@ impl Renderer {
             Pass::Shadow => shadow_state(item),
             Pass::Prepass => prepass_state(item),
             Pass::Outline => outline_state(item),
+            Pass::Prewrite => (item.prewrite_pipeline, item.material),
         };
         let mesh = self.meshes.get(item.mesh)?;
         let pipeline = self.pipeline_cache.get(pipeline_id)?;
@@ -2769,8 +2813,8 @@ impl Renderer {
             state.pipeline = pipeline_id;
             state.material = None;
         }
-        let binds_material =
-            matches!(which, Pass::Main | Pass::Outline) || entry.shadow_binds_material;
+        let binds_material = matches!(which, Pass::Main | Pass::Outline | Pass::Prewrite)
+            || entry.shadow_binds_material;
         if binds_material && state.material != Some(material) {
             if let Some(bind_group) = &entry.bind_group {
                 pass.set_bind_group(2, bind_group, &[]);
@@ -3374,6 +3418,10 @@ impl FrameResources {
                         offset: 0,
                         size: wgpu::BufferSize::new(64),
                     }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 7,
+                    resource: wgpu::BindingResource::TextureView(&placeholder_depth),
                 },
             ],
         });
@@ -4147,7 +4195,9 @@ mod tests {
             shadow_pipeline: NO_PIPELINE,
             prepass_pipeline: NO_PIPELINE,
             outline_pipeline: NO_PIPELINE,
+            prewrite_pipeline: NO_PIPELINE,
             transparent: true,
+            sort_bias: 0,
             cascades: 0,
             local_views: 0,
             depth,
@@ -4169,6 +4219,14 @@ mod tests {
         sort_transparent(&mut order, &draws);
         // Farthest first; equal depths keep submission order.
         assert_eq!(order, [1, 4, 0, 3, 2]);
+        // Sort bias first: higher biases draw later whatever their depth.
+        let mut biased = draws;
+        biased[2].sort_bias = -1;
+        biased[0].sort_bias = 2;
+        biased[1].sort_bias = 1;
+        let mut order: Vec<u32> = (0..5).collect();
+        sort_transparent(&mut order, &biased);
+        assert_eq!(order, [2, 4, 3, 1, 0]);
 
         let draws = [
             draw(0.0, 2, 1, 1),
@@ -4313,6 +4371,75 @@ mod tests {
         assert!(luma(&glow, 32, 18) > luma(&plain, 32, 18) + 20);
         assert!(luma(&plain, 32, 18) < 6, "dark without bloom");
         assert!(luma(&glow, 32, 32) > 600, "the sphere stays bright");
+        assert_eq!(r.validation_errors(), 0);
+    }
+
+    /// With a threshold only light above it glows: a dim sphere glows
+    /// without one and not with one (it looks as with bloom off), a bright
+    /// sphere glows either way.
+    #[test]
+    fn bloom_threshold_limits_the_glow_to_bright_light() {
+        let Some(mut r) = headless() else {
+            eprintln!("skipping: no GPU");
+            return;
+        };
+        let mut world = World::new();
+        let env = world.resource_or_default::<Environment>();
+        *env = Environment {
+            sky_zenith: Color::BLACK,
+            sky_horizon: Color::BLACK,
+            ground: Color::BLACK,
+            fog_density: 0.0,
+            ..Environment::default()
+        };
+        env.ambient_occlusion.enabled = false;
+        env.bloom.intensity = 0.6;
+        let material =
+            world
+                .resource_or_default::<Assets<StandardMaterial>>()
+                .add(StandardMaterial {
+                    base_color: Color::BLACK,
+                    // Exposed luminance about 0.44, below the knee of threshold 1.
+                    emissive: Color::linear(0.8, 0.8, 0.8),
+                    ..Default::default()
+                });
+        let sphere = world
+            .resource_or_default::<Assets<MeshData>>()
+            .add(MeshData::uv_sphere(0.3, 24, 12));
+        world.spawn((Transform::default(), MeshRenderer::new(sphere, material)));
+        world.spawn((Transform::from_xyz(0.0, 0.0, 4.0), Camera::default()));
+        propagate_transforms(&mut world);
+        let mut capture = |world: &mut World, enabled: bool, threshold: f32| {
+            let b = &mut world.resource_mut::<Environment>().bloom;
+            b.enabled = enabled;
+            b.threshold = threshold;
+            r.capture(world).unwrap()
+        };
+        let plain = capture(&mut world, false, 0.0);
+        let glow = capture(&mut world, true, 0.0);
+        let limited = capture(&mut world, true, 1.0);
+        assert!(
+            luma(&glow, 32, 18) > luma(&plain, 32, 18) + 4,
+            "a dim sphere glows without a threshold"
+        );
+        for (x, y) in [(32, 18), (32, 32), (32, 8)] {
+            let (a, b) = (luma(&limited, x, y) as i64, luma(&plain, x, y) as i64);
+            assert!(
+                (a - b).abs() <= 3,
+                "no glow below it at ({x}, {y}): {b} -> {a}"
+            );
+        }
+        world
+            .resource_mut::<Assets<StandardMaterial>>()
+            .get_mut(material)
+            .unwrap()
+            .emissive = Color::linear(40.0, 30.0, 20.0);
+        let plain = capture(&mut world, false, 0.0);
+        let limited = capture(&mut world, true, 1.0);
+        assert!(
+            luma(&limited, 32, 18) > luma(&plain, 32, 18) + 20,
+            "a bright sphere still glows"
+        );
         assert_eq!(r.validation_errors(), 0);
     }
 

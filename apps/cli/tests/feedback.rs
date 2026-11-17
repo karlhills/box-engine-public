@@ -148,7 +148,9 @@ fn registry_text_is_readable() {
         text.contains("materials: list of asset: null or {\"path\""),
         "{text}"
     );
-    assert!(text.contains("tonemapper: Tonemapper: \"AgX\" | \"AcesFitted\" | \"None\""));
+    assert!(
+        text.contains("tonemapper: Tonemapper: \"AgX\" | \"AcesFitted\" | \"None\" | \"Neutral\"")
+    );
     // Docs are whole first sentences, not cut at a line break.
     assert!(
         text.contains("A perspective camera. Uses the entity's `GlobalTransform` (looks down −Z).")

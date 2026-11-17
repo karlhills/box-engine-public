@@ -1,8 +1,8 @@
 // Tone mapping: resolved HDR scene -> sRGB output. In order: bloom (mixed
 // in), vignette, exposure, scene grading (white balance, contrast,
-// shadows/midtones/highlights, saturation), the
-// tone mapper, display grading (lift, gamma, gain on the sRGB-encoded
-// value) and a tiny dither against banding. The output view is sRGB, so the
+// shadows/midtones/highlights, saturation), the tone mapper (AgX, ACES
+// fitted, PBR Neutral or none), display grading (lift, gamma, gain on the
+// sRGB-encoded value) and a tiny dither against banding. The output view is sRGB, so the
 // shader returns linear values.
 
 #include "common.wgsl"
@@ -71,6 +71,27 @@ fn aces_fitted(color: vec3<f32>) -> vec3<f32> {
     return saturate(output_mat * (a / b));
 }
 
+// Khronos PBR Neutral (KhronosGroup/ToneMapping, PBR_Neutral): a small toe
+// offset, identity up to START_COMPRESSION, then a hyperbolic roll-off of the
+// peak channel toward 1 with slight desaturation. Output is display-linear.
+const NEUTRAL_START_COMPRESSION: f32 = 0.76;
+const NEUTRAL_DESATURATION: f32 = 0.15;
+
+fn pbr_neutral(color: vec3<f32>) -> vec3<f32> {
+    let x = min(color.r, min(color.g, color.b));
+    let offset = select(0.04, x - 6.25 * x * x, x < 0.08);
+    var c = color - vec3<f32>(offset);
+    let peak = max(c.r, max(c.g, c.b));
+    if peak < NEUTRAL_START_COMPRESSION {
+        return c;
+    }
+    let d = 1.0 - NEUTRAL_START_COMPRESSION;
+    let new_peak = 1.0 - d * d / (peak + d - NEUTRAL_START_COMPRESSION);
+    c *= new_peak / peak;
+    let g = 1.0 - 1.0 / (NEUTRAL_DESATURATION * (peak - new_peak) + 1.0);
+    return mix(c, vec3<f32>(new_peak), g);
+}
+
 fn linear_to_srgb(c: vec3<f32>) -> vec3<f32> {
     let lo = c * 12.92;
     let hi = 1.055 * pow(c, vec3<f32>(1.0 / 2.4)) - 0.055;
@@ -134,7 +155,12 @@ fn fs_main(in: TonemapOutput) -> @location(0) vec4<f32> {
     if globals.bloom.x > 0.0 {
         let uv = in.clip.xy / globals.viewport.xy;
         let bloom = textureSampleLevel(bloom_texture, bloom_sampler, uv, 0.0).rgb;
-        scene = mix(scene, bloom, globals.bloom.x);
+        if globals.bloom.y > 0.0 {
+            // Thresholded: only the bright part is swapped for its blur.
+            scene += (bloom - bloom_bright(scene)) * globals.bloom.x;
+        } else {
+            scene = mix(scene, bloom, globals.bloom.x);
+        }
     }
     if globals.vignette.x > 0.0 {
         scene *= vignette(in.clip.xy);
@@ -149,6 +175,8 @@ fn fs_main(in: TonemapOutput) -> @location(0) vec4<f32> {
         mapped = agx(hdr);
     } else if mode == 1u {
         mapped = aces_fitted(hdr);
+    } else if mode == 3u {
+        mapped = pbr_neutral(hdr);
     } else {
         mapped = hdr;
     }

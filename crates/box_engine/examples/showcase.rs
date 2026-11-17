@@ -3,7 +3,8 @@
 //! Keys: 1 day, 2 evening, C cascade view, O ambient occlusion view, G grid,
 //! T cycle tone mapper, Esc quit. Flags: `--evening`, `--cascades`,
 //! `--ao-view`, `--no-ao`, `--ao-radius <m>`, `--ao-intensity <x>`,
-//! `--no-bloom`, `--bloom <intensity>`, `--grade` (the reference afternoon grade:
+//! `--no-bloom`, `--bloom <intensity>`, `--bloom-threshold <exposed luminance>`,
+//! `--tonemap <agx|aces|neutral|none>`, `--grade` (the reference afternoon grade:
 //! white balance, contrast, shadows/midtones/highlights, saturation, and its
 //! vignette), `--vignette` (the vignette alone), `--no-shadows`,
 //! `--orbit <radians per second>` (turns the camera continuously, for capture
@@ -57,6 +58,16 @@ fn main() -> anyhow::Result<()> {
     }
     if let Some(v) = value("--bloom") {
         env.bloom.intensity = v;
+    }
+    if let Some(v) = value("--bloom-threshold") {
+        env.bloom.threshold = v;
+    }
+    if let Some(name) = args
+        .iter()
+        .position(|a| a == "--tonemap")
+        .and_then(|i| args.get(i + 1))
+    {
+        env.tonemapper = look::parse_tonemapper(name)?;
     }
     if flag("--grade") {
         // The reference afternoon grade and vignette.
@@ -113,7 +124,8 @@ fn keys(world: &mut World) {
         let env = world.resource_mut::<Environment>();
         env.tonemapper = match env.tonemapper {
             Tonemapper::AgX => Tonemapper::AcesFitted,
-            Tonemapper::AcesFitted => Tonemapper::None,
+            Tonemapper::AcesFitted => Tonemapper::Neutral,
+            Tonemapper::Neutral => Tonemapper::None,
             Tonemapper::None => Tonemapper::AgX,
         };
         tracing::info!("tone mapper: {:?}", env.tonemapper);

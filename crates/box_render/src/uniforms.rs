@@ -40,7 +40,8 @@ pub(crate) struct GlobalsUniform {
     /// x = AO bias (m), y = AO power, z = half-resolution pixels per metre
     /// at view depth 1.
     pub ao_params: [f32; 4],
-    /// x = bloom blend (0 off).
+    /// x = bloom blend (0 off), y = threshold on scene luminance before
+    /// exposure (0 off), z = knee half-width (same units).
     pub bloom: [f32; 4],
     /// x = contrast, y = saturation, z = 1 when white balance, contrast or
     /// saturation apply, w = 1 when lift, gamma or gain apply.

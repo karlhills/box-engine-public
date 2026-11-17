@@ -337,6 +337,12 @@ fn same_shader_material(a: &ShaderMaterial, b: &ShaderMaterial) -> bool {
         alpha_mode,
         double_sided,
         depth_fade,
+        sort_bias,
+        depth_write,
+        depth_test,
+        prewrite_depth,
+        scene_depth,
+        bounds_padding,
     } = a;
     if a == b {
         return true;
@@ -344,6 +350,20 @@ fn same_shader_material(a: &ShaderMaterial, b: &ShaderMaterial) -> bool {
     *shader == b.shader
         && *double_sided == b.double_sided
         && depth_fade.to_bits() == b.depth_fade.to_bits()
+        && (
+            *sort_bias,
+            *depth_write,
+            *depth_test,
+            *prewrite_depth,
+            *scene_depth,
+        ) == (
+            b.sort_bias,
+            b.depth_write,
+            b.depth_test,
+            b.prewrite_depth,
+            b.scene_depth,
+        )
+        && bounds_padding.to_bits() == b.bounds_padding.to_bits()
         && same_alpha(*alpha_mode, b.alpha_mode)
         && params.len() == b.params.len()
         && params
@@ -364,7 +384,8 @@ fn same_alpha(a: AlphaMode, b: AlphaMode) -> bool {
 /// See [`same_shader_material`].
 fn same_material(a: &StandardMaterial, b: &StandardMaterial) -> bool {
     // Destructured in full, so a new field cannot be forgotten here.
-    fn split(m: &StandardMaterial) -> ([u32; 18], [&AssetRef; 4], AlphaMode, bool) {
+    type State = (bool, i32, box_core::material::DepthWrite, bool, bool);
+    fn split(m: &StandardMaterial) -> ([u32; 18], [&AssetRef; 4], AlphaMode, State) {
         let StandardMaterial {
             base_color: c,
             roughness,
@@ -379,6 +400,10 @@ fn same_material(a: &StandardMaterial, b: &StandardMaterial) -> bool {
             depth_fade,
             wind,
             uv_scale,
+            sort_bias,
+            depth_write,
+            depth_test,
+            prewrite_depth,
         } = m;
         let (weight, bottom, top) = match wind.weight {
             box_core::material::WindWeight::HeightRamp { bottom, top } => (0.0, bottom, top),
@@ -413,7 +438,13 @@ fn same_material(a: &StandardMaterial, b: &StandardMaterial) -> bool {
                 emissive_texture,
             ],
             *alpha_mode,
-            *double_sided,
+            (
+                *double_sided,
+                *sort_bias,
+                *depth_write,
+                *depth_test,
+                *prewrite_depth,
+            ),
         )
     }
     if a == b {

@@ -74,6 +74,8 @@ Not adopted: moving rapier to M3 (no user before M7), and adding navigation and 
 
 **RS3 outcome (2026-11-16).** Prepass single-sample and separate from the MSAA pass (S5); AO applied per fragment to ambient light; bloom energy-conserving without threshold; grading in the tone-mapping pass; post-processing settings live in `Environment` and are on by default (existing scenes included, through field defaults); automatic instancing with persistent storage-buffer slots. Per-pass GPU timestamps were added early for measurement.
 
+**R10 (2026-11-17).** Bloom gains an optional threshold (default 0, off, so existing scenes and goldens are unchanged) that keeps it energy-conserving by swapping only the above-threshold part of each pixel for its blur. The threshold is on exposed luminance, so animating exposure does not change what blooms. A fourth tone mapper, Khronos PBR Neutral, for authored colours that should stay saturated in highlights; AgX stays the default.
+
 **Confidence.** High.
 
 

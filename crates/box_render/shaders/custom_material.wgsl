@@ -60,6 +60,7 @@ fn material_surface_input(in: MaterialVaryings, front_facing: bool) -> SurfaceIn
     si.color = in.color;
     si.view_dir = normalize(globals.camera_pos.xyz - in.world_pos);
     si.front_facing = front_facing;
+    si.frag_coord = in.clip;
     return si;
 }
 
@@ -76,7 +77,7 @@ fn fs_main(in: MaterialVaryings, @builtin(front_facing) front_facing: bool) -> @
         discard;
     }
     var color = vec3<f32>(0.0);
-    if ALPHA_MODE != ALPHA_MULTIPLY {
+    if !is_multiply(ALPHA_MODE) {
         let view_depth = dot(in.world_pos - globals.camera_pos.xyz, globals.camera_forward.xyz);
         var shadow = 1.0;
         if has_sun() && globals.shadow.x > 0.5 {

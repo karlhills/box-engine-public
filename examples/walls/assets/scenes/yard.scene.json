@@ -23,7 +23,9 @@
       "bloom": {
         "enabled": true,
         "intensity": 0.025,
-        "scatter": 0.7
+        "scatter": 0.7,
+        "threshold": 0.0,
+        "knee": 0.5
       },
       "color_grading": {
         "temperature": 0.0,
@@ -155,7 +157,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.5, -0.1, 0.5],

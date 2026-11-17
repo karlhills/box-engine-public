@@ -1,7 +1,7 @@
 //! Tests of the RS3 on-demand features: atmosphere, layered sky and stars,
 //! shadows/midtones/highlights and vignette, alpha-tested shadow casters,
-//! wind sway in every pass, soft transparency, and environment animation
-//! without pipeline builds.
+//! wind sway in every pass, soft transparency, environment animation
+//! without pipeline builds, and the PBR Neutral tone mapper.
 
 use box_core::assets::Assets;
 use box_core::color::Color;
@@ -626,10 +626,123 @@ fn animating_the_environment_builds_no_pipelines_and_no_buffers() {
         env.vignette.intensity = t * 0.3;
         env.wind.strength = 2.0 * t;
         env.exposure = 0.5 + t;
+        env.bloom.threshold = t;
+        env.tonemapper = [Tonemapper::AgX, Tonemapper::Neutral][frame % 2];
         r.capture(&mut world).unwrap();
         let s = r.stats();
         assert_eq!(s.material_pipelines, pipelines, "frame {frame}");
         assert_eq!(s.buffer_reallocations, 0, "frame {frame}");
     }
+    assert_eq!(r.validation_errors(), 0);
+}
+
+/// The Khronos PBR Neutral reference (KhronosGroup/ToneMapping, PBR_Neutral),
+/// display-linear out.
+fn pbr_neutral_reference(c: [f32; 3]) -> [f32; 3] {
+    const START: f32 = 0.8 - 0.04;
+    const DESATURATION: f32 = 0.15;
+    let x = c[0].min(c[1]).min(c[2]);
+    let offset = if x < 0.08 { x - 6.25 * x * x } else { 0.04 };
+    let mut c = c.map(|v| v - offset);
+    let peak = c[0].max(c[1]).max(c[2]);
+    if peak < START {
+        return c;
+    }
+    let d = 1.0 - START;
+    let new_peak = 1.0 - d * d / (peak + d - START);
+    c = c.map(|v| v * new_peak / peak);
+    let g = 1.0 - 1.0 / (DESATURATION * (peak - new_peak) + 1.0);
+    c.map(|v| v + (new_peak - v) * g)
+}
+
+fn srgb_byte(linear: f32) -> i32 {
+    let v = linear.clamp(0.0, 1.0);
+    let e = if v <= 0.0031308 {
+        v * 12.92
+    } else {
+        1.055 * v.powf(1.0 / 2.4) - 0.055
+    };
+    (e * 255.0).round() as i32
+}
+
+#[test]
+fn pbr_neutral_reference_values() {
+    // Below the start of compression the curve is the identity after the
+    // toe offset: 0.04 off every channel once the darkest is 0.08 or more.
+    assert_eq!(pbr_neutral_reference([0.0; 3]), [0.0; 3]);
+    let grey = pbr_neutral_reference([0.18; 3]);
+    assert!((grey[0] - 0.14).abs() < 1e-6, "{grey:?}");
+    let c = pbr_neutral_reference([0.5, 0.3, 0.2]);
+    assert!((c[0] - 0.46).abs() < 1e-6 && (c[2] - 0.16).abs() < 1e-6);
+    // Monotonic, below 1, and toward white for large values.
+    let mut last = -1.0;
+    for i in 0..2000 {
+        let v = pbr_neutral_reference([i as f32 * 0.01; 3])[0];
+        assert!(v >= last && v < 1.0, "{i}: {v}");
+        last = v;
+    }
+    assert!(last > 0.99);
+}
+
+/// The shader's Neutral tone mapper matches the reference, and keeps a bright
+/// saturated colour more saturated than AgX.
+#[test]
+fn neutral_tonemapper_matches_the_khronos_reference() {
+    let Some(mut r) = renderer(16, 16) else {
+        eprintln!("skipping: no GPU");
+        return;
+    };
+    let mut world = World::new();
+    let mut env = plain_env();
+    env.tonemapper = Tonemapper::Neutral;
+    env.exposure = 1.0;
+    env.sky_zenith = Color::BLACK;
+    env.sky_horizon = Color::BLACK;
+    env.ground = Color::BLACK;
+    world.insert_resource(env);
+    let m = material(&mut world, glow(Color::BLACK));
+    let quad = mesh(&mut world, MeshData::cuboid(Vec3::new(1.0, 1.0, 0.1)));
+    world.spawn((
+        Transform::from_xyz(0.0, 0.0, -1.0).with_scale(Vec3::new(8.0, 8.0, 1.0)),
+        MeshRenderer::new(quad, m),
+    ));
+    world.spawn((Transform::default(), Camera::default()));
+    propagate_transforms(&mut world);
+    let mut shade = |world: &mut World, c: [f32; 3], t: Tonemapper| {
+        world.resource_mut::<Environment>().tonemapper = t;
+        world
+            .resource_mut::<Assets<StandardMaterial>>()
+            .get_mut(m)
+            .unwrap()
+            .emissive = Color::linear(c[0], c[1], c[2]);
+        rgb(&r.capture(world).unwrap(), 8, 8)
+    };
+    for c in [
+        [0.02, 0.02, 0.02],
+        [0.18, 0.18, 0.18],
+        [0.5, 0.3, 0.2],
+        [0.7, 0.7, 0.7],
+        [1.5, 1.5, 1.5],
+        [4.0, 1.0, 0.5],
+        [20.0, 20.0, 20.0],
+    ] {
+        let got = shade(&mut world, c, Tonemapper::Neutral);
+        let want = pbr_neutral_reference(c).map(srgb_byte);
+        for i in 0..3 {
+            assert!(
+                (got[i] - want[i]).abs() <= 2,
+                "{c:?}: shader {got:?}, reference {want:?}"
+            );
+        }
+    }
+    let hot = [2.0, 0.5, 0.25];
+    let (neutral, agx) = (
+        shade(&mut world, hot, Tonemapper::Neutral),
+        shade(&mut world, hot, Tonemapper::AgX),
+    );
+    assert!(
+        saturation(neutral) > saturation(agx) + 20,
+        "Neutral {neutral:?} more saturated than AgX {agx:?}"
+    );
     assert_eq!(r.validation_errors(), 0);
 }

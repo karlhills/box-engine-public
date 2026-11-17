@@ -40,6 +40,31 @@ type gets a step, bump `SCENE_VERSION` with a no-op envelope step at the same
 time, so engines from before M9 refuse such files with the "newer" message
 instead of "unknown field `$version`".
 
+### Material fields
+
+A `*.material.json` is a reflected `StandardMaterial`, or a `ShaderMaterial`
+when it has a `"shader"` key; every field but `"shader"` is optional and a
+missing one takes its default. The user-facing description is
+[guide/materials.md](guide/materials.md).
+
+| Field | Type | Default | Materials |
+|---|---|---|---|
+| `alpha_mode` | `"Opaque"`, `{ "Mask": { "cutoff": f32 } }`, `"Blend"`, `"Additive"`, `"Multiply"`, `"Multiply2x"` | `"Opaque"` | both |
+| `double_sided` | bool | `false` | both |
+| `depth_fade` | f32, metres | `0` | both |
+| `sort_bias` | i32 | `0` | both |
+| `depth_write` | `"Auto"`, `"On"`, `"Off"` | `"Auto"` | both |
+| `depth_test` | bool | `true` | both |
+| `prewrite_depth` | bool | `false` | both |
+| `scene_depth` | bool | `false` | `ShaderMaterial` |
+| `bounds_padding` | f32, metres | `0` | `ShaderMaterial` |
+
+`sort_bias`, `depth_write`, `depth_test`, `prewrite_depth`, `scene_depth`,
+`bounds_padding` and `"Multiply2x"` were added after M9 with defaults that
+keep the earlier behaviour, so older files load unchanged. An engine from
+before them warns about the new fields and ignores them, and refuses a
+`"Multiply2x"` alpha mode (unknown variant).
+
 ## 2. Inventory before M9 (what existed, what was dropped)
 
 - Versions existed for scenes, the project file, `.meta`, save games (plus

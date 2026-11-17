@@ -70,7 +70,9 @@ pub use box_render;
 #[cfg(feature = "script")]
 pub use box_script;
 pub use box_ui;
-pub use camera::{OrbitCamera, orbit_camera_system};
+pub use camera::{
+    OrbitCamera, active_camera, cursor_ray, orbit_camera_system, screen_ray, world_to_screen,
+};
 pub use game::Game;
 pub use gamepad::GamepadPoller;
 pub use input::{CursorController, InputPlugin, apply_window_event};
@@ -93,7 +95,9 @@ use box_render::{DebugDraw, Environment, RenderSettings, StandardMaterial};
 /// reflect field attributes (`Range`, `Unit`, `Step`, `Hidden`, `NotSaved`)
 /// and the `tracing` log macros (`info!`, `warn!`, `error!`, `debug!`).
 pub mod prelude {
-    pub use crate::camera::{OrbitCamera, orbit_camera_system};
+    pub use crate::camera::{
+        OrbitCamera, active_camera, cursor_ray, orbit_camera_system, screen_ray, world_to_screen,
+    };
     pub use crate::game::Game;
     pub use crate::input::InputPlugin;
     pub use crate::runner::{RunOptions, WindowSize, run};
@@ -122,9 +126,10 @@ pub mod prelude {
     };
     pub use box_render::{
         AerialHaze, AlphaMode, AmbientOcclusion, Bloom, Camera, ColorGrading, DebugDraw,
-        DirectionalLight, DistanceQuieting, Environment, FrameStats, HeightMist, MaterialHandle,
-        MeshRenderer, PointLight, RenderSettings, Renderer, ShaderMaterial, ShaderSource, Sky,
-        SkyGradient, StandardMaterial, Tonemapper, Vignette, Wind,
+        DepthWrite, DirectionalLight, DistanceQuieting, Environment, FrameStats, HeightMist,
+        MaterialHandle, MeshRenderer, PointLight, RenderSettings, Renderer, ShaderMaterial,
+        ShaderSource, Sky, SkyGradient, StandardMaterial, Tonemapper, ViewportPoint, Vignette,
+        Wind,
     };
     pub use box_render::{
         AmbientVolume, CurveKey, GradientKey, LocalShadow, ParticleBlend, ParticleBurst,
@@ -218,11 +223,7 @@ fn sync_ui_screen(world: &mut World) {
 /// The global transform of the world's first active camera (where sounds
 /// are heard from when no entity has an `AudioListener`).
 pub fn active_camera_pose(world: &World) -> Option<GlobalTransform> {
-    world
-        .query::<(&box_render::Camera, &GlobalTransform)>()
-        .iter()
-        .find(|(c, _)| c.active)
-        .map(|(_, g)| *g)
+    active_camera(world).map(|(_, g)| g)
 }
 
 /// An [`AssetServer`](box_assets::AssetServer) for `assets_dir` with the

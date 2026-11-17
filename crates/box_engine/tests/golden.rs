@@ -118,8 +118,9 @@ fn golden_scenes() {
 
 /// RS2 material scenes (see `examples/common/materials.rs`), at 640x360:
 /// textures, alpha modes, double-sided faces, point lights with and without
-/// the sun, two materials on one mesh, and a custom shader material (plus a
-/// broken one drawing the error material).
+/// the sun, two materials on one mesh, a custom shader material (plus a
+/// broken one drawing the error material), and per-material pipeline state
+/// with a shader reading the scene depth.
 #[test]
 fn golden_material_scenes() {
     let Some(mut r) = renderer() else { return };

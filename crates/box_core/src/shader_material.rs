@@ -33,7 +33,7 @@ use glam::{Vec2, Vec3, Vec4};
 
 use crate::asset_ref::AssetRef;
 use crate::color::Color;
-use crate::material::AlphaMode;
+use crate::material::{AlphaMode, DepthWrite, yes};
 use crate::reflect::{Range, Reflect, ReflectComponent, ReflectDefault, Step, Unit};
 
 /// A material drawn by a custom WGSL shader with editable parameters.
@@ -43,7 +43,7 @@ use crate::reflect::{Range, Reflect, ReflectComponent, ReflectDefault, Step, Uni
 /// assets. Parameters are matched to the shader header by name, so values
 /// survive reordering the header; values for parameters the header does not
 /// declare are kept but unused.
-#[derive(Clone, Debug, Default, PartialEq, Reflect)]
+#[derive(Clone, Debug, PartialEq, Reflect)]
 #[reflect(Component, Default, Clone, Debug, PartialEq)]
 #[type_path = "box_engine"]
 pub struct ShaderMaterial {
@@ -66,6 +66,48 @@ pub struct ShaderMaterial {
     /// `StandardMaterial::depth_fade`.
     #[reflect(default, @Range { min: 0.0, max: 50.0 }, @Unit("m"), @Step(0.05))]
     pub depth_fade: f32,
+    /// Transparent modes: draw order. See `StandardMaterial::sort_bias`.
+    #[reflect(default)]
+    pub sort_bias: i32,
+    /// Whether the material writes depth.
+    #[reflect(default)]
+    pub depth_write: DepthWrite,
+    /// Test against depth. Off draws over everything drawn before it.
+    #[reflect(default = "yes")]
+    pub depth_test: bool,
+    /// Transparent modes: write depth first, then draw colour only on the
+    /// nearest surface (a ghost look). See `StandardMaterial::prewrite_depth`.
+    #[reflect(default)]
+    pub prewrite_depth: bool,
+    /// The shader reads the scene depth (`scene_depth` in material_api):
+    /// run the depth prepass while the material is visible. A shader that
+    /// calls `scene_depth` requests it without this.
+    #[reflect(default)]
+    pub scene_depth: bool,
+    /// Margin added on every side of the culling bounds of meshes drawn
+    /// with this material, for a `vertex` hook that moves vertices outside
+    /// the mesh (waves, sway): without it they can disappear at the edges of
+    /// the view or from shadows while still on screen.
+    #[reflect(default, @Range { min: 0.0, max: 100.0 }, @Unit("m"), @Step(0.05))]
+    pub bounds_padding: f32,
+}
+
+impl Default for ShaderMaterial {
+    fn default() -> Self {
+        Self {
+            shader: AssetRef::NONE,
+            params: Vec::new(),
+            alpha_mode: AlphaMode::Opaque,
+            double_sided: false,
+            depth_fade: 0.0,
+            sort_bias: 0,
+            depth_write: DepthWrite::Auto,
+            depth_test: true,
+            prewrite_depth: false,
+            scene_depth: false,
+            bounds_padding: 0.0,
+        }
+    }
 }
 
 /// One named parameter value of a [`ShaderMaterial`].
@@ -885,11 +927,19 @@ fn surface(in: SurfaceInput, p: Params) -> Surface {
                     value: ShaderParamValue::Float(12.0),
                 },
             ],
-            alpha_mode: AlphaMode::Blend,
+            alpha_mode: AlphaMode::Multiply2x,
             double_sided: true,
             depth_fade: 1.5,
+            sort_bias: -2,
+            depth_write: DepthWrite::On,
+            depth_test: false,
+            prewrite_depth: true,
+            scene_depth: true,
+            bounds_padding: 0.25,
         };
         let json = registry.value_to_json(&m).unwrap();
+        assert_eq!(json["alpha_mode"], serde_json::json!("Multiply2x"));
+        assert_eq!(json["depth_write"], serde_json::json!("On"));
         assert_eq!(
             json["shader"],
             serde_json::json!({"path": "shaders/stripes.wgsl"})
@@ -909,5 +959,12 @@ fn surface(in: SurfaceInput, p: Params) -> Surface {
         let v = registry.value_from_json(ty.type_id(), &minimal).unwrap();
         let m = <ShaderMaterial as bevy_reflect::FromReflect>::from_reflect(v.as_ref()).unwrap();
         assert!(m.params.is_empty() && m.alpha_mode == AlphaMode::Opaque);
+        // Files from before the pipeline state fields load with the old
+        // behaviour.
+        assert_eq!(
+            m,
+            ShaderMaterial::new(AssetRef::path("shaders/stripes.wgsl"))
+        );
+        assert!(m.depth_test && !m.scene_depth && m.bounds_padding == 0.0);
     }
 }

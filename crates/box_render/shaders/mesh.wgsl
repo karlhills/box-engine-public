@@ -88,7 +88,7 @@ fn fs_main(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @loca
     s.occlusion = orm.r;
 
     var color = vec3<f32>(0.0);
-    if ALPHA_MODE != ALPHA_MULTIPLY {
+    if !is_multiply(ALPHA_MODE) {
         var shadow = 1.0;
         if has_sun() && globals.shadow.x > 0.5 {
             shadow = sample_shadow(in.world_pos, n, view_depth);

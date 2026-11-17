@@ -4,7 +4,7 @@
 
 Every global, function, method, value type, callback and registered type a box-engine Luau script can use. Each page is generated from the declarations the editor's luau-lsp completion uses (`box script types`), so hover text in your editor and these pages say the same thing. New to scripting? Start with the scripting guide (`docs/guide/scripting.md`).
 
-628 items. Regenerate with `box script docs --out docs/reference` (engine) or `box script docs --project <dir>` (a project's own types).
+643 items. Regenerate with `box script docs --out docs/reference` (engine) or `box script docs --project <dir>` (a project's own types).
 
 ## Pages
 
@@ -24,6 +24,7 @@ Every global, function, method, value type, callback and registered type a box-e
 - [`save`](save.md) (20 items)
 - [`data`](data.md) (3 items)
 - [`particles`](particles.md) (7 items)
+- [`camera`](camera.md) (5 items)
 - [Script modules](script-modules.md) (24 items)
 - [Script rules](rules.md) (56 items)
 - [Components](components.md) (37 items)
@@ -70,6 +71,7 @@ Every global, function, method, value type, callback and registered type a box-e
 | [`save`](save.md#save-1) | `save` | Save games: snapshots of the running world in named slots. |
 | [`data`](data.md#data-1) | `data` | Data tables: JSON files (`*.data.json`) as read-only Luau tables. |
 | [`particles`](particles.md#particles-1) | `particles` | Particle effects: one-shot bursts and control of `ParticleEmitter` entities. |
+| [`camera`](camera.md#camera-1) | `camera` | The active camera's projection: world points to screen pixels and screen points to world rays (picking). |
 | [`PropertyDecl`](script-modules.md#propertydecl) | Script modules | One declared script property: what each entry of a module's `properties` table takes. |
 | [`ScriptSelf`](script-modules.md#scriptself) | Script modules | The `self` table of a running script instance (one per entity with a `Script`). |
 | [`ScriptModule`](script-modules.md#scriptmodule) | Script modules | The table a gameplay script file returns. |

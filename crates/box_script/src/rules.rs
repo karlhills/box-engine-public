@@ -1187,6 +1187,7 @@ const NOT_IN_RULES: &[&str] = &[
     "save",
     "data",
     "particles",
+    "camera",
     "ui",
     "strings",
 ];

@@ -536,9 +536,15 @@ Scripts: `e:get("ShaderMaterial")`, `e:set("ShaderMaterial", { ... })`, `e:add("
 
 - **`shader`** `string?` (default `null`): The material's `.wgsl` file. While it is not loaded the surface draws with the default material; a shader that fails to compile draws with the magenta error material.
 - **`params`** `{ { name: string, value: { Float: number } | { Int: number } | { Uint: number } | { Vec2: vector } | { Vec3: vector } | { Vec4: { x: number, y: number, z: number, w: number } } | { Color: Color } } }` (default `[]`): Parameter values by name. A parameter missing here, or holding a value of the wrong type, uses the default from the shader header.
-- **`alpha_mode`** `"Opaque" | { Mask: { cutoff: number? } } | "Blend" | "Additive" | "Multiply"` (default `"Opaque"`): How the alpha returned by the shader is used.
+- **`alpha_mode`** `"Opaque" | { Mask: { cutoff: number? } } | "Blend" | "Additive" | "Multiply" | "Multiply2x"` (default `"Opaque"`): How the alpha returned by the shader is used.
 - **`double_sided`** `boolean` (default `false`): Draw both faces; back faces get flipped normals.
 - **`depth_fade`** `number` (default `0.0`, range 0–50, unit m): Transparent modes: fade out over this distance in front of the opaque surface behind (soft particles). 0 is off. See `StandardMaterial::depth_fade`.
+- **`sort_bias`** `number` (default `0`): Transparent modes: draw order. See `StandardMaterial::sort_bias`.
+- **`depth_write`** `"Auto" | "On" | "Off"` (default `"Auto"`): Whether the material writes depth.
+- **`depth_test`** `boolean` (default `true`): Test against depth. Off draws over everything drawn before it.
+- **`prewrite_depth`** `boolean` (default `false`): Transparent modes: write depth first, then draw colour only on the nearest surface (a ghost look). See `StandardMaterial::prewrite_depth`.
+- **`scene_depth`** `boolean` (default `false`): The shader reads the scene depth (`scene_depth` in material_api): run the depth prepass while the material is visible. A shader that calls `scene_depth` requests it without this.
+- **`bounds_padding`** `number` (default `0.0`, range 0–100, unit m): Margin added on every side of the culling bounds of meshes drawn with this material, for a `vertex` hook that moves vertices outside the mesh (waves, sway): without it they can disappear at the edges of the view or from shadows while still on screen.
 
 ## `SkinBinding`
 
@@ -608,11 +614,15 @@ Scripts: `e:get("StandardMaterial")`, `e:set("StandardMaterial", { ... })`, `e:a
 - **`normal_texture`** `string?` (default `null`): Tangent-space normal map (linear).
 - **`orm_texture`** `string?` (default `null`): Occlusion (R), roughness (G) and metallic (B) in one linear texture, as in glTF; roughness and metallic multiply the factors above.
 - **`emissive_texture`** `string?` (default `null`): sRGB emissive texture, multiplied with `emissive`.
-- **`alpha_mode`** `"Opaque" | { Mask: { cutoff: number? } } | "Blend" | "Additive" | "Multiply"` (default `"Opaque"`): How alpha is used.
+- **`alpha_mode`** `"Opaque" | { Mask: { cutoff: number? } } | "Blend" | "Additive" | "Multiply" | "Multiply2x"` (default `"Opaque"`): How alpha is used.
 - **`double_sided`** `boolean` (default `false`): Draw both faces (foliage, thin sheets); back faces get flipped normals.
 - **`depth_fade`** `number` (default `0.0`, range 0–50, unit m): Transparent modes (blend, additive, multiply): fade out over this distance in front of the opaque surface behind, so sheets and puffs meet geometry softly instead of in a hard line (soft particles). 0 is off. Needs the depth prepass, which runs while such a material is visible.
 - **`wind`** `{ strength: number, frequency: number, weight: { HeightRamp: { bottom: number?, top: number? } } | "VertexAlpha" }`: Vertex sway in the wind.
 - **`uv_scale`** `vector` (default `[1.0,1.0]`): Texture repeats per UV unit (all four textures). With UVs in metres (generated meshes), a texture spanning 2 m is `Vec2::splat(0.5)`.
+- **`sort_bias`** `number` (default `0`): Transparent modes: draw order. A higher bias draws later, over transparent surfaces with a lower one, whatever their distance; equal biases sort back to front.
+- **`depth_write`** `"Auto" | "On" | "Off"` (default `"Auto"`): Whether the material writes depth.
+- **`depth_test`** `boolean` (default `true`): Test against depth (hidden behind nearer surfaces). Off draws over everything drawn before it.
+- **`prewrite_depth`** `boolean` (default `false`): Transparent modes: write the surface's depth first, then draw its colour only where it is the nearest surface of the object, so a see-through body shows no inner faces (a ghost look). Needs `depth_test`.
 
 ## `Sweep`
 

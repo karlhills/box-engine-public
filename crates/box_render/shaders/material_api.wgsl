@@ -26,6 +26,20 @@
 // available; `#import box::<module>` lines are accepted for readability.
 // The returned Surface is lit with `shade_standard`, shadowed and fogged
 // (fog, haze, mist, quieting) by the engine.
+//
+// Scene depth: a transparent material can read the depth of the opaque
+// scene behind it (soft intersections, shorelines, depth tint):
+//
+//     let gap = scene_depth(in.frag_coord) - fragment_view_depth(in.frag_coord);
+//
+// both in metres along the camera's view axis. Calling `scene_depth` makes
+// the engine run its depth prepass while the material is visible
+// (`ShaderMaterial::scene_depth` asks for it explicitly). Where the depth is
+// not available (a frame without the prepass, the shadow passes, opaque
+// materials drawing into the prepass) or nothing opaque is behind (the
+// sky), `scene_depth` returns SCENE_DEPTH_FAR, so a gap reads as "deep";
+// `scene_depth_available()` tells the cases apart. The prepass holds opaque
+// and masked surfaces only, so an opaque material reads its own depth.
 // Requires common.wgsl and lighting.wgsl.
 
 struct SurfaceInput {
@@ -45,7 +59,46 @@ struct SurfaceInput {
     // unit vector toward the camera
     view_dir: vec3<f32>,
     front_facing: bool,
+    // the fragment's @builtin(position): pixel centre in xy, depth in z;
+    // pass it to `scene_depth` and `fragment_view_depth`
+    frag_coord: vec4<f32>,
 };
+
+// What `scene_depth` returns where it has no depth: far enough that any
+// gap computed from it counts as deep.
+const SCENE_DEPTH_FAR: f32 = 1.0e9;
+
+// True when the scene depth was rendered this frame and is bound here.
+fn scene_depth_available() -> bool {
+    return globals.scene_depth_on.x > 0.5 && textureDimensions(opaque_depth).x > 1u;
+}
+
+// Linear view depth (metres along the camera's forward axis) of the nearest
+// opaque surface at `frag_coord` (`SurfaceInput.frag_coord`).
+// SCENE_DEPTH_FAR where nothing opaque is there or the depth is unavailable.
+fn scene_depth(frag_coord: vec4<f32>) -> f32 {
+    if globals.scene_depth_on.x < 0.5 {
+        return SCENE_DEPTH_FAR;
+    }
+    let size = textureDimensions(opaque_depth);
+    let p = vec2<i32>(frag_coord.xy);
+    if size.x <= 1u || p.x < 0 || p.y < 0 || p.x >= i32(size.x) || p.y >= i32(size.y) {
+        // The 1x1 placeholder (prepass and shadow passes) or off the target.
+        return SCENE_DEPTH_FAR;
+    }
+    let d = textureLoad(opaque_depth, p, 0);
+    if d <= 0.0 {
+        // The sky (reverse-Z clears to 0).
+        return SCENE_DEPTH_FAR;
+    }
+    // Infinite reverse-Z: NDC depth = near / view depth.
+    return globals.camera_pos.w / d;
+}
+
+// Linear view depth (metres) of the fragment at `frag_coord` itself.
+fn fragment_view_depth(frag_coord: vec4<f32>) -> f32 {
+    return globals.camera_pos.w / max(frag_coord.z, 1e-12);
+}
 
 // A plain surface: vertex colour, roughness 0.5, dielectric, no emission.
 fn default_surface(in: SurfaceInput) -> Surface {

@@ -12,7 +12,7 @@
 
 use box_core::assets::Handle;
 use box_core::color::Color;
-pub use box_core::material::{AlphaMode, StandardMaterial, WindSway, WindWeight};
+pub use box_core::material::{AlphaMode, DepthWrite, StandardMaterial, WindSway, WindWeight};
 use box_core::mesh::MeshData;
 use box_core::reflect::{
     Logarithmic, Range, Reflect, ReflectComponent, ReflectDefault, ReflectResource,
@@ -363,6 +363,11 @@ pub enum Tonemapper {
     AcesFitted,
     /// Clamp only.
     None,
+    /// Khronos PBR Neutral: linear (base colours reproduced as authored, a
+    /// small toe offset aside) up to 0.76, then a smooth roll-off to white
+    /// that desaturates highlights only slightly. Keeps saturated bright
+    /// colours more saturated than AgX.
+    Neutral,
 }
 
 /// Sky, ambient light, fog, exposure and post-processing (ambient
@@ -722,7 +727,9 @@ impl Default for AmbientOcclusion {
 
 /// Bloom: a blurred copy of the image (a chain of downsampled mips, added
 /// back up) blended over it before tone mapping. Energy-conserving: the glow
-/// redistributes light rather than adding it, so there is no threshold.
+/// redistributes light rather than adding it. Without a threshold the whole
+/// image glows a little; with one only the part of each pixel brighter than
+/// the threshold is blurred (and taken from the pixel it spreads from).
 #[derive(Clone, Copy, Debug, PartialEq, Reflect)]
 #[reflect(Default, Clone, Debug, PartialEq)]
 #[type_path = "box_engine"]
@@ -735,6 +742,16 @@ pub struct Bloom {
     /// How far the glow spreads: 0 keeps it tight, 1 makes it wide.
     #[reflect(@Range { min: 0.0, max: 1.0 }, @Step(0.01))]
     pub scatter: f32,
+    /// Luminance after exposure (the tone mapper's input, where middle grey
+    /// is 0.18) where bloom starts: only light above it glows, so emissive
+    /// surfaces and highlights bloom and the rest of the image stays crisp.
+    /// 0 turns the threshold off (the whole image glows a little).
+    #[reflect(@Range { min: 0.0, max: 10.0 }, @Step(0.01))]
+    pub threshold: f32,
+    /// Softness of the threshold, as a fraction of it: 0 is a hard cut,
+    /// 1 fades bloom in from 0 to twice the threshold (a quadratic knee).
+    #[reflect(@Range { min: 0.0, max: 1.0 }, @Step(0.01))]
+    pub knee: f32,
 }
 
 impl Default for Bloom {
@@ -743,6 +760,8 @@ impl Default for Bloom {
             enabled: true,
             intensity: 0.025,
             scatter: 0.7,
+            threshold: 0.0,
+            knee: 0.5,
         }
     }
 }

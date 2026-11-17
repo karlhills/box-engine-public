@@ -189,7 +189,7 @@ fn the_main_sample_scene_works() {
     let mut app = play("main", 60);
     no_failed_scripts(&mut app, "main");
     let stats = app.world.resource::<ScriptRuntime>().stats();
-    assert_eq!(stats.instances, 19, "{stats:?}");
+    assert_eq!(stats.instances, 20, "{stats:?}");
     let swarm = entity(&app, "Swarm");
     assert_eq!(
         app.world.children(swarm).len(),
@@ -238,6 +238,24 @@ fn the_main_sample_scene_works() {
         .get::<box_engine::box_core::animation::AnimationStateMachineState>(body)
         .map(|s| s.current().to_string());
     assert_eq!(state.as_deref(), Some("Idle"));
+
+    // Pick sees the ball on screen once the game view has a size, and a
+    // click casts the cursor ray.
+    assert!(!script_field::<bool>(&app, "Picker", "ball_visible"));
+    *app.world.resource_mut::<box_engine::WindowSize>() = box_engine::WindowSize {
+        width: 1280,
+        height: 720,
+        scale_factor_milli: 1000,
+    };
+    app.world.resource_mut::<Input>().cursor_position = Some(Vec2::new(640.0, 360.0));
+    app.world
+        .resource_mut::<Input>()
+        .press_button(MouseButton::Left);
+    frames(&mut app, 2);
+    app.world
+        .resource_mut::<Input>()
+        .release_button(MouseButton::Left);
+    assert!(script_field::<bool>(&app, "Picker", "ball_visible"));
 
     // Walk forward (W) through both coins and the gem.
     let z0 = app

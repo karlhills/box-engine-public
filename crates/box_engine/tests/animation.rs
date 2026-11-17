@@ -460,17 +460,11 @@ fn project(world: &World, p: Vec3) -> (u32, u32) {
         .map(|(c, g)| (*c, *g))
         .next()
         .unwrap();
-    let proj = box_engine::box_core::glam::camera::rh::proj::directx::perspective_infinite_reverse(
-        cam.fov_y,
-        W as f32 / H as f32,
-        cam.near,
-    );
-    let clip = proj * Mat4::from(g.0).inverse() * p.extend(1.0);
-    let ndc = clip.truncate() / clip.w;
-    (
-        ((ndc.x * 0.5 + 0.5) * W as f32) as u32,
-        ((0.5 - ndc.y * 0.5) * H as f32) as u32,
-    )
+    let px = cam
+        .world_to_viewport(&g, Vec2::new(W as f32, H as f32), p)
+        .unwrap()
+        .pixels;
+    (px.x as u32, px.y as u32)
 }
 
 /// Where a hand is: 0.3 m down the lower arm from its joint.

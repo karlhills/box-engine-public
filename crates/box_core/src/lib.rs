@@ -73,6 +73,7 @@ pub fn register_core_types(registry: &mut reflect::Registry) {
     registry.register_value::<asset_ref::AssetId>();
     registry.register_value::<asset_ref::AssetRef>();
     registry.register_value::<material::AlphaMode>();
+    registry.register_value::<material::DepthWrite>();
     registry.register_value::<shader_material::ShaderParamValue>();
 }
 
@@ -98,7 +99,7 @@ pub mod prelude {
         Modifiers, MouseButton,
     };
     pub use crate::interpolate::{Interpolated, interpolated_transform};
-    pub use crate::material::{AlphaMode, StandardMaterial, WindSway, WindWeight};
+    pub use crate::material::{AlphaMode, DepthWrite, StandardMaterial, WindSway, WindWeight};
     pub use crate::math::{Aabb, Ray};
     pub use crate::mesh::{MaterialGroup, MeshData};
     pub use crate::mesh_asset::{MaterialRef, MeshAsset};

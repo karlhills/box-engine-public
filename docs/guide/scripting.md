@@ -248,6 +248,7 @@ end
 ```
 
 - Queries see colliders as of the end of the previous frame: something spawned this frame is found from the next one.
+- To pick what is under the mouse, cast `camera.cursor_ray()` with `physics.raycast`; `camera.world_to_screen(position)` gives where a world point is drawn ([reference](../reference/camera.md)).
 - Pass `{ exclude = self.entity }` so a ray from inside an object does not hit the object itself.
 - Collision layers (`Collider.layers` and `mask`) decide what touches what; a query's `mask` option picks which layers it sees.
 

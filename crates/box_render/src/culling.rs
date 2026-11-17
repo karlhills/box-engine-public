@@ -1,7 +1,7 @@
 //! CPU frustum culling.
 
 use box_core::math::Aabb;
-use glam::{Mat4, Vec4};
+use glam::{Mat4, Vec3, Vec4};
 
 /// Frustum planes extracted from a view-projection matrix (wgpu clip space,
 /// `0 <= z <= w`). Degenerate planes, such as the far plane of an infinite
@@ -58,10 +58,20 @@ impl Frustum {
     }
 }
 
+/// `bounds` grown by `reach` metres on every side: the culling bounds of a
+/// mesh whose vertices a material moves (wind sway, `bounds_padding`).
+pub(crate) fn padded(bounds: Aabb, reach: f32) -> Aabb {
+    if reach > 0.0 && !bounds.is_empty() {
+        let pad = Vec3::splat(reach);
+        Aabb::new(bounds.min - pad, bounds.max + pad)
+    } else {
+        bounds
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use glam::Vec3;
     use glam::camera::rh::{proj::directx, view};
 
     fn camera() -> Mat4 {
@@ -96,5 +106,21 @@ mod tests {
             .filter(|&i| f.intersects_aabb(&boxes[i]))
             .collect();
         assert_eq!(visible, vec![0, 3, 5, 6]);
+    }
+
+    #[test]
+    fn padding_keeps_displaced_meshes_just_outside_the_frustum() {
+        let f = Frustum::from_view_proj(&camera());
+        // The right edge of the view near the origin is about 11 m to the
+        // side (60° vertical, 16:9, 10.2 m from the camera).
+        let outside = unit_box(Vec3::new(12.5, 0.0, 0.0));
+        assert!(!f.intersects_aabb(&outside), "culled without padding");
+        assert!(
+            f.intersects_aabb(&padded(outside, 1.5)),
+            "drawn with padding"
+        );
+        assert!(!f.intersects_aabb(&padded(outside, 0.2)), "too little");
+        assert_eq!(padded(outside, 0.0), outside);
+        assert!(padded(Aabb::EMPTY, 2.0).is_empty());
     }
 }

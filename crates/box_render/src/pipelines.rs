@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::num::NonZeroU64;
 
-use box_core::material::AlphaMode;
+use box_core::material::{AlphaMode, DepthWrite};
 
 use crate::shaders::ProcessedShaders;
 use crate::uniforms::{
@@ -188,11 +188,23 @@ impl Layouts {
                 storage(2, 64),
             ],
         });
+        // Binding 7 holds a placeholder scene depth: material shaders that
+        // call `scene_depth` reference it in their masked shadow fragment.
         let shadow_pass = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("shadow pass layout"),
             entries: &[
                 uniform(0, vf, false, globals_size),
                 uniform(4, wgpu::ShaderStages::VERTEX, true, 64),
+                wgpu::BindGroupLayoutEntry {
+                    binding: 7,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Depth,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
             ],
         });
         let texture = |binding, sample_type, multisampled| wgpu::BindGroupLayoutEntry {
@@ -913,6 +925,9 @@ pub(crate) enum Pass {
     /// sway, a material shader's `vertex` hook); others use the fixed
     /// outline mask pipelines.
     Outline,
+    /// Depth only, in the HDR pass just before the colour draw of a
+    /// transparent material with `prewrite_depth` (no colour writes).
+    Prewrite,
 }
 
 /// The `ALPHA_MODE` pipeline constant (forward.wgsl).
@@ -923,6 +938,7 @@ pub(crate) enum AlphaKey {
     Blend = 2,
     Additive = 3,
     Multiply = 4,
+    Multiply2x = 5,
 }
 
 impl From<AlphaMode> for AlphaKey {
@@ -933,6 +949,7 @@ impl From<AlphaMode> for AlphaKey {
             AlphaMode::Blend => Self::Blend,
             AlphaMode::Additive => Self::Additive,
             AlphaMode::Multiply => Self::Multiply,
+            AlphaMode::Multiply2x => Self::Multiply2x,
         }
     }
 }
@@ -941,7 +958,140 @@ impl AlphaKey {
     /// Drawn in the sorted transparent pass, without depth writes and
     /// without casting shadows.
     pub(crate) fn is_transparent(self) -> bool {
-        matches!(self, Self::Blend | Self::Additive | Self::Multiply)
+        matches!(
+            self,
+            Self::Blend | Self::Additive | Self::Multiply | Self::Multiply2x
+        )
+    }
+
+    /// The colour blend of the main pass (`None`: replace).
+    pub(crate) fn blend(self) -> Option<wgpu::BlendState> {
+        let multiply = |src_factor| wgpu::BlendState {
+            color: wgpu::BlendComponent {
+                src_factor,
+                dst_factor: wgpu::BlendFactor::Src,
+                operation: wgpu::BlendOperation::Add,
+            },
+            alpha: keep_destination_alpha(),
+        };
+        match self {
+            Self::Opaque | Self::Mask => None,
+            Self::Blend => Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+            Self::Additive => Some(wgpu::BlendState {
+                color: wgpu::BlendComponent {
+                    src_factor: wgpu::BlendFactor::One,
+                    dst_factor: wgpu::BlendFactor::One,
+                    operation: wgpu::BlendOperation::Add,
+                },
+                alpha: keep_destination_alpha(),
+            }),
+            // dst * src.
+            Self::Multiply => Some(multiply(wgpu::BlendFactor::Zero)),
+            // src * dst + dst * src = 2 * src * dst.
+            Self::Multiply2x => Some(multiply(wgpu::BlendFactor::Dst)),
+        }
+    }
+}
+
+/// The depth comparison of a main-pass pipeline (reverse-Z: nearer is
+/// greater).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(crate) enum DepthCompare {
+    /// Nearer than what is there (the default).
+    Greater,
+    /// Nearer or at the same depth: the colour draw after a depth pre-write.
+    GreaterEqual,
+    /// No depth test.
+    Always,
+}
+
+impl DepthCompare {
+    pub(crate) fn wgpu(self) -> wgpu::CompareFunction {
+        match self {
+            Self::Greater => wgpu::CompareFunction::Greater,
+            Self::GreaterEqual => wgpu::CompareFunction::GreaterEqual,
+            Self::Always => wgpu::CompareFunction::Always,
+        }
+    }
+}
+
+/// The depth state of a main-pass (or pre-write) pipeline.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(crate) struct DepthKey {
+    pub write: bool,
+    pub compare: DepthCompare,
+}
+
+impl DepthKey {
+    /// Writes and tests depth: opaque surfaces and depth pre-writes.
+    pub(crate) const OPAQUE: Self = Self {
+        write: true,
+        compare: DepthCompare::Greater,
+    };
+    /// Tests but does not write: transparent surfaces.
+    pub(crate) const TRANSPARENT: Self = Self {
+        write: false,
+        compare: DepthCompare::Greater,
+    };
+
+    /// The default for `alpha`.
+    pub(crate) fn for_alpha(alpha: AlphaKey) -> Self {
+        if alpha.is_transparent() {
+            Self::TRANSPARENT
+        } else {
+            Self::OPAQUE
+        }
+    }
+}
+
+/// A material's pipeline state in the HDR pass (R6), from its alpha mode
+/// and its `depth_write`, `depth_test` and `prewrite_depth` fields.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct MaterialDepth {
+    /// The colour draw.
+    pub main: DepthKey,
+    /// A depth-only draw ([`Pass::Prewrite`], [`DepthKey::OPAQUE`]) right
+    /// before the colour draw.
+    pub prewrite: bool,
+}
+
+impl MaterialDepth {
+    /// `prewrite` applies to transparent modes with the depth test on (a
+    /// pre-write without a test would keep the last surface drawn, not the
+    /// nearest); the colour draw then passes where its depth equals the
+    /// written one.
+    pub(crate) fn resolve(alpha: AlphaKey, write: DepthWrite, test: bool, prewrite: bool) -> Self {
+        let prewrite = prewrite && test && alpha.is_transparent();
+        let write = match write {
+            DepthWrite::Auto => !alpha.is_transparent(),
+            DepthWrite::On => true,
+            DepthWrite::Off => false,
+        };
+        let compare = match (test, prewrite) {
+            (false, _) => DepthCompare::Always,
+            (true, true) => DepthCompare::GreaterEqual,
+            (true, false) => DepthCompare::Greater,
+        };
+        Self {
+            main: DepthKey { write, compare },
+            prewrite,
+        }
+    }
+
+    /// The default state for `alpha` (what every material had before R6).
+    pub(crate) fn default_for(alpha: AlphaKey) -> Self {
+        Self {
+            main: DepthKey::for_alpha(alpha),
+            prewrite: false,
+        }
+    }
+
+    /// The colour draw writes and tests depth like an ordinary opaque
+    /// surface, so it belongs in the depth prepass (ambient occlusion, scene
+    /// depth). Opaque materials that do not write or test depth are left
+    /// out of it.
+    pub(crate) fn in_prepass(&self) -> bool {
+        self.main == DepthKey::OPAQUE
     }
 }
 
@@ -977,6 +1127,9 @@ pub(crate) struct PipelineKey {
     /// A `StandardMaterial` that sways in the wind (the `*_wind` vertex entry
     /// points, which read the material).
     pub wind: bool,
+    /// Depth write and compare of [`Pass::Main`] and [`Pass::Prewrite`]
+    /// keys; [`DepthKey::OPAQUE`] in other passes (their state is fixed).
+    pub depth: DepthKey,
     pub vertex_layout: VertexLayout,
     pub samples: u32,
     pub format: wgpu::TextureFormat,
@@ -1000,9 +1153,26 @@ impl PipelineKey {
             alpha_cutoff_bits: 0,
             depth_fade_bits: 0,
             wind: false,
+            depth: DepthKey::for_alpha(alpha),
             vertex_layout: VertexLayout::Mesh,
             samples: MSAA_SAMPLES,
             format: hdr_format,
+        }
+    }
+
+    /// The depth-only draw before the colour draw of a transparent material
+    /// with `prewrite_depth`, in the HDR pass.
+    pub(crate) fn prewrite(
+        shader: ShaderKey,
+        alpha: AlphaKey,
+        double_sided: bool,
+        mirrored: bool,
+        hdr_format: wgpu::TextureFormat,
+    ) -> Self {
+        Self {
+            pass: Pass::Prewrite,
+            depth: DepthKey::OPAQUE,
+            ..Self::main(shader, alpha, double_sided, mirrored, hdr_format)
         }
     }
 
@@ -1026,6 +1196,7 @@ impl PipelineKey {
             alpha_cutoff_bits: 0,
             depth_fade_bits: 0,
             wind: false,
+            depth: DepthKey::OPAQUE,
             vertex_layout: VertexLayout::Mesh,
             samples: 1,
             format: SHADOW_FORMAT,
@@ -1052,6 +1223,7 @@ impl PipelineKey {
             alpha_cutoff_bits: 0,
             depth_fade_bits: 0,
             wind: false,
+            depth: DepthKey::OPAQUE,
             vertex_layout: VertexLayout::Mesh,
             samples: 1,
             format: NORMAL_FORMAT,
@@ -1069,6 +1241,7 @@ impl PipelineKey {
             alpha_cutoff_bits: 0,
             depth_fade_bits: 0,
             wind: false,
+            depth: DepthKey::OPAQUE,
             vertex_layout: VertexLayout::Mesh,
             samples: 1,
             format: OUTLINE_MASK_FORMAT,
@@ -1087,6 +1260,12 @@ impl PipelineKey {
 
     pub(crate) fn with_wind(mut self, wind: bool) -> Self {
         self.wind = wind;
+        self
+    }
+
+    /// A main-pass key with another depth state (R6).
+    pub(crate) fn with_depth(mut self, depth: DepthKey) -> Self {
+        self.depth = depth;
         self
     }
 
@@ -1163,31 +1342,17 @@ pub(crate) fn create_material_pipeline(
         key.shader, key.pass, key.alpha, key.vertex_layout
     );
     match key.pass {
-        Pass::Main => {
+        Pass::Main | Pass::Prewrite => {
             let layout = match key.shader {
                 ShaderKey::Standard => &layouts.standard_main,
                 ShaderKey::Error => &layouts.frame_object,
                 ShaderKey::Custom(_) => &layouts.custom_main,
             };
-            let blend = match key.alpha {
-                AlphaKey::Opaque | AlphaKey::Mask => None,
-                AlphaKey::Blend => Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
-                AlphaKey::Additive => Some(wgpu::BlendState {
-                    color: wgpu::BlendComponent {
-                        src_factor: wgpu::BlendFactor::One,
-                        dst_factor: wgpu::BlendFactor::One,
-                        operation: wgpu::BlendOperation::Add,
-                    },
-                    alpha: keep_destination_alpha(),
-                }),
-                AlphaKey::Multiply => Some(wgpu::BlendState {
-                    color: wgpu::BlendComponent {
-                        src_factor: wgpu::BlendFactor::Zero,
-                        dst_factor: wgpu::BlendFactor::Src,
-                        operation: wgpu::BlendOperation::Add,
-                    },
-                    alpha: keep_destination_alpha(),
-                }),
+            // A depth pre-write runs the material's fragment stage (its
+            // discards apply) but writes no colour.
+            let (blend, write_mask) = match key.pass {
+                Pass::Prewrite => (None, wgpu::ColorWrites::empty()),
+                _ => (key.alpha.blend(), wgpu::ColorWrites::ALL),
             };
             device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some(&label),
@@ -1203,12 +1368,9 @@ pub(crate) fn create_material_pipeline(
                     buffers: &buffers,
                 },
                 primitive,
-                // Reverse-Z: nearer is greater. Transparent surfaces test
-                // against opaque depth but do not write it.
-                depth_stencil: Some(depth_state(
-                    !key.alpha.is_transparent(),
-                    wgpu::CompareFunction::Greater,
-                )),
+                // Reverse-Z: nearer is greater. By default transparent
+                // surfaces test against opaque depth but do not write it.
+                depth_stencil: Some(depth_state(key.depth.write, key.depth.compare.wgpu())),
                 multisample: wgpu::MultisampleState {
                     count: key.samples,
                     ..Default::default()
@@ -1220,7 +1382,7 @@ pub(crate) fn create_material_pipeline(
                     targets: &[Some(wgpu::ColorTargetState {
                         format: key.format,
                         blend,
-                        write_mask: wgpu::ColorWrites::ALL,
+                        write_mask,
                     })],
                 }),
                 multiview_mask: None,
@@ -1455,48 +1617,65 @@ mod tests {
     #[test]
     fn pipeline_keys_separate_every_input() {
         let base = PipelineKey::main(ShaderKey::Standard, AlphaKey::Opaque, false, false, HDR);
-        let variants = [
-            base,
-            PipelineKey::main(ShaderKey::Standard, AlphaKey::Mask, false, false, HDR),
-            PipelineKey::main(ShaderKey::Standard, AlphaKey::Blend, false, false, HDR),
-            PipelineKey::main(ShaderKey::Standard, AlphaKey::Additive, false, false, HDR),
-            PipelineKey::main(ShaderKey::Standard, AlphaKey::Multiply, false, false, HDR),
-            PipelineKey::main(ShaderKey::Standard, AlphaKey::Opaque, true, false, HDR),
-            PipelineKey::main(ShaderKey::Standard, AlphaKey::Opaque, false, true, HDR),
-            PipelineKey::main(ShaderKey::Error, AlphaKey::Opaque, false, false, HDR),
-            PipelineKey::main(ShaderKey::Custom(7), AlphaKey::Opaque, false, false, HDR),
-            PipelineKey::main(ShaderKey::Custom(8), AlphaKey::Opaque, false, false, HDR),
-            PipelineKey::main(ShaderKey::Custom(7), AlphaKey::Mask, false, false, HDR)
-                .with_cutoff(0.5),
-            PipelineKey::main(ShaderKey::Custom(7), AlphaKey::Mask, false, false, HDR)
-                .with_cutoff(0.25),
-            PipelineKey::main(
-                ShaderKey::Standard,
-                AlphaKey::Opaque,
-                false,
-                false,
-                wgpu::TextureFormat::Rgba16Float,
-            ),
-            PipelineKey { samples: 1, ..base },
-            PipelineKey::shadow(ShaderKey::Standard, false, false, false),
-            PipelineKey::shadow(ShaderKey::Standard, true, false, false),
-            PipelineKey::shadow(ShaderKey::Standard, false, true, false),
-            PipelineKey::shadow(ShaderKey::Standard, false, false, true),
-            PipelineKey::prepass(ShaderKey::Standard, false, false, false),
-            PipelineKey::prepass(ShaderKey::Standard, true, false, false),
-            PipelineKey::prepass(ShaderKey::Standard, false, true, false),
-            PipelineKey::prepass(ShaderKey::Standard, false, false, false).with_wind(true),
-            PipelineKey::shadow(ShaderKey::Standard, false, false, false).with_wind(true),
-            base.with_wind(true),
-            PipelineKey::main(ShaderKey::Custom(7), AlphaKey::Blend, false, false, HDR)
-                .with_depth_fade(2.0),
-            PipelineKey::outline(ShaderKey::Standard, false, false).with_wind(true),
-            PipelineKey::outline(ShaderKey::Custom(7), false, false),
-            PipelineKey::outline(ShaderKey::Custom(7), true, false),
-            base.skinned(),
-            PipelineKey::shadow(ShaderKey::Standard, false, false, false).skinned(),
-            PipelineKey::outline(ShaderKey::Standard, false, false).skinned(),
-        ];
+        let variants =
+            [
+                base,
+                PipelineKey::main(ShaderKey::Standard, AlphaKey::Mask, false, false, HDR),
+                PipelineKey::main(ShaderKey::Standard, AlphaKey::Blend, false, false, HDR),
+                PipelineKey::main(ShaderKey::Standard, AlphaKey::Additive, false, false, HDR),
+                PipelineKey::main(ShaderKey::Standard, AlphaKey::Multiply, false, false, HDR),
+                PipelineKey::main(ShaderKey::Standard, AlphaKey::Opaque, true, false, HDR),
+                PipelineKey::main(ShaderKey::Standard, AlphaKey::Opaque, false, true, HDR),
+                PipelineKey::main(ShaderKey::Error, AlphaKey::Opaque, false, false, HDR),
+                PipelineKey::main(ShaderKey::Custom(7), AlphaKey::Opaque, false, false, HDR),
+                PipelineKey::main(ShaderKey::Custom(8), AlphaKey::Opaque, false, false, HDR),
+                PipelineKey::main(ShaderKey::Custom(7), AlphaKey::Mask, false, false, HDR)
+                    .with_cutoff(0.5),
+                PipelineKey::main(ShaderKey::Custom(7), AlphaKey::Mask, false, false, HDR)
+                    .with_cutoff(0.25),
+                PipelineKey::main(
+                    ShaderKey::Standard,
+                    AlphaKey::Opaque,
+                    false,
+                    false,
+                    wgpu::TextureFormat::Rgba16Float,
+                ),
+                PipelineKey { samples: 1, ..base },
+                PipelineKey::shadow(ShaderKey::Standard, false, false, false),
+                PipelineKey::shadow(ShaderKey::Standard, true, false, false),
+                PipelineKey::shadow(ShaderKey::Standard, false, true, false),
+                PipelineKey::shadow(ShaderKey::Standard, false, false, true),
+                PipelineKey::prepass(ShaderKey::Standard, false, false, false),
+                PipelineKey::prepass(ShaderKey::Standard, true, false, false),
+                PipelineKey::prepass(ShaderKey::Standard, false, true, false),
+                PipelineKey::prepass(ShaderKey::Standard, false, false, false).with_wind(true),
+                PipelineKey::shadow(ShaderKey::Standard, false, false, false).with_wind(true),
+                base.with_wind(true),
+                PipelineKey::main(ShaderKey::Custom(7), AlphaKey::Blend, false, false, HDR)
+                    .with_depth_fade(2.0),
+                PipelineKey::outline(ShaderKey::Standard, false, false).with_wind(true),
+                PipelineKey::outline(ShaderKey::Custom(7), false, false),
+                PipelineKey::outline(ShaderKey::Custom(7), true, false),
+                base.skinned(),
+                PipelineKey::shadow(ShaderKey::Standard, false, false, false).skinned(),
+                PipelineKey::outline(ShaderKey::Standard, false, false).skinned(),
+                // R6: Multiply2x, depth state, the depth pre-write.
+                PipelineKey::main(ShaderKey::Standard, AlphaKey::Multiply2x, false, false, HDR),
+                PipelineKey::main(ShaderKey::Standard, AlphaKey::Blend, false, false, HDR)
+                    .with_depth(DepthKey::OPAQUE),
+                PipelineKey::main(ShaderKey::Standard, AlphaKey::Blend, false, false, HDR)
+                    .with_depth(DepthKey {
+                        write: false,
+                        compare: DepthCompare::Always,
+                    }),
+                PipelineKey::main(ShaderKey::Standard, AlphaKey::Blend, false, false, HDR)
+                    .with_depth(DepthKey {
+                        write: false,
+                        compare: DepthCompare::GreaterEqual,
+                    }),
+                PipelineKey::prewrite(ShaderKey::Standard, AlphaKey::Blend, false, false, HDR),
+                PipelineKey::prewrite(ShaderKey::Custom(7), AlphaKey::Blend, false, false, HDR),
+            ];
         let set: HashSet<_> = variants.iter().collect();
         assert_eq!(set.len(), variants.len(), "every input changes the key");
         // Equal inputs give equal keys.
@@ -1515,5 +1694,91 @@ mod tests {
             4,
             "matches ALPHA_MULTIPLY in forward.wgsl"
         );
+        assert_eq!(
+            AlphaKey::Multiply2x as u32,
+            5,
+            "matches ALPHA_MULTIPLY2X in forward.wgsl"
+        );
+        assert!(AlphaKey::from(AlphaMode::Multiply2x).is_transparent());
+        // The main key's default depth state follows the alpha mode.
+        assert_eq!(base.depth, DepthKey::OPAQUE);
+        let blend = PipelineKey::main(ShaderKey::Standard, AlphaKey::Blend, false, false, HDR);
+        assert_eq!(blend.depth, DepthKey::TRANSPARENT);
+        let pre = PipelineKey::prewrite(ShaderKey::Standard, AlphaKey::Blend, false, false, HDR);
+        assert_eq!((pre.pass, pre.depth), (Pass::Prewrite, DepthKey::OPAQUE));
+        assert_eq!(
+            (pre.samples, pre.format),
+            (MSAA_SAMPLES, HDR),
+            "in the HDR pass"
+        );
+    }
+
+    #[test]
+    fn material_depth_maps_the_material_fields() {
+        use DepthCompare::*;
+        let key = |write, compare| DepthKey { write, compare };
+        let r = MaterialDepth::resolve;
+        // Defaults: what every material had before R6.
+        for alpha in [
+            AlphaKey::Opaque,
+            AlphaKey::Mask,
+            AlphaKey::Blend,
+            AlphaKey::Additive,
+            AlphaKey::Multiply,
+            AlphaKey::Multiply2x,
+        ] {
+            assert_eq!(
+                r(alpha, DepthWrite::Auto, true, false),
+                MaterialDepth::default_for(alpha),
+                "{alpha:?}"
+            );
+        }
+        let opaque = r(AlphaKey::Opaque, DepthWrite::Auto, true, false);
+        assert_eq!(opaque.main, key(true, Greater));
+        assert!(opaque.in_prepass());
+        let blend = r(AlphaKey::Blend, DepthWrite::Auto, true, false);
+        assert_eq!((blend.main, blend.prewrite), (key(false, Greater), false));
+        // Overrides.
+        assert_eq!(
+            r(AlphaKey::Blend, DepthWrite::On, true, false).main,
+            key(true, Greater)
+        );
+        let no_write = r(AlphaKey::Opaque, DepthWrite::Off, true, false);
+        assert_eq!(no_write.main, key(false, Greater));
+        assert!(!no_write.in_prepass(), "not depth for AO");
+        let no_test = r(AlphaKey::Opaque, DepthWrite::Auto, false, false);
+        assert_eq!(no_test.main, key(true, Always));
+        assert!(!no_test.in_prepass());
+        // The ghost: depth first, then colour where equal or nearer.
+        let ghost = r(AlphaKey::Blend, DepthWrite::Auto, true, true);
+        assert_eq!(
+            (ghost.main, ghost.prewrite),
+            (key(false, GreaterEqual), true)
+        );
+        // A pre-write needs a transparent mode and the depth test.
+        assert_eq!(r(AlphaKey::Opaque, DepthWrite::Auto, true, true), opaque);
+        let untested = r(AlphaKey::Blend, DepthWrite::Auto, false, true);
+        assert_eq!(
+            (untested.main, untested.prewrite),
+            (key(false, Always), false)
+        );
+        assert_eq!(GreaterEqual.wgpu(), wgpu::CompareFunction::GreaterEqual);
+    }
+
+    #[test]
+    fn multiply_blends_scale_the_destination() {
+        use wgpu::BlendFactor::*;
+        let color = |a: AlphaKey| a.blend().map(|b| (b.color.src_factor, b.color.dst_factor));
+        assert_eq!(color(AlphaKey::Opaque), None);
+        assert_eq!(color(AlphaKey::Mask), None);
+        // dst * src.
+        assert_eq!(color(AlphaKey::Multiply), Some((Zero, Src)));
+        // src * dst + dst * src = 2 src dst: 0.5 is neutral.
+        assert_eq!(color(AlphaKey::Multiply2x), Some((Dst, Src)));
+        assert_eq!(color(AlphaKey::Additive), Some((One, One)));
+        // Multiply modes keep the destination alpha.
+        for a in [AlphaKey::Multiply, AlphaKey::Multiply2x, AlphaKey::Additive] {
+            assert_eq!(a.blend().unwrap().alpha, keep_destination_alpha());
+        }
     }
 }

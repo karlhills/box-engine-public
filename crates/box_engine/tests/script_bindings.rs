@@ -1,7 +1,7 @@
 //! The M7 script bindings of the engine's modules, each driven from a
 //! small Luau script in a temporary project: `character` and `physics`
 //! (move_and_slide, forces, body reads, collision callbacks), `animation`,
-//! `ui` and `strings`, `data`, `particles`, `save` and `scenes`.
+//! `ui` and `strings`, `data`, `particles`, `camera`, `save` and `scenes`.
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -555,6 +555,58 @@ fn particles_burst_start_stop_restart() {
         field::<bool>(&app, e, "burst_gone"),
         "one-shot bursts despawn"
     );
+}
+
+const CAMERA: &str = r#"
+local T = {}
+function T.on_start(self)
+    self.size = camera.screen_size()
+    local ahead = camera.world_to_screen(vector.create(0, 0, -10))
+    self.centre = ahead
+    self.behind = camera.world_to_screen(vector.create(0, 0, 10)) == nil
+    local p = vector.create(3, -1, -6)
+    local s = camera.world_to_screen(p)
+    local origin, direction = camera.screen_ray(s)
+    self.miss = vector.magnitude(origin + direction * vector.magnitude(p - origin) - p)
+    local o, d = camera.cursor_ray()
+    self.no_cursor = o == nil and d == nil
+    wait_frames(1)
+    local co, cd = camera.cursor_ray()
+    self.cursor_dir = cd
+    self.done = true
+end
+return T
+"#;
+
+#[test]
+fn camera_projects_points_and_casts_screen_and_cursor_rays() {
+    let p = Project::new("camera", &[("scripts/c.luau", CAMERA)]);
+    let mut app = p.app();
+    *app.world.resource_mut::<box_engine::WindowSize>() = box_engine::WindowSize {
+        width: 800,
+        height: 400,
+        scale_factor_milli: 1000,
+    };
+    app.world.spawn((
+        Transform::default(),
+        GlobalTransform::default(),
+        Camera::default(),
+    ));
+    let e = spawn_script(&mut app, "Cam", "scripts/c.luau", ());
+    // The cursor enters the window after the script's first look.
+    run_until(&mut app, 30.0, |app| instance(app, e).is_some());
+    app.world.resource_mut::<Input>().cursor_position = Some(Vec2::new(400.0, 200.0));
+    finish(&mut app, e);
+    let v = |key: &str| {
+        let v = field::<box_engine::box_script::mlua::Vector>(&app, e, key);
+        Vec3::new(v.x(), v.y(), v.z())
+    };
+    assert_eq!(v("size"), Vec3::new(800.0, 400.0, 0.0));
+    assert!((v("centre") - Vec3::new(400.0, 200.0, 10.0)).length() < 1e-3);
+    assert!(field::<bool>(&app, e, "behind"));
+    assert!(field::<f64>(&app, e, "miss") < 1e-4);
+    assert!(field::<bool>(&app, e, "no_cursor"));
+    assert!((v("cursor_dir") - Vec3::NEG_Z).length() < 1e-5);
 }
 
 const VISIBILITY: &str = r#"

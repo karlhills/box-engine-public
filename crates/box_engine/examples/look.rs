@@ -9,7 +9,9 @@
 //! Flags: `--hour <13..21.5>` (time of day for pillars, atmosphere and
 //! night), `--time-lapse <hours per second>` (animates it), `--no-haze`,
 //! `--no-mist`, `--no-quieting`, `--simple-sky`, `--no-stars`, `--no-grade`,
-//! `--no-vignette`, `--no-bloom`, `--calm` (no wind), `--no-depth-fade`.
+//! `--no-vignette`, `--no-bloom`, `--bloom <intensity>`,
+//! `--bloom-threshold <exposed luminance>`, `--tonemap <agx|aces|neutral|none>`,
+//! `--calm` (no wind), `--no-depth-fade`.
 //! Esc quits.
 
 mod common;
@@ -71,6 +73,15 @@ fn main() -> anyhow::Result<()> {
     }
     if flag("--no-bloom") {
         env.bloom.enabled = false;
+    }
+    if let Some(v) = value("--bloom").and_then(|v| v.parse::<f32>().ok()) {
+        env.bloom.intensity = v;
+    }
+    if let Some(v) = value("--bloom-threshold").and_then(|v| v.parse::<f32>().ok()) {
+        env.bloom.threshold = v;
+    }
+    if let Some(name) = value("--tonemap") {
+        env.tonemapper = parse_tonemapper(name)?;
     }
     if flag("--calm") {
         env.wind.strength = 0.0;

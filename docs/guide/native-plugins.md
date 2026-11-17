@@ -446,6 +446,8 @@ Players and designers can rebind without rebuilding: `assets/settings/input.acti
 
 Raw input is still there when you need it: the `Input` resource has `key_down`, `key_pressed`, `button_pressed` and `mouse_delta`. For mouse look, lock the cursor with `world.resource_mut::<CursorOptions>().lock()` (and `release()`).
 
+To pick with the mouse, `cursor_ray(world)` gives the world ray under the cursor through the active camera; cast it with `world.resource::<Physics>().raycast(&ray, 100.0, &QueryFilter::default())`. `world_to_screen(world, point)` gives where a world point is drawn (pixels, depth; `None` behind the camera) and `screen_ray(world, pixel)` the ray through any pixel. They use the renderer's own projection; for an explicit camera use `Camera::world_to_viewport` and `Camera::viewport_ray`.
+
 ## Physics, characters, timers and tweens
 
 With the default `physics` module (see [Optional engine modules](#optional-engine-modules)):

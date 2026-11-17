@@ -7,6 +7,12 @@ const ALPHA_MASK: u32 = 1u;
 const ALPHA_BLEND: u32 = 2u;
 const ALPHA_ADDITIVE: u32 = 3u;
 const ALPHA_MULTIPLY: u32 = 4u;
+const ALPHA_MULTIPLY2X: u32 = 5u;
+
+// Multiply modes draw the unlit albedo (no lighting is computed).
+fn is_multiply(alpha_mode: u32) -> bool {
+    return alpha_mode == ALPHA_MULTIPLY || alpha_mode == ALPHA_MULTIPLY2X;
+}
 
 // Applies tangent-space normal `tn` (components in -1..1) with the
 // world-space tangent frame of `n` and `tangent` (w = bitangent sign, so the
@@ -49,9 +55,10 @@ fn depth_fade(frag: vec4<f32>, distance: f32) -> f32 {
 // The fragment's output for `alpha_mode`, from the lit colour `color`, the
 // unlit albedo `albedo` (multiply mode) and `alpha`. Blend output is
 // premultiplied (blended with One, OneMinusSrcAlpha); additive output is
-// added; multiply output multiplies what is behind. Fog and atmosphere:
-// opaque and blend surfaces fade toward the fog colour, additive ones fade
-// out, multiply ones fade toward no tint. `fade` (`depth_fade`) scales the
+// added; multiply output multiplies what is behind, multiply 2x output
+// multiplies it twice (blended with Dst, Src: 0.5 is neutral). Fog and
+// atmosphere: opaque and blend surfaces fade toward the fog colour, additive
+// ones fade out, multiply ones fade toward no tint. `fade` (`depth_fade`) scales the
 // coverage of transparent modes.
 fn forward_output(alpha_mode: u32, color: vec3<f32>, albedo: vec3<f32>, alpha: f32, world_pos: vec3<f32>, fade: f32) -> vec4<f32> {
     let eye = globals.camera_pos.xyz;
@@ -71,6 +78,11 @@ fn forward_output(alpha_mode: u32, color: vec3<f32>, albedo: vec3<f32>, alpha: f
         case 4u: {
             let tr = fog_transmittance(eye, world_pos) * atmosphere_transmittance(world_pos);
             let tint = mix(vec3<f32>(1.0), albedo, saturate(alpha) * tr * fade);
+            return vec4<f32>(tint, 1.0);
+        }
+        case 5u: {
+            let tr = fog_transmittance(eye, world_pos) * atmosphere_transmittance(world_pos);
+            let tint = mix(vec3<f32>(0.5), albedo, saturate(alpha) * tr * fade);
             return vec4<f32>(tint, 1.0);
         }
         default: {

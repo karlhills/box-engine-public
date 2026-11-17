@@ -236,7 +236,7 @@ fn material_json(m: &GlbMaterial<'_>, extensions_used: &mut Vec<&'static str>) -
             out["alphaCutoff"] = json!(cutoff);
         }
         // glTF has no additive or multiply blending: blended is closest.
-        AlphaMode::Blend | AlphaMode::Additive | AlphaMode::Multiply => {
+        AlphaMode::Blend | AlphaMode::Additive | AlphaMode::Multiply | AlphaMode::Multiply2x => {
             out["alphaMode"] = json!("BLEND")
         }
     }

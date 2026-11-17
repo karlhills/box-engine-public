@@ -40,6 +40,9 @@ pub(crate) struct ComposedShader {
     /// The file defines a `vertex` hook (it may move vertices, so the
     /// selection outline draws with the shader's own vertex stage).
     pub has_vertex: bool,
+    /// The file calls `scene_depth`: materials using it run the depth
+    /// prepass while visible.
+    pub reads_scene_depth: bool,
 }
 
 /// Checks a material shader file (`.wgsl` defining `fn surface`) the way the
@@ -117,6 +120,7 @@ pub(crate) fn compose(
     prelude.push_str("@group(2) @binding(0) var<uniform> material: MaterialParams;\n");
     prelude.push_str(&format!("#include \"{file}\"\n"));
     let has_vertex = defines("vertex");
+    let reads_scene_depth = code_tokens.contains(&"scene_depth");
     if !has_vertex {
         prelude.push_str(
             "fn vertex(position: vec3<f32>, in: VertexInput, p: MaterialParams) -> vec3<f32> {\n    \
@@ -153,6 +157,7 @@ pub(crate) fn compose(
         params,
         uniform_size: (span as u64).max(16).next_multiple_of(16),
         has_vertex,
+        reads_scene_depth,
     })
 }
 
@@ -228,6 +233,8 @@ pub(crate) struct CompiledShader {
     pub uniform_size: u64,
     /// See [`ComposedShader::has_vertex`].
     pub has_vertex: bool,
+    /// See [`ComposedShader::reads_scene_depth`].
+    pub reads_scene_depth: bool,
 }
 
 /// The compile state of one `ShaderSource` asset.
@@ -376,6 +383,7 @@ fn compile(
         params: composed.params,
         uniform_size: composed.uniform_size,
         has_vertex: composed.has_vertex,
+        reads_scene_depth: composed.reads_scene_depth,
     })
 }
 
@@ -464,6 +472,33 @@ fn surface(in: SurfaceInput, p: Params) -> Surface {
             !c.wgsl.contains("p: MaterialParams) -> vec3<f32> {"),
             "no default hook"
         );
+    }
+
+    #[test]
+    fn scene_depth_helpers_compose_and_are_detected() {
+        let shore = "\
+@material struct P { @range(0.0, 4.0) foam: f32 = 0.5 }
+fn surface(in: SurfaceInput, p: P) -> Surface {
+    var s = default_surface(in);
+    let gap = scene_depth(in.frag_coord) - fragment_view_depth(in.frag_coord);
+    s.alpha = select(0.5, saturate(gap / p.foam), scene_depth_available());
+    return s;
+}
+";
+        let c = compose(&library(), &ShaderSource::new("shore.wgsl", shore)).unwrap();
+        assert!(c.reads_scene_depth);
+        let plain = compose(
+            &library(),
+            &ShaderSource::new("shaders/stripes.wgsl", STRIPES),
+        )
+        .unwrap();
+        assert!(!plain.reads_scene_depth);
+        // A mention in a comment is not a call.
+        let commented = "// scene_depth(in.frag_coord) later\n\
+                         fn surface(in: SurfaceInput, p: MaterialParams) -> Surface {\n    \
+                         return default_surface(in);\n}\n";
+        let c = compose(&library(), &ShaderSource::new("c.wgsl", commented)).unwrap();
+        assert!(!c.reads_scene_depth);
     }
 
     #[test]

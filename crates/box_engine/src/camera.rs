@@ -1,9 +1,65 @@
-//! A reusable orbit camera controller.
+//! A reusable orbit camera controller, and the active camera's projection
+//! for games: [`world_to_screen`], [`screen_ray`] and [`cursor_ray`].
 
+use box_core::input::Input;
 use box_core::prelude::*;
-use box_render::Camera;
+use box_render::{Camera, ViewportPoint};
 
 use crate::runner::WindowSize;
+
+/// The world's first active [`Camera`] and its `GlobalTransform`: the
+/// camera the renderer draws the game with.
+pub fn active_camera(world: &World) -> Option<(Camera, GlobalTransform)> {
+    world
+        .query::<(&Camera, &GlobalTransform)>()
+        .iter()
+        .find(|(c, _)| c.active)
+        .map(|(c, g)| (*c, *g))
+}
+
+/// The render target size in physical pixels ([`WindowSize`]), if known.
+fn screen_size(world: &World) -> Option<Vec2> {
+    let size = world.get_resource::<WindowSize>()?;
+    (size.width > 0 && size.height > 0).then(|| Vec2::new(size.width as f32, size.height as f32))
+}
+
+/// Where world point `point` appears on screen through the
+/// [active camera](active_camera), in physical pixels of [`WindowSize`]
+/// (the coordinates of `Input::cursor_position`). `None` without an active
+/// camera or a window size, or when the point is behind the camera; a point
+/// in front but outside the view is returned
+/// ([`ViewportPoint::is_on_screen`] is false).
+///
+/// The camera's `GlobalTransform` is as of the last transform propagation
+/// (the start of `PostUpdate`): in `Update` a camera moved this frame is
+/// seen where it was drawn last.
+pub fn world_to_screen(world: &World, point: Vec3) -> Option<ViewportPoint> {
+    let (camera, transform) = active_camera(world)?;
+    camera.world_to_viewport(&transform, screen_size(world)?, point)
+}
+
+/// The world-space ray from the [active camera](active_camera) through
+/// screen pixel `pixel` (physical pixels from the top-left, as
+/// `Input::cursor_position`). `None` without an active camera or a window
+/// size. Cast it with `Physics::raycast` to pick what is under a point.
+pub fn screen_ray(world: &World, pixel: Vec2) -> Option<Ray> {
+    let (camera, transform) = active_camera(world)?;
+    Some(camera.viewport_ray(&transform, screen_size(world)?, pixel))
+}
+
+/// The ray under the mouse cursor: [`screen_ray`] at
+/// `Input::cursor_position`. `None` when the cursor is outside the window
+/// (or locked away), or without an active camera.
+///
+/// ```ignore
+/// if let Some(ray) = cursor_ray(world) {
+///     let hit = world.resource::<Physics>().raycast(&ray, 100.0, &QueryFilter::default());
+/// }
+/// ```
+pub fn cursor_ray(world: &World) -> Option<Ray> {
+    let cursor = world.get_resource::<Input>()?.cursor_position?;
+    screen_ray(world, cursor)
+}
 
 /// Smallest distance the controller uses, so the eye never sits on the target.
 const DISTANCE_FLOOR: f32 = 1.0e-3;
@@ -391,5 +447,46 @@ mod tests {
             w.get::<Transform>(e).unwrap().translation,
             expected.translation
         ));
+    }
+
+    #[test]
+    fn screen_helpers_use_the_active_camera_window_and_cursor() {
+        let mut w = World::new();
+        let eye = Transform::from_xyz(0.0, 2.0, 8.0).looking_at(Vec3::ZERO, Vec3::Y);
+        // An inactive camera elsewhere is ignored.
+        w.spawn((
+            Camera {
+                active: false,
+                ..Default::default()
+            },
+            GlobalTransform(Transform::from_xyz(50.0, 0.0, 0.0).to_affine()),
+        ));
+        w.spawn((Camera::default(), GlobalTransform(eye.to_affine())));
+        assert!(
+            world_to_screen(&w, Vec3::ZERO).is_none(),
+            "no window size yet"
+        );
+        w.insert_resource(WindowSize {
+            width: 800,
+            height: 600,
+            scale_factor_milli: 2000,
+        });
+        w.insert_resource(Input::default());
+        let centre = world_to_screen(&w, Vec3::ZERO).unwrap();
+        assert!((centre.pixels - Vec2::new(400.0, 300.0)).length() < 1e-3);
+        assert!(cursor_ray(&w).is_none(), "cursor outside the window");
+        w.resource_mut::<Input>().cursor_position = Some(Vec2::new(400.0, 300.0));
+        let ray = cursor_ray(&w).unwrap();
+        assert!(approx(ray.origin, eye.translation));
+        assert!(approx(ray.direction, eye.forward()));
+        // A point off centre round-trips through the screen.
+        let p = Vec3::new(1.5, 0.5, -1.0);
+        let s = world_to_screen(&w, p).unwrap();
+        let r = screen_ray(&w, s.pixels).unwrap();
+        assert!(approx(r.at((p - r.origin).length()), p));
+        assert!(
+            world_to_screen(&w, Vec3::new(0.0, 2.0, 20.0)).is_none(),
+            "behind"
+        );
     }
 }

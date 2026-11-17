@@ -1060,6 +1060,25 @@
           "scale": [1.0, 1.0, 1.0]
         }
       }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-000000000019",
+      "name": "Picker",
+      "parent": null,
+      "components": {
+        "Script": {
+          "source": {
+            "id": "293de0d8-74ec-4f53-9459-771b6ce3f8f6",
+            "path": "scripts/pick.luau"
+          },
+          "properties": []
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
     }
   ]
 }

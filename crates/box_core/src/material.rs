@@ -1,5 +1,5 @@
-//! Material descriptions: [`StandardMaterial`], [`AlphaMode`] and
-//! [`WindSway`].
+//! Material descriptions: [`StandardMaterial`], [`AlphaMode`],
+//! [`DepthWrite`] and [`WindSway`].
 //!
 //! `StandardMaterial` is saved data. It is a scene component (on an entity
 //! with a `Primitive` it holds that entity's material) and the content of
@@ -35,13 +35,36 @@ pub enum AlphaMode {
     Additive,
     /// Colour multiplies what is behind (tinted glass, shadows decals).
     Multiply,
+    /// Twice the colour multiplies what is behind: mid grey (0.5) leaves it
+    /// unchanged, darker colours darken it and lighter ones lighten it
+    /// (grime, dirt and wear decals). Unlit, like `Multiply`.
+    Multiply2x,
 }
 
 impl AlphaMode {
     /// True for modes drawn in the sorted transparent pass.
     pub fn is_transparent(self) -> bool {
-        matches!(self, Self::Blend | Self::Additive | Self::Multiply)
+        matches!(
+            self,
+            Self::Blend | Self::Additive | Self::Multiply | Self::Multiply2x
+        )
     }
+}
+
+/// Whether a material writes the depth buffer.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Reflect)]
+#[reflect(Default, Clone, Debug, PartialEq)]
+#[type_path = "box_engine"]
+pub enum DepthWrite {
+    /// By alpha mode: opaque and masked materials write depth, transparent
+    /// ones do not.
+    #[default]
+    Auto,
+    /// Always write depth (a transparent surface that hides what is drawn
+    /// after it and behind it).
+    On,
+    /// Never write depth.
+    Off,
 }
 
 /// How a material's vertices sway in the wind (the renderer's global wind,
@@ -167,10 +190,33 @@ pub struct StandardMaterial {
     /// (generated meshes), a texture spanning 2 m is `Vec2::splat(0.5)`.
     #[reflect(default = "uv_scale_one")]
     pub uv_scale: Vec2,
+    /// Transparent modes: draw order. A higher bias draws later, over
+    /// transparent surfaces with a lower one, whatever their distance;
+    /// equal biases sort back to front.
+    #[reflect(default)]
+    pub sort_bias: i32,
+    /// Whether the material writes depth.
+    #[reflect(default)]
+    pub depth_write: DepthWrite,
+    /// Test against depth (hidden behind nearer surfaces). Off draws over
+    /// everything drawn before it.
+    #[reflect(default = "yes")]
+    pub depth_test: bool,
+    /// Transparent modes: write the surface's depth first, then draw its
+    /// colour only where it is the nearest surface of the object, so a
+    /// see-through body shows no inner faces (a ghost look). Needs
+    /// `depth_test`.
+    #[reflect(default)]
+    pub prewrite_depth: bool,
 }
 
 fn uv_scale_one() -> Vec2 {
     Vec2::ONE
+}
+
+/// `true`: the default of fields that are on unless turned off.
+pub(crate) fn yes() -> bool {
+    true
 }
 
 impl Default for StandardMaterial {
@@ -189,6 +235,10 @@ impl Default for StandardMaterial {
             depth_fade: 0.0,
             wind: WindSway::default(),
             uv_scale: Vec2::ONE,
+            sort_bias: 0,
+            depth_write: DepthWrite::Auto,
+            depth_test: true,
+            prewrite_depth: false,
         }
     }
 }
@@ -269,6 +319,11 @@ mod tests {
         assert_eq!(m.alpha_mode, AlphaMode::Opaque);
         assert_eq!((m.depth_fade, m.wind), (0.0, WindSway::default()));
         assert!(!m.wind.is_on());
+        // Pipeline state (R6) defaults: the behaviour before it existed.
+        assert_eq!(
+            (m.sort_bias, m.depth_write, m.depth_test, m.prewrite_depth),
+            (0, DepthWrite::Auto, true, false)
+        );
     }
 
     #[test]

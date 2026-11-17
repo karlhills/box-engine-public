@@ -22,6 +22,7 @@ pub const MATERIAL_SCENES: &[&str] = &[
     "point_lights_day",
     "multi_material",
     "shader_material",
+    "pipeline_state",
 ];
 
 /// Builds the material scene `name` with its lights and camera. Returns
@@ -35,6 +36,7 @@ pub fn build_material_scene(world: &mut World, name: &str) -> bool {
         "point_lights_day" => build_point_lights(world, true),
         "multi_material" => build_multi_material(world),
         "shader_material" => build_shader_material(world),
+        "pipeline_state" => build_pipeline_state(world),
         _ => return false,
     }
     true
@@ -626,6 +628,242 @@ pub fn build_shader_material(world: &mut World) {
             distance: 6.0,
             yaw: 0.25,
             pitch: 0.4,
+            ..Default::default()
+        },
+    );
+}
+
+/// Linear 0..1 to an sRGB byte.
+fn srgb(v: f32) -> u8 {
+    let v = v.clamp(0.0, 1.0);
+    let s = if v <= 0.003_130_8 {
+        v * 12.92
+    } else {
+        1.055 * v.powf(1.0 / 2.4) - 0.055
+    };
+    unit(s)
+}
+
+/// Smooth value noise in 0..1 on a `cells`-wide lattice.
+fn value_noise(u: f32, v: f32, cells: f32, seed: u32) -> f32 {
+    let (x, y) = (u * cells, v * cells);
+    let (ix, iy) = (x.floor(), y.floor());
+    let (fx, fy) = (x - ix, y - iy);
+    let s = |t: f32| t * t * (3.0 - 2.0 * t);
+    let h = |dx: f32, dy: f32| {
+        let cx = (ix + dx).rem_euclid(cells) as u32;
+        let cy = (iy + dy).rem_euclid(cells) as u32;
+        hash(cx + seed * 977, cy)
+    };
+    let top = h(0.0, 0.0) + (h(1.0, 0.0) - h(0.0, 0.0)) * s(fx);
+    let bottom = h(0.0, 1.0) + (h(1.0, 1.0) - h(0.0, 1.0)) * s(fx);
+    top + (bottom - top) * s(fy)
+}
+
+/// Per-material pipeline state and scene depth (R6, R7), left to right:
+/// sort bias (two pairs of overlapping panes; in the right pair the farther
+/// blue pane has bias 1 and draws over the nearer red one), `Multiply2x`
+/// grime across a light and a dark slab (darker and lighter than mid grey),
+/// a glass slab that writes depth hiding an additive glow drawn after it
+/// (the left part of the glow sticks out), two ghost cubes (left without,
+/// right with `prewrite_depth`: no inner faces), and a pool of the
+/// `shoreline.wgsl` material shader, which reads the scene depth for its
+/// colour, opacity and foam line and pads its bounds for its waves. In the
+/// back, a marker with the depth test off shows through a wall.
+pub fn build_pipeline_state(world: &mut World) {
+    use box_core::shader_material::ShaderParamValue as V;
+    ground(world, 24.0);
+    let pane = add_mesh(world, quad(1.2, 1.2));
+    let cube = add_mesh(world, MeshData::cuboid(Vec3::ONE));
+
+    // Sort bias: red 0.5 m nearer the camera than blue.
+    let pane_material = |world: &mut World, color: Color, bias: i32| {
+        std_material(
+            world,
+            StandardMaterial {
+                base_color: color.with_alpha(0.7),
+                roughness: 0.4,
+                alpha_mode: AlphaMode::Blend,
+                double_sided: true,
+                sort_bias: bias,
+                ..Default::default()
+            },
+        )
+    };
+    let red = Color::linear(0.9, 0.08, 0.05);
+    let blue = Color::linear(0.08, 0.2, 0.95);
+    for (x, blue_bias) in [(-8.6, 0), (-7.0, 1)] {
+        let near = pane_material(world, red, 0);
+        let far = pane_material(world, blue, blue_bias);
+        spawn(world, Transform::from_xyz(x - 0.3, 0.75, -0.25), pane, far);
+        spawn(world, Transform::from_xyz(x + 0.3, 0.65, 0.25), pane, near);
+    }
+
+    // Multiply2x: grime around mid grey over a light and a dark slab.
+    let slab = add_mesh(world, MeshData::cuboid(Vec3::new(1.1, 0.1, 2.2)));
+    for (x, color) in [(-5.05, 0xe8e2d4), (-3.95, 0x4a4844)] {
+        let m = std_material(
+            world,
+            StandardMaterial {
+                base_color: Color::hex(color),
+                roughness: 0.8,
+                ..Default::default()
+            },
+        );
+        spawn(world, Transform::from_xyz(x, 0.05, 0.0), slab, m);
+    }
+    let grime = add_image(
+        world,
+        "textures/grime_2x.png",
+        image(128, ColorSpace::Srgb, |u, v| {
+            let n = 0.6 * value_noise(u, v, 4.0, 1) + 0.4 * value_noise(u, v, 16.0, 2);
+            // Dark blotches below 0.5, light scuffs above.
+            let g = 0.5 + (n - 0.5) * 1.4;
+            [srgb(g * 0.95), srgb(g * 0.9), srgb(g * 0.8), 255]
+        }),
+    );
+    let decal = std_material(
+        world,
+        StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: grime,
+            alpha_mode: AlphaMode::Multiply2x,
+            ..Default::default()
+        },
+    );
+    let decal_mesh = add_mesh(world, MeshData::plane(2.0, 1.8));
+    spawn(
+        world,
+        Transform::from_xyz(-4.5, 0.105, 0.0),
+        decal_mesh,
+        decal,
+    );
+
+    // Depth write: a glass slab writing depth hides the part of an additive
+    // glow behind it, although the glow draws later (sort bias 1).
+    let glass = std_material(
+        world,
+        StandardMaterial {
+            base_color: Color::linear(0.2, 0.45, 0.6).with_alpha(0.35),
+            roughness: 0.1,
+            alpha_mode: AlphaMode::Blend,
+            depth_write: DepthWrite::On,
+            ..Default::default()
+        },
+    );
+    let glass_slab = add_mesh(world, MeshData::cuboid(Vec3::new(0.9, 1.3, 0.12)));
+    spawn(
+        world,
+        Transform::from_xyz(-1.85, 0.7, 0.3),
+        glass_slab,
+        glass,
+    );
+    let glow = std_material(
+        world,
+        StandardMaterial {
+            base_color: Color::BLACK,
+            emissive: Color::linear(2.5, 0.9, 0.2),
+            alpha_mode: AlphaMode::Additive,
+            double_sided: true,
+            sort_bias: 1,
+            ..Default::default()
+        },
+    );
+    spawn(world, Transform::from_xyz(-2.25, 0.75, -0.3), pane, glow);
+
+    // Ghosts: double-sided transparent cubes, the right one pre-writes depth.
+    for (x, prewrite) in [(0.2, false), (1.7, true)] {
+        let ghost = std_material(
+            world,
+            StandardMaterial {
+                base_color: Color::linear(0.55, 0.85, 1.0).with_alpha(0.35),
+                emissive: Color::linear(0.02, 0.05, 0.08),
+                roughness: 0.3,
+                alpha_mode: AlphaMode::Blend,
+                double_sided: true,
+                prewrite_depth: prewrite,
+                ..Default::default()
+            },
+        );
+        spawn(
+            world,
+            Transform::from_xyz(x, 0.9, 0.0).with_rotation(Quat::from_euler(
+                EulerRot::YXZ,
+                0.6,
+                0.5,
+                0.0,
+            )),
+            cube,
+            ghost,
+        );
+    }
+
+    // Shoreline: depth-reading water with waves over a sphere and a ramp.
+    let stone = std_material(
+        world,
+        StandardMaterial {
+            base_color: Color::hex(0xb8a888),
+            roughness: 0.9,
+            ..Default::default()
+        },
+    );
+    let rock = add_mesh(world, MeshData::uv_sphere(0.55, 32, 16));
+    spawn(world, Transform::from_xyz(3.9, 0.15, 0.4), rock, stone);
+    // A ramp from the ground up through the surface: the water shallows
+    // along it.
+    let ramp = add_mesh(world, MeshData::cuboid(Vec3::new(3.0, 0.1, 1.1)));
+    spawn(
+        world,
+        Transform::from_xyz(5.5, 0.3, -0.45).with_rotation(Quat::from_rotation_z(0.25)),
+        ramp,
+        stone,
+    );
+    let shoreline = add_shader(
+        world,
+        "shaders/shoreline.wgsl",
+        include_str!("../assets/shoreline.wgsl"),
+    );
+    let water = world
+        .resource_or_default::<Assets<ShaderMaterial>>()
+        .add(ShaderMaterial {
+            alpha_mode: AlphaMode::Blend,
+            bounds_padding: 0.05,
+            ..ShaderMaterial::new(shoreline).with_param("depth", V::Float(0.8))
+        });
+    let pool = add_mesh(world, MeshData::grid(3.6, 2.6, 36, 26));
+    spawn(world, Transform::from_xyz(4.9, 0.3, 0.0), pool, water);
+
+    // Depth test off: a marker inside an opaque wall shows through it.
+    let wall = std_material(
+        world,
+        StandardMaterial {
+            base_color: Color::hex(0x9c958a),
+            roughness: 0.85,
+            ..Default::default()
+        },
+    );
+    let wall_mesh = add_mesh(world, MeshData::cuboid(Vec3::new(2.0, 1.4, 0.4)));
+    spawn(world, Transform::from_xyz(-0.8, 0.7, -2.6), wall_mesh, wall);
+    let xray = std_material(
+        world,
+        StandardMaterial {
+            base_color: Color::BLACK,
+            emissive: Color::linear(0.2, 1.6, 0.4),
+            alpha_mode: AlphaMode::Additive,
+            depth_test: false,
+            ..Default::default()
+        },
+    );
+    let marker = add_mesh(world, MeshData::uv_sphere(0.22, 24, 12));
+    spawn(world, Transform::from_xyz(-0.8, 0.7, -2.6), marker, xray);
+
+    sun_and_camera(
+        world,
+        OrbitCamera {
+            target: Vec3::new(-1.6, 0.4, -0.3),
+            distance: 11.5,
+            yaw: 0.0,
+            pitch: 0.5,
             ..Default::default()
         },
     );

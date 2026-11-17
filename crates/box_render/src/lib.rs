@@ -56,6 +56,11 @@
 //! [`Renderer::render_to`], optionally from a [`ViewCamera`] that is not an
 //! entity, and can share the renderer's device ([`Renderer::device`]) and
 //! window surface ([`Renderer::acquire_surface_frame`]).
+//!
+//! Projection helpers ([`Camera::world_to_viewport`] →
+//! [`ViewportPoint`], [`Camera::viewport_ray`], [`Camera::projection`],
+//! also on [`ViewCamera`]) use the renderer's own projection; use them
+//! rather than re-deriving it.
 
 mod cascades;
 mod components;
@@ -68,12 +73,15 @@ mod lights;
 #[cfg(test)]
 mod look_tests;
 mod material_shader;
+#[cfg(test)]
+mod material_state_tests;
 mod materials;
 mod overlay;
 mod particle_render;
 mod particles;
 mod pipelines;
 mod post;
+mod projection;
 mod renderer;
 #[cfg(test)]
 mod rs4_tests;
@@ -85,7 +93,7 @@ mod viewport;
 
 pub use components::{
     AerialHaze, AlphaMode, AmbientOcclusion, AmbientVolume, Bloom, Camera, ColorGrading,
-    DirectionalLight, DistanceQuieting, Environment, HeightMist, Hidden, LocalShadow,
+    DepthWrite, DirectionalLight, DistanceQuieting, Environment, HeightMist, Hidden, LocalShadow,
     MaterialHandle, MeshRenderer, PointLight, RenderSettings, SelectionOutline, ShaderMaterial,
     ShaderSource, Sky, SkyGradient, SpotLight, StandardMaterial, Tonemapper, Vignette, Wind,
     WindSway, WindWeight,
@@ -98,6 +106,7 @@ pub use particles::{
     CurveKey, GradientKey, MAX_PARTICLES_PER_EMITTER, Particle, ParticleBlend, ParticleBurst,
     ParticleEmitter, ParticleSpace, ParticleState, simulate_particles,
 };
+pub use projection::ViewportPoint;
 pub use renderer::{FrameStats, RenderError, Renderer, SurfaceFrame, set_gpu_validation};
 pub use shaders::set_shader_hot_reload;
 pub use viewport::{VIEWPORT_FORMAT, ViewCamera, ViewportTarget};

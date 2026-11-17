@@ -28,10 +28,7 @@ thread_local! {
 /// The world-space ray through `ndc` (−1..1, +Y up) for a viewport with
 /// `aspect` = width / height.
 pub fn camera_ray(camera: &EditorCamera, ndc: Vec2, aspect: f32) -> Ray {
-    let t = camera.orbit.transform();
-    let tan = (camera.camera.fov_y * 0.5).tan();
-    let local = Vec3::new(ndc.x * tan * aspect, ndc.y * tan, -1.0);
-    Ray::new(t.translation, (t.rotation * local).normalize())
+    camera.view().ndc_ray(aspect, ndc)
 }
 
 /// A pick result: the selectable entity (the nearest ancestor-or-self with a

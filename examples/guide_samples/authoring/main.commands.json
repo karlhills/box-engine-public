@@ -193,5 +193,12 @@
       "Transform": { "translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
       "Script": { "source": "scripts/spawner.luau", "properties": [] }
     }
+  },
+  {
+    "op": "spawn", "uid": "6a1d0000-0000-4000-8000-000000000019", "name": "Picker",
+    "components": {
+      "Transform": { "translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "Script": { "source": "scripts/pick.luau", "properties": [] }
+    }
   }
 ]

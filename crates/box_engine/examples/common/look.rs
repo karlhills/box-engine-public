@@ -56,6 +56,17 @@ pub fn reference_grade() -> ColorGrading {
     }
 }
 
+/// The tone mapper of a `--tonemap` flag: `agx`, `aces`, `neutral` or `none`.
+pub fn parse_tonemapper(name: &str) -> anyhow::Result<Tonemapper> {
+    Ok(match name.to_ascii_lowercase().as_str() {
+        "agx" => Tonemapper::AgX,
+        "aces" | "acesfitted" => Tonemapper::AcesFitted,
+        "neutral" => Tonemapper::Neutral,
+        "none" => Tonemapper::None,
+        _ => anyhow::bail!("unknown tone mapper `{name}`; available: agx, aces, neutral, none"),
+    })
+}
+
 /// The reference vignette: intensity 0.18, smoothness 0.5, not rounded.
 pub fn reference_vignette() -> Vignette {
     Vignette {

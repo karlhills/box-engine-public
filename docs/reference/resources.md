@@ -43,9 +43,9 @@ Scripts: `world.resource("Environment")`, `world.set_resource("Environment", { .
 - **`fog_height_falloff`** `number` (default `0.07999999821186066`, range 0–1, unit 1/m): How quickly fog thins out with height (per metre).
 - **`fog_base_height`** `number` (default `0.0`, unit m): Height at which fog has its full density.
 - **`exposure`** `number` (default `0.550000011920929`, range 0–16): Exposure multiplier applied before tone mapping.
-- **`tonemapper`** `"AgX" | "AcesFitted" | "None"` (default `"AgX"`): Tone-mapping operator.
+- **`tonemapper`** `"AgX" | "AcesFitted" | "None" | "Neutral"` (default `"AgX"`): Tone-mapping operator.
 - **`ambient_occlusion`** `{ enabled: boolean, intensity: number, radius: number, bias: number, power: number, direct_lighting: number }`: Screen-space ambient occlusion: darkens ambient light in creases, corners and where objects meet.
-- **`bloom`** `{ enabled: boolean, intensity: number, scatter: number }`: Soft glow around bright areas.
+- **`bloom`** `{ enabled: boolean, intensity: number, scatter: number, threshold: number, knee: number }`: Soft glow around bright areas.
 - **`color_grading`** `{ temperature: number, tint: number, contrast: number, saturation: number, shadows: vector, midtones: vector, highlights: vector, shadows_end: number, highlights_start: number, lift: vector, gamma: vector, gain: vector }`: White balance, contrast, saturation, shadows/midtones/highlights and lift/gamma/gain.
 - **`sky`** `{ gradient: "Simple" | { Layered: { upper: Color?, below_horizon: Color? } }, sun_glow: number, sun_disc: number, horizon_glow: number, stars: number }`: Sky gradient style, sun glow and disc, horizon glow, stars.
 - **`aerial_haze`** `{ enabled: boolean, color: Color, density: number, start_distance: number, max_opacity: number, sun_scatter: number, sky_height: number }`: Distance haze toward a colour, from a start distance, up to a maximum opacity (aerial perspective).

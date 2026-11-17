@@ -22,7 +22,7 @@ struct Globals {
     ambient: vec4<f32>,
     // x = density, y = height falloff, z = base height
     fog: vec4<f32>,
-    // x = exposure, y = tonemapper (0 AgX, 1 ACES fitted, 2 none)
+    // x = exposure, y = tonemapper (0 AgX, 1 ACES fitted, 2 none, 3 PBR Neutral)
     post: vec4<f32>,
     cascade_view_proj: array<mat4x4<f32>, 4>,
     // far view depth of each cascade
@@ -47,7 +47,8 @@ struct Globals {
     // x = AO bias (m), y = AO power, z = half-resolution pixels per metre at
     // view depth 1
     ao_params: vec4<f32>,
-    // x = bloom blend (0 off)
+    // x = bloom blend (0 off), y = threshold on scene luminance before
+    // exposure (0 off), z = knee half-width (same units)
     bloom: vec4<f32>,
     // x = contrast, y = saturation, z = scene grading on, w = display grading on
     grade: vec4<f32>,
@@ -155,6 +156,20 @@ fn has_sun() -> bool {
 
 fn luminance(c: vec3<f32>) -> f32 {
     return dot(c, vec3<f32>(0.2126, 0.7152, 0.0722));
+}
+
+// The part of `c` above the bloom threshold (globals.bloom.y) in luminance,
+// with a quadratic soft knee of half-width globals.bloom.z: 0 below
+// threshold - knee, `c` scaled by (luma - threshold) / luma above
+// threshold + knee. Used by the first bloom downsample and the tone-mapping
+// pass when the threshold is on.
+fn bloom_bright(c: vec3<f32>) -> vec3<f32> {
+    let threshold = globals.bloom.y;
+    let knee = globals.bloom.z;
+    let l = luminance(c);
+    let s = clamp(l - threshold + knee, 0.0, 2.0 * knee);
+    let soft = s * s / (4.0 * knee + 1e-5);
+    return c * (max(soft, l - threshold) / max(l, 1e-5));
 }
 
 // Fullscreen triangle covering the viewport; returns NDC xy for vertex 0..2.

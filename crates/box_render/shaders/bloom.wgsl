@@ -5,7 +5,10 @@
 // into the next larger one with the blend constant `scatter`:
 // mip[i] = mix(mip[i], up(mip[i + 1]), scatter). Mip 0 is a weighted
 // average of every blur level, so mixing it into the scene in the
-// tone-mapping pass redistributes light without adding any.
+// tone-mapping pass redistributes light without adding any. With a
+// threshold (globals.bloom.y > 0) the first downsample keeps only the part of
+// each tap above it (`bloom_bright`), and the tone-mapping pass swaps that
+// part of the scene for its blur.
 
 #include "common.wgsl"
 
@@ -75,7 +78,22 @@ fn fs_downsample(in: BloomOutput) -> @location(0) vec4<f32> {
 
 @fragment
 fn fs_downsample_first(in: BloomOutput) -> @location(0) vec4<f32> {
-    let t = taps13(in.uv);
+    var t = taps13(in.uv);
+    if globals.bloom.y > 0.0 {
+        t.a = bloom_bright(t.a);
+        t.b = bloom_bright(t.b);
+        t.c = bloom_bright(t.c);
+        t.d = bloom_bright(t.d);
+        t.e = bloom_bright(t.e);
+        t.f = bloom_bright(t.f);
+        t.g = bloom_bright(t.g);
+        t.h = bloom_bright(t.h);
+        t.i = bloom_bright(t.i);
+        t.j = bloom_bright(t.j);
+        t.k = bloom_bright(t.k);
+        t.l = bloom_bright(t.l);
+        t.m = bloom_bright(t.m);
+    }
     // Five overlapping 2x2 groups, each weighted by its Karis average.
     let g0 = (t.j + t.k + t.l + t.m) * 0.25;
     let g1 = (t.a + t.b + t.d + t.e) * 0.25;
