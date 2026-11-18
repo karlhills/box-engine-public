@@ -161,7 +161,7 @@ flowchart LR
 - **macOS:** the player is placed in an `.app` skeleton with a generated `Info.plist` and re-signed. Apple Silicon requires at least an ad-hoc signature. Distribution outside the developer's machine needs a Developer ID signature and notarization, which the user configures with their own credentials. Signing from non-Mac hosts is possible with `rcodesign`.
 - **Windows:** the player executable with icon and version resources patched, next to the pak.
 - **Build profiles:** development (hot reload, validation, console), and release (no validation, cooked assets only).
-- Windows player binaries are built on CI, not cross-compiled from macOS.
+- Release Windows player templates are built on CI; a native project's Windows player is cross-compiled from macOS with `cargo xwin` (EXPORT.md section 6).
 
 **As built (M9).** BOXPAK v1: uncompressed, 16-byte aligned, sorted index at the end, xxh3-128 per file, reproducible; mounted through `box_assets::vfs` (code reads project files through it, so an exported game runs from the pak). Cook = import every asset (stop on problems) + pack `box.project.json`, `assets/**` (with `.meta`) and an `export.json` manifest. `box export --target macos|windows --profile release|development` and File ▸ Export: macOS `.app` (Info.plist, icns, ad-hoc `codesign`), Windows folder (`<Name>.exe` + `game.pak`, icon/version/subsystem patched with `editpe`). Player templates via `BOX_TEMPLATES` or next to `box`/the editor (`Resources/templates` in Box Editor.app). Textures are not compressed yet. Details and numbers: [EXPORT.md](EXPORT.md).
 

@@ -13,9 +13,14 @@
 //!    (`cargo build -p box_player_app`, `cargo install` of the engine's apps)
 //!
 //! `<target>` is `macos` or `windows`. A templates folder may hold a
-//! `VERSION` file; a version other than this engine's is refused. Windows
-//! templates are built on Windows (CI), not cross-compiled.
+//! `VERSION` file; a version other than this engine's is refused. Release
+//! Windows templates are built on Windows (CI).
+//!
+//! A native project's player is built with cargo for the host, or, for
+//! Windows from macOS or Linux, cross-compiled with `cargo xwin`
+//! ([`cross_tools`]).
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -118,18 +123,137 @@ fn check_version(dir: &Path) -> Result<(), ExportError> {
     Ok(())
 }
 
+/// The target triple of Windows cross builds.
+pub const WINDOWS_TRIPLE: &str = "x86_64-pc-windows-msvc";
+
+/// The tools a Windows cross build runs: `cargo-xwin`, and LLVM's
+/// `clang-cl`, `lld-link` and `llvm-lib`.
+const CROSS_TOOLS: [(&str, &str); 4] = [
+    ("cargo-xwin", "cargo install --locked cargo-xwin"),
+    ("clang-cl", "brew install llvm"),
+    ("llvm-lib", "brew install llvm"),
+    ("lld-link", "brew install lld"),
+];
+
+/// Folders searched for the cross tools after `PATH`: Homebrew's keg-only
+/// LLVM and lld (Apple Silicon and Intel prefixes), and cargo's bin folder.
+fn cross_tool_dirs(home: Option<&Path>, cargo_home: Option<&Path>) -> Vec<PathBuf> {
+    let mut dirs: Vec<PathBuf> = [
+        "/opt/homebrew/opt/llvm/bin",
+        "/opt/homebrew/opt/lld/bin",
+        "/usr/local/opt/llvm/bin",
+        "/usr/local/opt/lld/bin",
+    ]
+    .iter()
+    .map(PathBuf::from)
+    .collect();
+    match (cargo_home, home) {
+        (Some(c), _) => dirs.push(c.join("bin")),
+        (None, Some(h)) => dirs.push(h.join(".cargo/bin")),
+        (None, None) => {}
+    }
+    dirs
+}
+
+/// What a Windows cross build runs with: the search path that finds the
+/// cross tools.
+#[derive(Debug, Clone)]
+pub struct CrossTools {
+    /// `PATH` with the tool folders appended.
+    pub path: OsString,
+}
+
+/// Checks the tools a Windows cross build needs (`cargo-xwin`, LLVM, lld
+/// and the Rust target `x86_64-pc-windows-msvc` for the toolchain `dir`
+/// selects) and says how to install what is missing.
+pub fn cross_tools(dir: &Path) -> Result<CrossTools, ExportError> {
+    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let cargo_home = std::env::var_os("CARGO_HOME").map(PathBuf::from);
+    let mut dirs: Vec<PathBuf> = std::env::var_os("PATH")
+        .map(|p| std::env::split_paths(&p).collect())
+        .unwrap_or_default();
+    dirs.extend(cross_tool_dirs(home.as_deref(), cargo_home.as_deref()));
+    let target_installed = rustup_has_target(dir);
+    let missing = missing_cross_tools(&dirs, target_installed);
+    if !missing.is_empty() {
+        return Err(ExportError::Cargo(cross_tools_message(&missing)));
+    }
+    let path = std::env::join_paths(&dirs)
+        .map_err(|e| ExportError::Cargo(format!("PATH for the cross build: {e}")))?;
+    Ok(CrossTools { path })
+}
+
+/// Whether rustup has the Windows target for the toolchain `dir` selects
+/// (its `rust-toolchain.toml`). `None` without rustup: cargo reports it.
+fn rustup_has_target(dir: &Path) -> Option<bool> {
+    let out = Command::new("rustup")
+        .current_dir(dir)
+        .args(["target", "list", "--installed"])
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()
+        .filter(|o| o.status.success())?;
+    Some(
+        String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .any(|l| l.trim() == WINDOWS_TRIPLE),
+    )
+}
+
+/// The missing tools as `(name, install command)`, given the folders
+/// searched and whether the Rust target is installed.
+fn missing_cross_tools(
+    dirs: &[PathBuf],
+    target_installed: Option<bool>,
+) -> Vec<(&'static str, String)> {
+    let mut missing: Vec<(&'static str, String)> = CROSS_TOOLS
+        .iter()
+        .filter(|(tool, _)| !dirs.iter().any(|d| d.join(tool).is_file()))
+        .map(|(tool, fix)| (*tool, fix.to_string()))
+        .collect();
+    if target_installed == Some(false) {
+        missing.push((
+            "the Rust target x86_64-pc-windows-msvc",
+            format!("rustup target add {WINDOWS_TRIPLE}"),
+        ));
+    }
+    missing
+}
+
+fn cross_tools_message(missing: &[(&'static str, String)]) -> String {
+    let names: Vec<&str> = missing.iter().map(|m| m.0).collect();
+    let mut fixes: Vec<&str> = Vec::new();
+    for (_, fix) in missing {
+        if !fixes.contains(&fix.as_str()) {
+            fixes.push(fix);
+        }
+    }
+    format!(
+        "building a native project for Windows on this computer needs {} (docs/EXPORT.md section 6). Install with: {}",
+        names.join(", "),
+        fixes
+            .iter()
+            .map(|f| format!("`{f}`"))
+            .collect::<Vec<_>>()
+            .join("; ")
+    )
+}
+
 /// Builds a native project's player binary in release mode (`cargo build
 /// --release --bin <player>` in the project folder) and returns its path.
-/// Only for the host platform.
+/// For the host platform, or Windows from macOS or Linux with `cargo xwin`
+/// (static CRT, so testers need no Visual C++ Redistributable).
 pub fn build_native_player(
     project: &Project,
     native: &NativeCrate,
     target: Target,
     progress: &mut dyn FnMut(Progress),
 ) -> Result<PathBuf, ExportError> {
-    if target != Target::host() {
+    let cross = target != Target::host();
+    if cross && target != Target::Windows {
         return Err(ExportError::Cargo(format!(
-            "`{}` is a native project: its player must be built on {} (cross-compiling is not supported); export it there, or pass the built player with --player",
+            "`{}` is a native project: its player must be built on {}; export it there, or pass the built player with --player",
             project.name(),
             target.label()
         )));
@@ -141,17 +265,38 @@ pub fn build_native_player(
             native.bins.join(", ")
         ))
     })?;
-    progress(Progress::new(
-        "build",
-        format!("Building {bin} (cargo build --release)"),
-        0.02,
-    ));
     let mut command = Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()));
-    command.current_dir(native.dir()).args([
-        "build",
-        "--release",
-        "--message-format=json-render-diagnostics",
-    ]);
+    command.current_dir(native.dir());
+    if cross {
+        let tools = cross_tools(native.dir())?;
+        progress(Progress::new(
+            "build",
+            format!(
+                "Building {bin} for Windows (cargo xwin; the first build downloads Microsoft's CRT and SDK)"
+            ),
+            0.02,
+        ));
+        // Static CRT: the exe needs no VCRUNTIME140.dll. Appended to any
+        // flags the caller set for this target.
+        let flags_var = "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS";
+        let mut flags = std::env::var(flags_var).unwrap_or_default();
+        flags.push_str(" -C target-feature=+crt-static");
+        // ATL: wgpu's statically linked DXC (DX12 shader compiler) links
+        // atls.lib.
+        command
+            .env("PATH", &tools.path)
+            .env("XWIN_INCLUDE_ATL", "true")
+            .env(flags_var, flags.trim())
+            .args(["xwin", "build", "--target", WINDOWS_TRIPLE]);
+    } else {
+        progress(Progress::new(
+            "build",
+            format!("Building {bin} (cargo build --release)"),
+            0.02,
+        ));
+        command.arg("build");
+    }
+    command.args(["--release", "--message-format=json-render-diagnostics"]);
     if let Some((_, features)) = native.required_features.iter().find(|(b, _)| b == bin) {
         command.args(["--features", &features.join(",")]);
     }
@@ -166,7 +311,8 @@ pub fn build_native_player(
         let stderr = String::from_utf8_lossy(&out.stderr);
         let tail: Vec<&str> = stderr.lines().rev().take(20).collect();
         return Err(ExportError::Cargo(format!(
-            "cargo build --release --bin {bin} failed:\n{}",
+            "cargo {} --release --bin {bin} failed:\n{}",
+            if cross { "xwin build" } else { "build" },
             tail.into_iter().rev().collect::<Vec<_>>().join("\n")
         )));
     }
@@ -190,6 +336,50 @@ pub fn build_native_player(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn missing_cross_tools_say_how_to_install_them() {
+        let root = std::env::temp_dir().join(format!("box_cross_tools_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        // Nothing found, target missing: every tool, install commands once.
+        let missing = missing_cross_tools(std::slice::from_ref(&root), Some(false));
+        let names: Vec<&str> = missing.iter().map(|m| m.0).collect();
+        assert_eq!(
+            names,
+            [
+                "cargo-xwin",
+                "clang-cl",
+                "llvm-lib",
+                "lld-link",
+                "the Rust target x86_64-pc-windows-msvc"
+            ]
+        );
+        let text = cross_tools_message(&missing);
+        assert_eq!(text.matches("`brew install llvm`").count(), 1, "{text}");
+        assert!(text.contains("`brew install lld`"), "{text}");
+        assert!(
+            text.contains("`cargo install --locked cargo-xwin`"),
+            "{text}"
+        );
+        assert!(
+            text.contains("`rustup target add x86_64-pc-windows-msvc`"),
+            "{text}"
+        );
+        // Everything present; rustup unknown is not reported.
+        for (tool, _) in CROSS_TOOLS {
+            std::fs::write(root.join(tool), b"").unwrap();
+        }
+        assert!(missing_cross_tools(std::slice::from_ref(&root), None).is_empty());
+        assert!(missing_cross_tools(std::slice::from_ref(&root), Some(true)).is_empty());
+        // Homebrew's keg-only folders and cargo's bin are searched.
+        let dirs = cross_tool_dirs(Some(Path::new("/h")), None);
+        assert!(dirs.contains(&PathBuf::from("/opt/homebrew/opt/lld/bin")));
+        assert!(dirs.contains(&PathBuf::from("/h/.cargo/bin")));
+        let dirs = cross_tool_dirs(Some(Path::new("/h")), Some(Path::new("/c")));
+        assert!(dirs.contains(&PathBuf::from("/c/bin")));
+        let _ = std::fs::remove_dir_all(&root);
+    }
 
     #[test]
     fn templates_are_found_in_order() {

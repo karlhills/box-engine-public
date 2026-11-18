@@ -173,14 +173,39 @@ it links into. Release layout and packaging: [RELEASING.md](RELEASING.md).
 
 A native project (a `Cargo.toml` at its root) builds its own player:
 `cargo build --release --bin <player> [--features ...]` in the project
-folder, the executable path read from cargo's JSON messages. Only for the
-host platform: a native Windows game is exported on Windows.
+folder, the executable path read from cargo's JSON messages.
 
-**Windows templates are built on Windows (CI)**, not cross-compiled: the
-player links wgpu, Luau (C++ through `cc`) and audio, which need the MSVC
-toolchain and SDK. An engine release ships `templates/macos/box-player` and
+**Windows from a Mac (or Linux): cross-compiled.** `--target windows` on a
+non-Windows host builds the player with
+[cargo-xwin](https://github.com/rust-cross/cargo-xwin):
+`cargo xwin build --release --target x86_64-pc-windows-msvc --bin <player>`,
+with `XWIN_INCLUDE_ATL=true` (wgpu's statically linked DX12 shader compiler
+links ATL) and `-C target-feature=+crt-static` appended to
+`CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS` (the exe imports no
+`VCRUNTIME140.dll`, so players need no Visual C++ Redistributable). One-time
+setup; `box export` checks it and prints the commands for what is missing:
+
+```bash
+brew install llvm lld                     # clang-cl, llvm-lib, lld-link (keg-only; found without PATH changes)
+cargo install --locked cargo-xwin
+rustup target add x86_64-pc-windows-msvc  # in the project folder, for its rust-toolchain.toml
+```
+
+The first build downloads Microsoft's MSVC CRT, Windows SDK and ATL (about
+1 GB, cached in `~/Library/Caches/cargo-xwin`); **using cargo-xwin accepts
+Microsoft's Visual Studio license** for them
+(https://go.microsoft.com/fwlink/?LinkId=2086102). Later builds take as long
+as a host release build (about 40 s for a warm native game on an M3 Ultra).
+A macOS game cannot be built on Windows.
+
+**Release Windows templates are built on Windows (CI)** (the `windows` job
+of `release.yml`). An engine release ships `templates/macos/box-player` and
 `templates/windows/box-player.exe` so a Mac user can export a Windows build
-of a script project (docs/ASSETS.md section 8).
+of a script project without any toolchain (docs/ASSETS.md section 8). From
+an engine checkout, a template can also be cross-compiled the same way
+(`cargo xwin build --release -p box_player_app --target
+x86_64-pc-windows-msvc`, with the two environment settings above) and named
+with `BOX_TEMPLATES`.
 
 ## 7. Texture compression
 
@@ -207,7 +232,11 @@ memory or load time asks for it (R22 stays open).
   Properties, and that release builds show no console window. On macOS the
   patching is tested on a real (tiny, `rust-lld`-linked) PE:
   `crates/box_export/tests/fixtures/tiny.exe`.
-- Exporting a native project for Windows (cargo on Windows).
+- Nothing for building: a native project's Windows player is
+  cross-compiled on a Mac (section 6). Exports built natively on Windows
+  (`cargo build` there) still link the CRT dynamically and need the Visual
+  C++ Redistributable; the CI template build has not been switched to
+  `+crt-static` yet.
 
 ## 9. Tests
 
@@ -228,7 +257,11 @@ memory or load time asks for it (R22 stays open).
   Windows layout, icon, version and subsystem per profile, re-export
   replacing the earlier one, a Mach-O refused as a Windows template, a
   stranger's folder kept; `open -W -n` (LaunchServices) launching the app.
-  `--ignored`: `examples/collector` exported through `cargo build --release`.
+  `--ignored`: `examples/collector` exported through `cargo build --release`,
+  and (not on Windows) cross-exported for Windows through `cargo xwin`: a GUI
+  exe with its name and icon patched, no CRT DLL imports, a valid pak.
+- `cargo test -p box_export`: also the cross-build tool check (missing tools
+  listed with their install commands, each command once).
 - `cargo test -p box_editor --test export`: the Export window's settings
   validation, save, background export with progress, success and error
   toasts; a capture of the window (`target/captures/export/editor_export.png`).

@@ -459,3 +459,43 @@ fn native_project_exports_through_cargo() {
     std::fs::remove_dir_all(&elsewhere).unwrap();
     std::fs::remove_dir_all(&out).unwrap();
 }
+
+/// A native project exports for Windows from macOS or Linux: its player is
+/// cross-compiled with `cargo xwin` (docs/EXPORT.md section 6) with a static
+/// CRT, so the exe needs no Visual C++ Redistributable. Running it needs
+/// Windows.
+#[cfg(not(windows))]
+#[test]
+#[ignore = "cross-compiles the collector player (needs cargo-xwin, LLVM, lld and the x86_64-pc-windows-msvc target; minutes); run with --ignored"]
+fn native_project_cross_exports_for_windows() {
+    let out = temp("native_windows");
+    let options = ExportOptions::new(
+        example("collector"),
+        Target::Windows,
+        Profile::Release,
+        &out,
+    );
+    let report = box_export::export(&options, &mut |_| {}).unwrap();
+    assert_eq!(report.player_source, "cargo");
+    assert!(
+        report
+            .player
+            .ends_with("x86_64-pc-windows-msvc/release/collector-player.exe"),
+        "{}",
+        report.player.display()
+    );
+    assert_eq!(report.executable, out.join("Collector/Collector.exe"));
+    let summary = windows::read_back(&report.executable).unwrap();
+    assert_eq!(summary.subsystem, windows::SUBSYSTEM_GUI);
+    assert_eq!(summary.product_name.as_deref(), Some("Collector"));
+    let exe = std::fs::read(&report.executable).unwrap();
+    let imports = |name: &[u8]| {
+        exe.windows(name.len())
+            .any(|w| w.eq_ignore_ascii_case(name))
+    };
+    for dll in ["VCRUNTIME140.dll", "MSVCP140.dll", "api-ms-win-crt-runtime"] {
+        assert!(!imports(dll.as_bytes()), "the exe imports {dll}");
+    }
+    Pak::open(&report.pak).unwrap().verify().unwrap();
+    std::fs::remove_dir_all(&out).unwrap();
+}

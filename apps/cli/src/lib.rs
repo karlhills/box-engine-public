@@ -102,7 +102,7 @@ pub enum Command {
     Import(ImportArgs),
     /// Play a project (or one of its scene files): in a window, or headless with --frames or --capture. A native project (with a Cargo.toml) runs its own player through `cargo run`.
     Run(RunArgs),
-    /// Export a runnable game: cook the project into game.pak and bundle it with the player as a macOS .app (ad-hoc signed) or a Windows folder (<Name>.exe + game.pak). A native project builds its own player with `cargo build --release`.
+    /// Export a runnable game: cook the project into game.pak and bundle it with the player as a macOS .app (ad-hoc signed) or a Windows folder (<Name>.exe + game.pak). A native project builds its own player with `cargo build --release` (for Windows on macOS or Linux: `cargo xwin`, see docs/EXPORT.md).
     Export(ExportArgs),
     /// Serve the Model Context Protocol on stdio, for AI agents (MCP clients launch this).
     #[command(after_help = mcp::registration_help())]

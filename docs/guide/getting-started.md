@@ -280,7 +280,7 @@ In the editor, **File ▸ Export…** does the same, and also edits the game's n
 - **Saves.** An exported game keeps its save games in `~/Library/Application Support/<bundle id>/saves`.
 - **Windows.** `--target windows` makes a folder with `<Name>.exe` and `game.pak`, from a Mac too, when your box-engine includes the Windows player; see the Windows guide when it is available.
 
-Exporting a native project (one with Rust code) builds its player with cargo, so it needs Rust. [EXPORT.md](../EXPORT.md) has the details: the pak format, signing, settings and what each platform needs.
+Exporting a native project (one with Rust code) builds its player with cargo, so it needs Rust. On a Mac it can build the Windows version too, after a one-time setup that `box export --target windows` prints when something is missing (`brew install llvm lld`, `cargo install --locked cargo-xwin`, `rustup target add x86_64-pc-windows-msvc`); the first Windows build downloads Microsoft's Windows libraries under their Visual Studio license. [EXPORT.md](../EXPORT.md) has the details: the pak format, signing, settings and what each platform needs.
 
 ## Where to go next
 

@@ -279,6 +279,8 @@ The first draft placed a thin Luau slice in M3. The complexity review pointed ou
 
 **Confidence.** Medium-high.
 
+**Update (2026-11-17).** Game developers on a Mac must be able to ship Windows builds without a Windows PC, so `box export --target windows` cross-compiles a native project's player with `cargo-xwin` (MSVC target, ATL for the static DXC, static CRT). The engine's own development, tests and release templates stay on the Windows runner and PC as above; a cross-built exe is verified there before it is trusted (docs/EXPORT.md sections 6 and 8).
+
 ---
 
 ## D10. Public engine API design
