@@ -23,11 +23,12 @@
 //! executable (or in `Contents/Resources` of a macOS app), the player mounts
 //! the pak and plays the project inside it ([`crate::packed`]): read-only,
 //! no hot reload, GPU validation per the export's profile, the window titled
-//! with the exported name.
+//! with the exported name, and in a window the startup splash first
+//! ([`crate::splash`]) unless the export settings turn it off.
 //!
 //! Command line: `[project_dir] [--scene <name|path>] [--no-watch] [runner flags]`
 //! (`--capture`, `--frames`, `--size`, `--report`, `--headless`,
-//! `--control`; see [`RunOptions`]; `--help` prints [`USAGE`], an unknown
+//! `--control`, `--splash`; see [`RunOptions`]; `--help` prints [`USAGE`], an unknown
 //! flag is an error with a suggestion). With `--control` the running player
 //! serves the live control socket for its project (`box mcp` live tools).
 //! Without a project directory the current directory (or the nearest parent
@@ -93,7 +94,7 @@ impl Default for PlayerOptions {
 /// project directory.
 const VALUE_FLAGS: [&str; 4] = ["--capture", "--frames", "--report", "--size"];
 /// Runner flags without a value.
-const SWITCH_FLAGS: [&str; 2] = ["--headless", "--control"];
+const SWITCH_FLAGS: [&str; 3] = ["--headless", "--control", "--splash"];
 /// The player's own flags.
 const PLAYER_FLAGS: [&str; 6] = [
     "--scene",
@@ -124,6 +125,9 @@ Options:
   --headless            No window: run --frames frames offscreen
   --control             Serve the live control socket for `box mcp`
                         (with --headless and no --frames: until `stop`)
+  --splash              Show the startup splash first (exported games show
+                        it in a window unless their export settings turn it
+                        off); also headless, so --capture can record it
   --write-registry      Write the game's types to <project>/.box/registry.json
                         (what `box` and `box mcp` read) and exit
   --upgrade             Migrate the project's files from an older engine or
@@ -626,6 +630,12 @@ pub fn run_game(options: PlayerOptions, game: Game) -> Result<RunSummary> {
     }
     let (app, project) = build_app(&game, &options)?;
     let mut run = options.run;
+    run.splash = crate::splash::should_show(
+        project.is_packed(),
+        project.file().export.splash,
+        run.splash,
+        run.headless || run.capture.is_some(),
+    );
     if project.is_packed() {
         let manifest = crate::packed::read_manifest(project.root())?;
         if run.control {
@@ -674,8 +684,10 @@ mod tests {
             "--scene",
             "level2",
             "--headless",
+            "--splash",
         ]))
         .unwrap();
+        assert!(o.run.splash);
         assert_eq!(o.project.as_deref(), Some(Path::new("my-game")));
         assert_eq!(o.scene.as_deref(), Some("level2"));
         assert_eq!(o.run.frames, Some(5));

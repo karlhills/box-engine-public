@@ -59,12 +59,17 @@ pub(crate) fn export(args: &ExportArgs) -> Result<Output, CliError> {
     })
     .map_err(error)?;
     let mut text = format!(
-        "exported {} ({} {}, {} build)\n  run: {}\n  game.pak: {} files, {:.1} KiB (project assets {:.1} KiB)\n  time: {:.0} ms (import {:.0} ms, pak {:.0} ms, bundle {:.0} ms, sign {:.0} ms{})",
+        "exported {} ({} {}, {} build)\n  run: {}\n  splash screen: {}\n  game.pak: {} files, {:.1} KiB (project assets {:.1} KiB)\n  time: {:.0} ms (import {:.0} ms, pak {:.0} ms, bundle {:.0} ms, sign {:.0} ms{})",
         report.output.display(),
         report.name,
         report.version,
         report.profile.name(),
         report.executable.display(),
+        if report.splash {
+            "on"
+        } else {
+            "off (export.splash)"
+        },
         report.cook.files,
         report.cook.pak_bytes as f64 / 1024.0,
         report.cook.source_bytes as f64 / 1024.0,

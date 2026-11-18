@@ -1,6 +1,6 @@
 //! File ▸ Export… (and Game ▸ Project Settings ▸ Export Settings…): the
-//! project's export settings (app name, bundle id, version, icon, saved in
-//! `box.project.json`) and an export run with the same code as `box export`
+//! project's export settings (app name, bundle id, version, icon, startup
+//! splash, saved in `box.project.json`) and an export run with the same code as `box export`
 //! ([`box_export::export`]).
 //!
 //! The export runs on a background thread; its progress shows in the window
@@ -43,6 +43,9 @@ pub(crate) struct ExportPanel {
     pub out: String,
     /// The settings fields as typed (empty: the default).
     pub fields: [String; 4],
+    /// The startup splash check box is off (`"splash": false`); the default
+    /// (false) is the splash on, like an absent setting.
+    pub no_splash: bool,
     /// The project root the fields were read from.
     loaded_for: Option<PathBuf>,
     job: Option<Job>,
@@ -98,6 +101,7 @@ impl EditorState {
             s.version.clone().unwrap_or_default(),
             s.icon.clone().unwrap_or_default(),
         ];
+        self.export.no_splash = !s.splash_enabled();
         self.export.out = project.root().join("export").display().to_string();
         self.export.loaded_for = Some(project.root().to_path_buf());
     }
@@ -110,6 +114,8 @@ impl EditorState {
             bundle_id: opt(id),
             version: opt(version),
             icon: opt(icon),
+            // Written only when turned off: absent means on.
+            splash: self.export.no_splash.then_some(false),
         }
     }
 
@@ -121,6 +127,7 @@ impl EditorState {
             s.version.clone().unwrap_or_default(),
             s.icon.clone().unwrap_or_default(),
         ];
+        self.export.no_splash = !s.splash_enabled();
     }
 
     /// Problems with the edited settings, as `(field, message)`.
@@ -381,6 +388,19 @@ pub(crate) fn export_window(
                     });
                     ui.end_row();
                     problem_row(ui, p_icon.as_deref(), t);
+                    ui.label("Splash screen");
+                    let mut show = !state.export.no_splash;
+                    crate::widgets::checkbox_labeled(
+                        ui,
+                        &mut show,
+                        "Show \"made with box engine\" at startup",
+                    )
+                    .on_hover_text(
+                        "A black screen with the box engine wordmark for about 2.5 s \
+                         while the game loads",
+                    );
+                    state.export.no_splash = !show;
+                    ui.end_row();
                 });
             if browse_icon
                 && let Some(path) = rfd::FileDialog::new()

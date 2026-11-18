@@ -16,6 +16,7 @@ use winit::window::{Window, WindowId};
 use crate::gamepad::GamepadPoller;
 use crate::input::CursorController;
 use crate::live::LiveControl;
+use crate::splash::Splash;
 
 /// Size of the render target in physical pixels. Updated by the runner.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -43,6 +44,11 @@ pub struct WindowSize {
 ///   600 frames), so a first screenshot shows the scene. Headless runs are then paced to
 ///   60 frames per second, and `--headless --control` without `--frames` runs
 ///   until the control `stop` method (or [`AppExit`]) ends it.
+/// - `--splash`: show the startup splash ([`crate::splash`]) before the
+///   game, also in headless and capture runs (whose timeline is
+///   deterministic: `--splash --frames 60 --capture out.png` captures it
+///   fully shown). The player turns it on by itself for exported games in a
+///   window.
 #[derive(Clone, Debug)]
 pub struct RunOptions {
     pub title: String,
@@ -54,6 +60,8 @@ pub struct RunOptions {
     pub headless: bool,
     /// Serve the live control socket (`--control`).
     pub control: bool,
+    /// Show the startup splash before the game (`--splash`).
+    pub splash: bool,
 }
 
 /// What a run did, returned by [`run_with`].
@@ -81,6 +89,7 @@ impl RunOptions {
             report: None,
             headless: false,
             control: false,
+            splash: false,
         }
     }
 
@@ -101,6 +110,7 @@ impl RunOptions {
                 "--report" => self.report = Some(value()?.into()),
                 "--headless" => self.headless = true,
                 "--control" => self.control = true,
+                "--splash" => self.splash = true,
                 "--size" => {
                     let v = value()?;
                     let (w, h) = v.split_once('x').context("--size expects WxH")?;
@@ -181,8 +191,10 @@ fn run_headless(mut app: App, options: &RunOptions) -> Result<RunSummary> {
     };
     let frames = options.frames.unwrap_or(default_frames).max(1);
     // Captures never show a half-loaded scene: wait for the world's assets
-    // (prefab contents, meshes, textures) before the first frame.
-    if app.world.contains_resource::<box_assets::AssetServer>() {
+    // (prefab contents, meshes, textures) before the first frame. With a
+    // splash they load while it shows.
+    let mut splash = options.splash.then(Splash::new);
+    if splash.is_none() && app.world.contains_resource::<box_assets::AssetServer>() {
         crate::asset_glue::settle_assets(&mut app.world, ASSET_SETTLE_TIMEOUT);
     }
     let mut renderer = Renderer::new_headless(options.width, options.height)
@@ -215,14 +227,26 @@ fn run_headless(mut app: App, options: &RunOptions) -> Result<RunSummary> {
             }
         }
         let t0 = Instant::now();
-        app.tick(FIXED_DT);
+        // The splash shows instead of the game until it has finished.
+        let (w, h) = renderer.size();
+        let showing = splash
+            .as_mut()
+            .is_some_and(|s| s.update(&mut app.world, FIXED_DT, w, h, 1.0));
+        if !showing {
+            splash = None;
+            app.tick(FIXED_DT);
+        }
         let update_ms = ms_since(t0);
         let t1 = Instant::now();
         let save_this = pattern.is_some() && (sequence || frame + 1 == frames);
+        let world = match &mut splash {
+            Some(s) => s.world_mut(),
+            None => &mut app.world,
+        };
         let image = if save_this {
-            Some(renderer.capture(&mut app.world)?)
+            Some(renderer.capture(world)?)
         } else {
-            renderer.render(&mut app.world)?;
+            renderer.render(world)?;
             None
         };
         let render_ms = ms_since(t1);
@@ -278,6 +302,7 @@ fn run_headless(mut app: App, options: &RunOptions) -> Result<RunSummary> {
 
 fn run_windowed(app: App, options: RunOptions) -> Result<RunSummary> {
     let control = start_control(&app, &options)?;
+    let splash = options.splash.then(Splash::new);
     // A window is someone listening: sounds go to the device (opened on the
     // first sound). Headless runs stay silent.
     #[cfg(feature = "audio")]
@@ -298,6 +323,7 @@ fn run_windowed(app: App, options: RunOptions) -> Result<RunSummary> {
         gamepads: GamepadPoller::new(),
         cursor: CursorController::new(),
         control,
+        splash,
     };
     event_loop.run_app(&mut runner)?;
     // Close the socket and remove the discovery file before writing reports.
@@ -351,6 +377,8 @@ struct Runner {
     cursor: CursorController,
     /// The live control socket (`--control`).
     control: Option<LiveControl>,
+    /// The startup splash, while it shows.
+    splash: Option<Splash>,
 }
 
 impl Runner {
@@ -365,13 +393,42 @@ impl Runner {
             return;
         };
         let now = Instant::now();
-        let dt = self
+        let mut dt = self
             .last_frame
             .map(|t| (now - t).as_secs_f32())
             .unwrap_or(FIXED_DT);
         self.last_frame = Some(now);
 
         self.gamepads.update(self.app.world.resource_mut::<Input>());
+        if let Some(splash) = &mut self.splash {
+            match splash.frame(renderer, &mut self.app.world, dt) {
+                Ok(true) => {
+                    // Splash frames count towards `--frames`, as in headless
+                    // runs. As below: back off while the surface is
+                    // unavailable.
+                    let presented = renderer.stats().presented;
+                    if presented {
+                        self.frames += 1;
+                    }
+                    if self.options.frames.is_some_and(|n| self.frames >= n) {
+                        event_loop.exit();
+                    } else if presented {
+                        window.request_redraw();
+                    } else if !self.occluded {
+                        std::thread::sleep(std::time::Duration::from_millis(8));
+                        window.request_redraw();
+                    }
+                    return;
+                }
+                // Finished: the game starts this frame, with a normal step
+                // (a slow last splash frame must not become a huge one).
+                Ok(false) => {
+                    self.splash = None;
+                    dt = FIXED_DT;
+                }
+                Err(e) => return self.fail(event_loop, e.into()),
+            }
+        }
         // Requests are answered once a frame was presented and the assets
         // loaded (or after 600 frames), so the first answer (a screenshot)
         // never shows an empty, half-loaded world.
@@ -740,6 +797,7 @@ mod tests {
                     "r.json",
                     "--headless",
                     "--control",
+                    "--splash",
                     "--other",
                 ]
                 .map(String::from),
@@ -750,8 +808,8 @@ mod tests {
             Some(std::path::Path::new("out/a.png"))
         );
         assert_eq!((o.frames, o.width, o.height), (Some(5), 640, 360));
-        assert!(o.report.is_some() && o.headless && o.control);
-        assert!(!RunOptions::new("t").control);
+        assert!(o.report.is_some() && o.headless && o.control && o.splash);
+        assert!(!RunOptions::new("t").control && !RunOptions::new("t").splash);
         assert!(
             RunOptions::new("t")
                 .with_arg_list(["--frames".to_string()])

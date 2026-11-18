@@ -368,6 +368,8 @@ pub struct ExportReport {
     pub name: String,
     pub bundle_id: String,
     pub version: String,
+    /// The game shows the startup splash (`export.splash` is not `false`).
+    pub splash: bool,
     /// Where the player came from: `template` or `cargo` (or `given`).
     pub player_source: &'static str,
     pub player: PathBuf,
@@ -544,6 +546,7 @@ pub fn export(
         name: id.name,
         bundle_id: id.bundle_id,
         version: id.version,
+        splash: project.file().export.splash_enabled(),
         player_source,
         player,
         signed,
@@ -583,6 +586,7 @@ mod tests {
             bundle_id: Some("nodots".into()),
             version: Some("1.2.3.4".into()),
             icon: Some("missing-icon-file.png".into()),
+            splash: Some(false),
         };
         let fields: Vec<&str> = settings_problems(&root, &bad).iter().map(|p| p.0).collect();
         assert_eq!(fields, ["app_name", "bundle_id", "version", "icon"]);
@@ -591,6 +595,7 @@ mod tests {
             bundle_id: Some("com.example.keep-2".into()),
             version: Some("1.20.300".into()),
             icon: None,
+            splash: None,
         };
         assert!(settings_problems(&root, &good).is_empty());
         assert_eq!(Target::parse("Windows"), Some(Target::Windows));

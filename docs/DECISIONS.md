@@ -111,7 +111,7 @@ Not adopted: moving rapier to M3 (no user before M7), and adding navigation and 
 
 **S1 outcome (2026-11-15): proceed with egui.** A themed shell with egui 0.37, egui-winit, egui-wgpu and egui_tiles 0.18 reached a restrained, professional look after several capture-and-fix passes (captures in `spikes/s1_editor_shell/captures/`). CPU cost with a 10,000-row virtualized hierarchy at 2560×1440, 2× scale: egui run 0.3–0.5 ms mean, under 1.3 ms max; tessellation about 0.1 ms; upload and encode about 0.2 ms. Lessons for M2:
 - egui 0.37 and egui_tiles 0.18 need Rust 1.95 or later (same as bevy_reflect; see D3).
-- egui ships no fonts unless asked; the editor bundles Inter and Source Code Pro (both OFL).
+- egui ships no fonts unless asked; the editor bundles Inter and Source Code Pro (both OFL). Later, box_ui bundled DM Sans (OFL, `crates/box_ui/assets/fonts`) for the startup splash's wordmark.
 - egui's theming is coarse (one fill per interaction state for all widgets), so the editor uses its own small widget kit (about 400 lines: property row, Vec3 field, slider, checkbox, segmented control, section header).
 - egui treats a native viewport texture as sRGB-encoded; the engine's viewport output must match.
 - Saved layouts are keyed through our own pane enum and validated on load, falling back to the default.

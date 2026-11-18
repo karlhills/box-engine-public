@@ -870,6 +870,55 @@ fn rule_parts_generate_in_the_same_frame() {
     );
 }
 
+/// A rule that places a marker part at each landing's world position.
+fn marker_rule(
+    input: &box_engine::box_proc::rule::RuleInput<Landing>,
+) -> box_engine::box_proc::rule::RuleOutput {
+    use box_engine::box_proc::derive::Part;
+    let mut out = box_engine::box_proc::rule::RuleOutput::default();
+    for i in input.intents {
+        let at = i.transform.translation;
+        out.push(Part::new(i.key("marker")).with(Transform::from_xyz(at.x, at.y, at.z)));
+    }
+    out
+}
+
+struct Markers;
+
+impl Plugin for Markers {
+    fn build(&self, app: &mut App) {
+        use box_engine::box_proc::rule::RuleAppExt;
+        app.add_rule("markers", marker_rule);
+    }
+}
+
+/// `settle_step` (the startup splash's loading, and `settle_assets`) runs
+/// rules on current world transforms: a child intent spawned since the last
+/// propagation is seen where it is, not at the origin.
+#[test]
+fn settle_step_runs_rules_on_current_world_transforms() {
+    let game = Game::new().with_plugin(Markers);
+    let mut app = game.new_app();
+    let parent = app
+        .world
+        .spawn((Uid::new(), Transform::from_xyz(4.0, 2.0, 0.0)));
+    let child = app.world.spawn((
+        Uid::new(),
+        Transform::from_xyz(1.0, 0.0, 0.0),
+        Landing { steps: 1 },
+    ));
+    app.world.set_parent(child, Some(parent)).unwrap();
+    box_engine::settle_step(&mut app.world);
+    let marker = app
+        .world
+        .query::<(&box_engine::box_core::derived::Derived, &Transform)>()
+        .iter()
+        .map(|(_, t)| t.translation)
+        .next()
+        .expect("a marker part");
+    assert_eq!(marker, Vec3::new(5.0, 2.0, 0.0));
+}
+
 /// A world without an `App` (the editor's edit world) runs the game's rules
 /// through `sync_scene_meshes` once `Game::rules` is installed.
 #[test]

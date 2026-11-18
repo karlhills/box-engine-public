@@ -65,6 +65,7 @@ fn export_finds_templates_and_reports_json() {
     assert_eq!(json["player_source"], "template");
     assert_eq!(json["bundle_id"], "com.example.script-demo");
     assert_eq!(json["version"], "1.0.0");
+    assert_eq!(json["splash"], true);
     assert!(
         json["player"]
             .as_str()

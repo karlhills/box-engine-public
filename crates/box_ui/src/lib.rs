@@ -39,6 +39,8 @@
 //!   tessellator and text engine); no egui type is part of this API.
 //! - Scripts (`script` feature): the `ui` and `strings` Luau globals
 //!   ([`script_api`]), added by [`UiPlugin`].
+//! - [`splash`]: the startup splash's picture ([`SplashPainter`]), shown by
+//!   `box_engine::splash` before exported games start.
 //! - [`UiPlugin`] (added by every `box_engine` app) installs the resources,
 //!   events and systems; `box_engine` keeps [`UiScreen`] equal to the
 //!   window or view size.
@@ -50,6 +52,7 @@ pub mod node;
 mod paint;
 #[cfg(feature = "script")]
 pub mod script_api;
+pub mod splash;
 pub mod strings;
 pub mod style;
 mod systems;
@@ -58,6 +61,7 @@ mod ui;
 pub use input::{UI_ACTIONS, UI_BACK, UI_CONFIRM, UI_NAVIGATE, UI_NEXT, UI_PREV, default_actions};
 pub use node::{NodeKind, UiNode, WorldAnchorDesc};
 pub use paint::DEFAULT_FONT;
+pub use splash::SplashPainter;
 pub use strings::{Strings, fill, update_strings};
 pub use style::{Align, Edges, FocusRing, Justify, Shadow, Size, Style, TextAlign, Theme};
 pub use systems::{UiScreen, request_ui_assets, ui_input_system, ui_layout_system};

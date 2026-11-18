@@ -263,6 +263,7 @@ box export --project my-game --target macos --out my-game/export
 ```text
 exported my-game/export/my-game.app (my-game 1.0.0, release build)
   run: my-game/export/my-game.app/Contents/MacOS/my-game
+  splash screen: on
 ```
 
 Double-click `my-game.app` in Finder, or run it from Terminal:
@@ -272,11 +273,12 @@ open my-game/export/my-game.app
 my-game/export/my-game.app/Contents/MacOS/my-game --capture shot.png --frames 90   # no window: a screenshot
 ```
 
-In the editor, **File ▸ Export…** does the same, and also edits the game's name, version, bundle id and icon (saved in `box.project.json` under `export`).
+In the editor, **File ▸ Export…** does the same, and also edits the game's name, version, bundle id, icon and splash screen (saved in `box.project.json` under `export`).
 
 - **Profiles.** `--profile release` (the default) is the build you give to players. `--profile development` also turns on GPU validation, for finding rendering problems.
 - **What goes in.** `box.project.json` and everything under `assets/`. Editor state (`.box/`), hidden files and anything outside `assets/` stay behind. Every asset is imported once while exporting: a broken file stops the export with a list of problems, so `box check my-game` first is a good habit.
 - **Giving it to others.** The app is ad-hoc signed. It runs on your Mac; on another Mac, a downloaded copy opens after right-click ▸ **Open** (or `xattr -dr com.apple.quarantine my-game.app`). Opening without that step needs a Developer ID signature and notarisation with your own Apple developer account, which box-engine does not do for you. Zip the `.app` to send it (`ditto -c -k --keepParent my-game.app my-game.zip` keeps it intact).
+- **Splash screen.** The game starts with a short "made with box engine" screen (about 2.5 s) while it loads. Turn it off with the **Splash screen** check box in the Export window, or `"splash": false` under `export`.
 - **Saves.** An exported game keeps its save games in `~/Library/Application Support/<bundle id>/saves`.
 - **Windows.** `--target windows` makes a folder with `<Name>.exe` and `game.pak`, from a Mac too, when your box-engine includes the Windows player; see the Windows guide when it is available.
 

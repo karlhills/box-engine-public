@@ -226,13 +226,14 @@ pub struct ProjectFile {
     pub export: ExportSettings,
 }
 
-/// `"export"` in `box.project.json`: the exported application's identity.
-/// Every field is optional; `box_export` documents the defaults (the project
-/// name, `com.example.<name>`, `1.0.0`, the engine's icon).
+/// `"export"` in `box.project.json`: the exported application's identity
+/// and startup splash. Every field is optional; `box_export` documents the
+/// defaults (the project name, `com.example.<name>`, `1.0.0`, the engine's
+/// icon, the splash on).
 ///
 /// ```json
 /// "export": { "app_name": "Cinder Keep", "bundle_id": "com.example.cinder-keep",
-///             "version": "1.2.0", "icon": "assets/icon.png" }
+///             "version": "1.2.0", "icon": "assets/icon.png", "splash": false }
 /// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -249,11 +250,20 @@ pub struct ExportSettings {
     /// A square PNG (1024 px is best), relative to the project root.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
+    /// Show the "made with box engine" startup splash (default: on;
+    /// `"splash": false` turns it off). See `box_engine::splash`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub splash: Option<bool>,
 }
 
 impl ExportSettings {
     pub fn is_empty(&self) -> bool {
         *self == Self::default()
+    }
+
+    /// Whether exports show the startup splash (`splash` absent or true).
+    pub fn splash_enabled(&self) -> bool {
+        self.splash != Some(false)
     }
 }
 
@@ -891,6 +901,31 @@ mod tests {
             DEFAULT_START_SCENE
         );
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn the_splash_setting_defaults_to_on() {
+        let path = Path::new("box.project.json");
+        let parse = |export: &str| {
+            let text = format!(
+                r#"{{ "version": 1, "name": "x", "engine_version": "0.0.1", "start_scene": "a"{export} }}"#
+            );
+            parse_project_file(path, &text).unwrap().export
+        };
+        let absent = parse("");
+        assert_eq!(absent.splash, None);
+        assert!(absent.splash_enabled() && absent.is_empty());
+        let off = parse(r#", "export": { "splash": false }"#);
+        assert_eq!(off.splash, Some(false));
+        assert!(!off.splash_enabled());
+        assert!(parse(r#", "export": { "splash": true }"#).splash_enabled());
+        // Written back only when set.
+        let json = serde_json::to_value(&off).unwrap();
+        assert_eq!(json, serde_json::json!({ "splash": false }));
+        assert_eq!(
+            serde_json::to_value(&absent).unwrap(),
+            serde_json::json!({})
+        );
     }
 
     #[test]

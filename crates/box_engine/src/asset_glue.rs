@@ -198,33 +198,10 @@ pub fn sync_assets(world: &mut World) {
 /// Headless runs and captures call it before the first frame so they never
 /// draw a half-loaded scene. Returns whether everything settled.
 pub fn settle_assets(world: &mut World, timeout: Duration) -> bool {
-    // `sync_scene_meshes` runs `sync_assets` and also turns inline material
-    // components into material assets, whose textures the next pass requests.
-    // Procedural objects are regenerated in full (no throttle or budget),
-    // also after assets they read finished loading.
-    let Some(server) = world.get_resource::<AssetServer>().cloned() else {
-        box_proc::settle(world);
-        crate::sync_scene_meshes(world);
-        crate::scatter_glue::settle(world);
-        return true;
-    };
     let start = Instant::now();
     loop {
-        box_proc::settle(world);
-        crate::sync_scene_meshes(world);
-        crate::scatter_glue::settle(world);
-        // UI theme, its fonts, images and string tables.
-        box_ui::request_ui_assets(world);
-        if server.is_idle() {
-            // One more pass consumes the last results; it may request more
-            // (nested prefabs, textures of new materials, a theme's fonts).
-            box_proc::settle(world);
-            crate::sync_scene_meshes(world);
-            crate::scatter_glue::settle(world);
-            box_ui::request_ui_assets(world);
-            if server.is_idle() {
-                return true;
-            }
+        if settle_step(world) {
+            return true;
         }
         if start.elapsed() >= timeout {
             tracing::warn!(
@@ -235,6 +212,43 @@ pub fn settle_assets(world: &mut World, timeout: Duration) -> bool {
         }
         std::thread::sleep(Duration::from_millis(1));
     }
+}
+
+/// One non-blocking pass of [`settle_assets`]: applies finished loads,
+/// requests what they need next and regenerates dirty procedural objects
+/// in full, propagating world transforms before each pass so rules see
+/// intents (children included) where they are. Returns whether the world's assets are settled: the server is
+/// idle after a last pass that consumed its results (always true without
+/// an [`AssetServer`]). The startup splash calls it once per frame while
+/// the game waits ([`crate::splash`]).
+pub fn settle_step(world: &mut World) -> bool {
+    // `sync_scene_meshes` runs `sync_assets` and also turns inline material
+    // components into material assets, whose textures the next pass requests.
+    // Procedural objects are regenerated in full (no throttle or budget),
+    // also after assets they read finished loading. World transforms first
+    // (change-driven, cheap when nothing moved): rules read their intents'
+    // world transforms, and the last pass may have spawned children.
+    let pass = |world: &mut World| {
+        box_core::transform::propagate_transforms(world);
+        box_proc::settle(world);
+        crate::sync_scene_meshes(world);
+        crate::scatter_glue::settle(world);
+    };
+    let Some(server) = world.get_resource::<AssetServer>().cloned() else {
+        pass(world);
+        return true;
+    };
+    pass(world);
+    // UI theme, its fonts, images and string tables.
+    box_ui::request_ui_assets(world);
+    if !server.is_idle() {
+        return false;
+    }
+    // One more pass consumes the last results; it may request more (nested
+    // prefabs, textures of new materials, a theme's fonts).
+    pass(world);
+    box_ui::request_ui_assets(world);
+    server.is_idle()
 }
 
 // ------------------------------------------------------------- prefabs ----

@@ -52,7 +52,7 @@ development. The exe is unsigned; sign it with `signtool` (or
 
 ```json
 "export": { "app_name": "Cinder Keep", "bundle_id": "com.example.cinder-keep",
-            "version": "1.2.0", "icon": "assets/icon.png" }
+            "version": "1.2.0", "icon": "assets/icon.png", "splash": false }
 ```
 
 | Field | Default | Rules |
@@ -61,6 +61,7 @@ development. The exe is unsigned; sign it with `signtool` (or
 | `bundle_id` | `com.example.<name>` | reverse DNS, letters, digits, `-` |
 | `version` | `1.0.0` | one to three numbers 0-65535 |
 | `icon` | the engine's icon | a square PNG inside the project (1024 px is best) |
+| `splash` | `true` | `false` turns the startup splash off (§5) |
 
 The section is optional and left out of the file while empty, so older
 engines still read projects that never set it. The editor's Export window
@@ -152,6 +153,19 @@ project folder for `.box/control.json`); engine shader hot reload (debug
 builds) is off. Save games go to the per-user folder named after the bundle
 id: `~/Library/Application Support/<bundle_id>/saves` on macOS,
 `%APPDATA%\<bundle_id>\saves` on Windows (`box_engine::packed::data_dir`).
+
+**Startup splash.** In a window, an exported game first shows a black
+screen with a grey "made with" above the white "box engine" wordmark (DM
+Sans, sized to the window): fade in 0.5 s, hold, fade out 0.5 s, at least
+2.5 s, not skippable. Meanwhile the game's assets load; the game does not
+tick (no scripts, no sound) until it ends. The hold lasts until the assets
+are loaded, at most 10 s in all. `"splash": false` in the export settings
+(the editor's **Splash screen** check box) turns it off. Headless and
+capture runs never show it unless `--splash` is given, which also shows it
+in a project folder: `box-player my-game --splash --frames 60 --capture
+splash.png` captures it fully shown (the headless step is a fixed 1/60 s).
+The code is `box_engine::splash`; a game with its own event loop calls
+`Splash::frame` (or `Splash::update`) each frame until it returns false.
 
 ## 6. Player templates
 

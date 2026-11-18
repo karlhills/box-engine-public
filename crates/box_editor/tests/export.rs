@@ -63,6 +63,7 @@ fn export_window_saves_settings_and_exports_in_the_background() {
         bundle_id: Some("not a bundle id".into()),
         version: Some("1.x".into()),
         icon: None,
+        splash: None,
     });
     let fields: Vec<&str> = state
         .export_settings_problems()
@@ -76,8 +77,11 @@ fn export_window_saves_settings_and_exports_in_the_background() {
         bundle_id: Some("com.example.exported".into()),
         version: Some("2.1.0".into()),
         icon: None,
+        // The splash check box, turned off: written as `"splash": false`.
+        splash: Some(false),
     };
     state.set_export_fields(&settings);
+    assert_eq!(state.export_settings_edited(), settings);
     assert!(state.export_settings_problems().is_empty());
 
     // Export (Windows layout with a sample PE: no GPU, no template needed).
@@ -138,6 +142,7 @@ fn export_window_capture() {
         bundle_id: Some("com.example.export me".into()),
         version: None,
         icon: None,
+        splash: None,
     });
     let image = match capture(&mut editor, &CaptureOptions::default()) {
         Ok(image) => image,

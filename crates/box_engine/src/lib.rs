@@ -55,10 +55,11 @@ pub mod scenes;
 #[cfg(feature = "script")]
 pub mod script_glue;
 pub mod settings;
+pub mod splash;
 pub mod templates;
 pub mod upgrade;
 
-pub use asset_glue::{AssetGluePlugin, settle_assets, sync_assets};
+pub use asset_glue::{AssetGluePlugin, settle_assets, settle_step, sync_assets};
 pub use box_assets;
 #[cfg(feature = "audio")]
 pub use box_audio;
