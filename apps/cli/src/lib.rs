@@ -12,12 +12,15 @@ mod game_registry;
 mod import_cmd;
 pub mod mcp;
 mod native;
+mod nav_cmd;
+mod playtest_cmd;
 mod problems;
 mod render;
 mod run_cmd;
 mod scene_cmd;
 mod script_cmd;
 mod upgrade_cmd;
+mod walk_cmd;
 
 use std::path::{Path, PathBuf};
 
@@ -98,8 +101,14 @@ pub enum Command {
     Script(ScriptCommand),
     /// Render a scene headlessly to a PNG.
     Render(RenderArgs),
+    /// Walk a probe character (the scene's player size, or the default) through waypoints against the scene's colliders and report each leg: reached or stuck (where), the biggest step up, falls, the steepest slope. Nothing is changed or played.
+    Walk(WalkArgs),
+    /// The navmesh path between two points (feet positions) of a scene: corners and length, or `unreachable` with the nearest reachable point. The navmesh is baked from the scene's static colliders as in the game (docs/NAVIGATION.md). Nothing is changed or played.
+    Nav(NavArgs),
     /// Copy a file into the project's assets/, write its .meta and import it once; prints its id and sub-assets.
     Import(ImportArgs),
+    /// Replay playtests (playtests/<name>.playtest.json: a start state, named-action input per frame, checks) headless with the fixed 1/60 s step, from a fresh load of the scene, and report every check with its frame and values; exit code 1 when one fails. Without a file: every playtest of the project.
+    Playtest(PlaytestArgs),
     /// Play a project (or one of its scene files): in a window, or headless with --frames or --capture. A native project (with a Cargo.toml) runs its own player through `cargo run`.
     Run(RunArgs),
     /// Export a runnable game: cook the project into game.pak and bundle it with the player as a macOS .app (ad-hoc signed) or a Windows folder (<Name>.exe + game.pak). A native project builds its own player with `cargo build --release` (for Windows on macOS or Linux: `cargo xwin`, see docs/EXPORT.md).
@@ -171,11 +180,78 @@ pub struct RenderArgs {
     #[arg(long, default_value = "1280x720", value_parser = parse_size)]
     pub size: (u32, u32),
     /// Camera entity (uid or unique name). Default: the scene's first active camera, else an automatic camera framing the scene.
-    #[arg(long)]
+    #[arg(long, conflicts_with_all = ["eye", "overview", "views"])]
     pub camera: Option<String>,
+    /// Render from this point (x,y,z in metres) with a temporary camera; needs --look-at. The scene is not changed.
+    #[arg(long, value_parser = parse_point, requires = "look_at", conflicts_with_all = ["overview", "views"], allow_hyphen_values = true)]
+    pub eye: Option<Vec3Arg>,
+    /// The point the --eye camera looks at (x,y,z).
+    #[arg(long, value_parser = parse_point, requires = "eye", allow_hyphen_values = true)]
+    pub look_at: Option<Vec3Arg>,
+    /// Vertical field of view in degrees for --eye, --overview and --views poses.
+    #[arg(long, value_parser = clap::value_parser!(f32))]
+    pub fov: Option<f32>,
+    /// Frame the whole scene from above at an angle (an overview of its layout).
+    #[arg(long, conflicts_with = "views")]
+    pub overview: bool,
+    /// Render several views in one run from a JSON file: a list of
+    /// `{"name": "...", "eye": [x,y,z], "look_at": [x,y,z], "fov"?: degrees}`,
+    /// `{"name": "...", "overview": true}` or `{"name": "...", "camera": "<uid or name>"}`.
+    /// Each view is written next to --out as <stem>_<name>.png.
+    #[arg(long)]
+    pub views: Option<PathBuf>,
+    /// Draw the navmesh (where enemies can walk) over the image: outlines of
+    /// the walkable areas, baked from the scene's static colliders.
+    #[arg(long)]
+    pub nav: bool,
     /// Frames to simulate and render before the capture.
     #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u32).range(1..=600))]
     pub frames: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct WalkArgs {
+    /// Scene file (relative to the current directory or the project root), or a project directory for its start scene.
+    pub scene: PathBuf,
+    /// Route JSON: {"waypoints": [[x,y,z], ...], "speed"?: m/s (4), "reach"?: m (0.5), "radius"?, "height"?, "step_height"?, "max_slope"?: degrees}.
+    #[arg(long)]
+    pub route: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub struct NavArgs {
+    /// Scene file (relative to the current directory or the project root), or a project directory for its start scene.
+    pub scene: PathBuf,
+    /// Start point (x,y,z in metres, at the feet).
+    #[arg(long, value_parser = parse_point, allow_hyphen_values = true)]
+    pub from: Vec3Arg,
+    /// Goal point (x,y,z).
+    #[arg(long, value_parser = parse_point, allow_hyphen_values = true)]
+    pub to: Vec3Arg,
+}
+
+#[derive(Debug, Args)]
+pub struct PlaytestArgs {
+    /// Project directory, or any path inside it (default: the current directory).
+    pub project: Option<PathBuf>,
+    /// The playtest: a name (playtests/<name>.playtest.json) or a file. Default: every playtest of the project.
+    pub file: Option<String>,
+    /// Save a PNG every N frames (and the last frame); needs a GPU.
+    #[arg(long, value_parser = clap::value_parser!(u32).range(1..))]
+    pub capture_every: Option<u32>,
+    /// Folder for the captures (default: <project>/.box/playtests/<name>/).
+    #[arg(long)]
+    pub capture_dir: Option<PathBuf>,
+    /// The size the game sees, and of the captures (default 1280x720).
+    #[arg(long, value_parser = parse_size)]
+    pub size: Option<(u32, u32)>,
+}
+
+/// A point given as `x,y,z`.
+pub type Vec3Arg = box_engine::box_core::glam::Vec3;
+
+fn parse_point(text: &str) -> Result<Vec3Arg, String> {
+    box_engine::parse_point(text)
 }
 
 #[derive(Debug, Args)]
@@ -222,6 +298,9 @@ pub struct RunArgs {
     /// Write frame timings and render statistics as JSON.
     #[arg(long)]
     pub report: Option<PathBuf>,
+    /// Write each sound source's peak and RMS level at the listener over the run as JSON (headless runs mix the audio in memory to measure it).
+    #[arg(long)]
+    pub audio_report: Option<PathBuf>,
     /// Render headlessly and save the last frame as a PNG (`{frame}` in the path saves every frame).
     #[arg(long)]
     pub capture: Option<PathBuf>,
@@ -339,7 +418,10 @@ fn dispatch(cli: &Cli) -> Result<Output, CliError> {
             script_cmd::docs(project.as_deref(), out.as_deref())
         }
         Command::Render(args) => render::render(args),
+        Command::Walk(args) => walk_cmd::walk(args),
+        Command::Nav(args) => nav_cmd::nav(args),
         Command::Import(args) => import_cmd::import(args),
+        Command::Playtest(args) => playtest_cmd::playtest(args),
         Command::Run(args) => run_cmd::run(args, cli.json),
         Command::Export(args) => export_cmd::export(args),
         Command::Mcp { project } => {
@@ -596,6 +678,17 @@ fn new_project(
     if !existing && project.root().join("README.md").is_file() {
         text.push_str("\nREADME.md says what is in it");
     }
+    if !existing && project.root().join("AGENTS.md").is_file() {
+        text.push_str("\nAGENTS.md tells coding agents how to build, check and verify it");
+    }
+    if let Some(dir) = path_hint() {
+        let line = format!("export PATH=\"{}:$PATH\"", dir.display());
+        text.push_str(&format!(
+            "\nNote: `box` is not on your PATH ({} is not in it); add it, e.g. in ~/.zshrc: {line}",
+            dir.display()
+        ));
+        json["path_hint"] = json!(line);
+    }
     let next: Vec<String> = match engine {
         Some(engine) => {
             let files = native::write(project.root(), project.name(), &engine)?;
@@ -636,6 +729,22 @@ fn new_project(
     Ok(Output::ok(json, text))
 }
 
+/// The directory of this `box` executable when running `box` from a shell
+/// would not find it (its directory is not on `PATH`), so agents and people
+/// do not have to call it by its full path.
+fn path_hint() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?.canonicalize().ok()?;
+    let dir = exe.parent()?.to_path_buf();
+    let path = std::env::var_os("PATH").unwrap_or_default();
+    let found = std::env::split_paths(&path).any(|p| {
+        let candidate = p.join(exe.file_name().unwrap_or_default());
+        candidate.canonicalize().is_ok_and(|c| c == exe)
+    });
+    // A development build under target/ is run through cargo: no hint.
+    let dev = dir.components().any(|c| c.as_os_str() == "target");
+    (!found && !dev).then_some(dir)
+}
+
 /// `word` quoted for a shell when it needs it.
 fn shell_word(word: &str) -> String {
     box_engine::player::shell_line(&[word.to_string()])
@@ -652,7 +761,10 @@ fn first_sentence(doc: &str) -> String {
 
 /// A field type as people write it in scene JSON: `number`, `vec3 [x, y, z]`,
 /// an enum's variants, ... instead of a Rust type path.
-fn friendly_type(type_path: &str, registry: &box_engine::box_core::reflect::Registry) -> String {
+pub(crate) fn friendly_type(
+    type_path: &str,
+    registry: &box_engine::box_core::reflect::Registry,
+) -> String {
     use box_engine::box_core::reflect::TypeInfo;
     use box_engine::box_core::reflect::bevy_reflect::enums::VariantInfo;
     if let Some(inner) = type_path
@@ -797,7 +909,15 @@ fn registry(project: Option<&Path>) -> Result<Output, CliError> {
             }
         }
     }
-    text.push_str("Field types are as written in scene JSON; `box registry --json` has the full docs, defaults and steps.");
+    for p in json["presets"].as_array().into_iter().flatten() {
+        text.push_str(&format!(
+            "preset {} ({})\n    {}\n",
+            p["name"].as_str().unwrap_or("?"),
+            p["title"].as_str().unwrap_or("?"),
+            p["description"].as_str().unwrap_or("")
+        ));
+    }
+    text.push_str("Field types are as written in scene JSON; `box registry --json` has the full docs, defaults and steps. Place a preset with the `add_preset` command.");
     text.push_str(&problems::summary(&problems));
     Ok(Output::ok(json, text))
 }
@@ -903,6 +1023,39 @@ fn unknown_type_problems(world: &World, order: &[Entity], rel: &str) -> Vec<Json
 
 /// Errors for raw values of schema-only (game) types that do not fit their
 /// schema, in a loaded scene.
+/// Gameplay rules that cannot work (`behaviours::check`), and enemies that
+/// cannot reach the player (the scene is loaded again and its navmesh
+/// built, only when it has an enemy).
+fn rule_problems(world: &World, path: &Path, rel: &str) -> Vec<Json> {
+    let to_json = |p: box_engine::behaviours::check::RuleProblem| {
+        json!({
+            "severity": "warning",
+            "code": p.code,
+            "file": rel,
+            "entity": p.entity.map(|u| u.to_string()),
+            "entity_name": p.entity_name,
+            "message": p.message,
+        })
+    };
+    let mut out: Vec<Json> = box_engine::behaviours::check::rule_problems(world)
+        .into_iter()
+        .map(to_json)
+        .collect();
+    let has_enemy = world
+        .query::<&box_engine::behaviours::Chaser>()
+        .iter()
+        .next()
+        .is_some();
+    if has_enemy && let Ok((app, _)) = nav_cmd::settled_app(path) {
+        out.extend(
+            box_engine::behaviours::check::reachability_problems(&app.world)
+                .into_iter()
+                .map(to_json),
+        );
+    }
+    out
+}
+
 fn schema_problems(world: &World, order: &[Entity], rel: &str) -> Vec<Json> {
     let registry = world.registry();
     let mut out = Vec::new();
@@ -1102,6 +1255,7 @@ fn check(project: Option<&Path>) -> Result<Output, CliError> {
                 let order = hierarchy_order(&world);
                 problems.extend(unknown_type_problems(&world, &order, &rel));
                 problems.extend(schema_problems(&world, &order, &rel));
+                problems.extend(rule_problems(&world, &path, &rel));
                 scenes.push(json!({ "file": rel, "ok": true, "entities": order.len() }));
                 worlds.push((rel, world));
             }

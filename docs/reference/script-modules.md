@@ -39,6 +39,7 @@ return Spinner
 | [`ScriptModule:on_destroy`](#scriptmoduleon_destroy) | Runs after the entity or its `Script` component is gone; its components can no longer be read. |
 | [`ScriptModule:on_trigger_enter`](#scriptmoduleon_trigger_enter) | Called when another collider starts overlapping this entity's trigger collider, or this entity enters another's trigger. |
 | [`ScriptModule:on_trigger_exit`](#scriptmoduleon_trigger_exit) | Called when an overlap reported by `on_trigger_enter` ends. |
+| [`ScriptModule:on_interact`](#scriptmoduleon_interact) | Called when the player uses this entity's `Interactable` (after its built-in actions ran), with the entity that used it. |
 | [`ScriptModule:on_collision_enter`](#scriptmoduleon_collision_enter) | Called when this rigid body or character starts touching `other`; `impulse` is the contact impulse in newton-seconds. |
 | [`ScriptModule:on_collision_exit`](#scriptmoduleon_collision_exit) | Called when a contact reported by `on_collision_enter` ends. |
 | [`ScriptModule:on_save`](#scriptmoduleon_save) | Returns the instance's runtime state as plain data (numbers, strings, booleans, vectors, Quats, entities and tables of them) for a save game. |
@@ -196,6 +197,14 @@ function ScriptModule:on_trigger_exit(other: Entity)
 ```
 
 Called when an overlap reported by `on_trigger_enter` ends.
+
+### `ScriptModule:on_interact`
+
+```luau
+function ScriptModule:on_interact(interactor: Entity)
+```
+
+Called when the player uses this entity's `Interactable` (after its built-in actions ran), with the entity that used it. Runs in the next Update.
 
 ### `ScriptModule:on_collision_enter`
 

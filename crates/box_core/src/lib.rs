@@ -30,6 +30,7 @@ pub mod migrate;
 pub mod panic_guard;
 pub mod pmath;
 pub mod prefab;
+pub mod preset;
 pub mod primitive;
 pub mod reflect;
 pub mod scene;

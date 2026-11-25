@@ -512,6 +512,7 @@ pub(crate) fn toasts_ui(
     let mut dismissed = None;
     let mut hovered = None;
     let mut copied = false;
+    let mut edit_script: Option<(String, u32)> = None;
     // A short viewport shows only the newest toasts that fit; the others
     // are counted with the overflow.
     let fit = (((area.height() - 24.0) / TOAST_SLOT_H).floor() as usize).max(1);
@@ -554,8 +555,14 @@ pub(crate) fn toasts_ui(
                         copied = true;
                     }
                     Some(ToastClick::ShowFile) => {
-                        if let Some(f) = &toast.file {
-                            reveal_in_os(f);
+                        // A script line opens in the Script pane.
+                        match crate::script_editor::script_location(&toast.full) {
+                            Some(loc) => edit_script = Some(loc),
+                            None => {
+                                if let Some(f) = &toast.file {
+                                    reveal_in_os(f);
+                                }
+                            }
                         }
                     }
                     None => {}
@@ -576,6 +583,11 @@ pub(crate) fn toasts_ui(
     }
     if let Some(id) = dismissed {
         state.toasts.dismiss(id);
+    }
+    if let Some((path, line)) = edit_script
+        && let Err(e) = state.open_script(&path, Some(line))
+    {
+        tracing::warn!("{e}");
     }
     clicked
 }
@@ -637,7 +649,11 @@ fn toast_ui(
         };
         add(ToastClick::Copy, "Copy");
         if toast.file.is_some() {
-            add(ToastClick::ShowFile, "Show File");
+            let script = crate::script_editor::script_location(&toast.full).is_some();
+            add(
+                ToastClick::ShowFile,
+                if script { "Edit Script" } else { "Show File" },
+            );
         }
     }
     let body = ui.interact(rect, id, Sense::click());

@@ -327,6 +327,24 @@ fn every_method_round_trips() {
             call("screenshot", json!({ "width": 160, "height": 90 })),
         );
         put("shot_half", call("screenshot", json!({ "width": 160 })));
+        put(
+            "shot_pose",
+            call(
+                "screenshot",
+                json!({ "width": 160, "height": 90, "eye": [0.0, 30.0, 0.1], "look_at": [0.0, 0.0, 0.0], "fov": 40.0 }),
+            ),
+        );
+        put(
+            "shot_eye_only",
+            call("screenshot", json!({ "eye": [0.0, 3.0, 5.0] })),
+        );
+        put(
+            "shot_same_point",
+            call(
+                "screenshot",
+                json!({ "eye": [1.0, 1.0, 1.0], "look_at": [1.0, 1.0, 1.0] }),
+            ),
+        );
         put("play", call("play", json!({})));
         put(
             "play_edit",
@@ -403,7 +421,19 @@ fn every_method_round_trips() {
     assert_eq!(err("pause_edit"), "not_playing");
     assert_eq!(err("step_edit"), "not_playing");
     assert_eq!(err("shot_half"), "invalid_params");
+    assert_eq!(err("shot_eye_only"), "invalid_params");
+    assert_eq!(err("shot_same_point"), "invalid_params");
     if has_gpu {
+        // A pose renders a different view, and leaves the world alone.
+        assert_eq!(r["shot_pose"]["width"], 160);
+        assert_ne!(r["shot_pose"]["png_base64"], r["shot"]["png_base64"]);
+        let png = base64_decode(r["shot_pose"]["png_base64"].as_str().unwrap()).unwrap();
+        std::fs::write(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../target/captures/control_screenshot_pose.png"),
+            &png,
+        )
+        .unwrap();
         assert_eq!(r["shot"]["width"], 160);
         assert_eq!(r["shot"]["mime_type"], "image/png");
         let png = base64_decode(r["shot"]["png_base64"].as_str().unwrap()).unwrap();
@@ -566,4 +596,135 @@ fn commands_reach_the_host_parsed() {
     assert_eq!(out["dry_run"], true);
     assert_eq!(host.0.len(), 1);
     assert_eq!(host.0[0].op(), "despawn");
+}
+
+/// A game that walks the entity named "Walker" with the `move` action
+/// (2 m/s, +y forward = -Z) and jumps it up 1 m on `jump`.
+struct WalkerGame;
+
+impl box_engine::prelude::Plugin for WalkerGame {
+    fn build(&self, app: &mut box_engine::prelude::App) {
+        use box_engine::prelude::*;
+        app.world.insert_resource(
+            ActionMap::new()
+                .axis2("move", [Axis2Binding::wasd()])
+                .button("jump", [Binding::Key(KeyCode::Space)]),
+        );
+        app.add_system(Stage::FixedUpdate, |w: &mut World| {
+            let (v, jump, dt) = {
+                let a = w.resource::<Actions>();
+                (
+                    a.axis2("move"),
+                    a.pressed("jump"),
+                    w.resource::<Time>().delta,
+                )
+            };
+            if let Some(e) = w.find_by_name("Walker")
+                && let Some(t) = w.component_mut::<Transform>(e)
+            {
+                t.translation += Vec3::new(v.x, 0.0, -v.y) * 2.0 * dt;
+                if jump {
+                    t.translation.y += 1.0;
+                }
+            }
+        });
+    }
+}
+
+/// W1: `send_input` drives a game through its named actions and `teleport`
+/// moves an entity, both only during Play.
+#[test]
+fn send_input_and_teleport_drive_the_playing_game() {
+    let mut server = ControlServer::bind(HostKind::Player, None).unwrap();
+    let mut host = HeadlessHost::new(Game::new().with_plugin(WalkerGame), starter_scene());
+    let r = drive(&mut server, &mut host, move |d| {
+        let mut c = ControlClient::connect(d, TIMEOUT).unwrap();
+        let mut call = |m: &str, p: Json| {
+            c.call(m, p)
+                .unwrap_or_else(|e| json!({ "error": e.to_control_error().to_json() }))
+        };
+        let mut r = serde_json::Map::new();
+        r.insert(
+            "spawn".into(),
+            call(
+                "apply_commands",
+                json!({ "commands": [{ "op": "spawn", "name": "Walker" }] }),
+            ),
+        );
+        r.insert(
+            "edit".into(),
+            call("send_input", json!({ "action": "jump" })),
+        );
+        call("play", json!({}));
+        call("pause", json!({}));
+        r.insert(
+            "unknown".into(),
+            call("send_input", json!({ "action": "mvoe", "value": [0, 1] })),
+        );
+        r.insert(
+            "button_value".into(),
+            call("send_input", json!({ "action": "jump", "value": 1 })),
+        );
+        r.insert(
+            "axis_no_value".into(),
+            call("send_input", json!({ "action": "move" })),
+        );
+        r.insert(
+            "move".into(),
+            call(
+                "send_input",
+                json!({ "action": "move", "value": [0, 1], "frames": 30 }),
+            ),
+        );
+        r.insert(
+            "jump".into(),
+            call("send_input", json!({ "action": "jump", "frames": 5 })),
+        );
+        call("step_frames", json!({ "frames": 60 }));
+        r.insert(
+            "after".into(),
+            call("world_query", json!({ "name": "Walker" })),
+        );
+        r.insert(
+            "teleport".into(),
+            call(
+                "teleport",
+                json!({ "entity": "Walker", "position": [5.0, 0.0, 5.0], "yaw": 90.0 }),
+            ),
+        );
+        call("step_frames", json!({ "frames": 2 }));
+        r.insert(
+            "moved".into(),
+            call("world_query", json!({ "name": "Walker" })),
+        );
+        r.insert(
+            "teleport_nobody".into(),
+            call(
+                "teleport",
+                json!({ "entity": "Nobody", "position": [0, 0, 0] }),
+            ),
+        );
+        Json::Object(r)
+    });
+    let code = |k: &str| r[k]["error"]["code"].as_str().unwrap_or("").to_string();
+    assert_eq!(code("edit"), "not_playing", "{r:#}");
+    assert_eq!(code("unknown"), "invalid_params");
+    let msg = r["unknown"]["error"]["message"].as_str().unwrap();
+    assert!(
+        msg.contains("actions: interact, jump, look, move, pause, run"),
+        "{msg}"
+    );
+    assert_eq!(code("button_value"), "invalid_params");
+    assert_eq!(code("axis_no_value"), "invalid_params");
+    assert_eq!(r["move"]["kind"], "axis2");
+    assert_eq!(r["move"]["frames"], 30);
+    assert_eq!(r["jump"]["kind"], "button");
+    // 30 input frames forward at 2 m/s, one jump of 1 m (a press, not 5).
+    let t = &r["after"]["entities"][0]["components"]["Transform"]["translation"];
+    let (y, z) = (t[1].as_f64().unwrap(), t[2].as_f64().unwrap());
+    assert!((z + 1.0).abs() < 0.08, "walked 1 m forward: {t}");
+    assert!((y - 1.0).abs() < 1e-4, "jumped once: {t}");
+    let t = &r["moved"]["entities"][0]["components"]["Transform"]["translation"];
+    assert_eq!(t, &json!([5.0, 0.0, 5.0]));
+    assert_eq!(code("teleport_nobody"), "entity_not_found");
 }

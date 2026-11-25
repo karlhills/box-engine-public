@@ -73,6 +73,8 @@ pub(crate) enum Op {
     },
     Add(&'static str),
     Remove(&'static str),
+    /// Convert to Script: replace the behaviour with its script version.
+    ConvertToScript(&'static str),
     /// Reset the field (or whole component) at this path to its registry
     /// default; one undo step for every target.
     Reset(String),
@@ -188,11 +190,39 @@ pub fn inspector_ui(ui: &mut Ui, state: &mut EditorState) {
                 for section in sections {
                     section_ui(ui, state, &section, false, &t, &mut ops);
                 }
+                add_scene_setting(ui, state);
             }
             ui.add_space(12.0);
         });
     let uids: Vec<Uid> = targets.iter().map(|(u, _)| *u).collect();
     apply(ui, state, &uids, ops);
+}
+
+/// "Add Scene Setting": the saved scene resources this scene lacks (game
+/// rules, the built-in HUD).
+fn add_scene_setting(ui: &mut Ui, state: &mut EditorState) {
+    let missing = state.missing_scene_resources();
+    if missing.is_empty() {
+        return;
+    }
+    ui.add_space(8.0);
+    ui.menu_button("Add Scene Setting", |ui| {
+        for name in missing {
+            let doc = state
+                .world
+                .registry()
+                .resource(name)
+                .and_then(|r| r.doc())
+                .map(str::to_string);
+            let mut b = ui.button(crate::inspect::friendly_name(name));
+            if let Some(doc) = doc {
+                b = b.on_hover_text(doc);
+            }
+            if b.clicked() {
+                state.add_scene_resource(name);
+            }
+        }
+    });
 }
 
 /// A project settings resource (`project_settings.rs`): its fields, edited
@@ -333,6 +363,7 @@ fn settings_ui(ui: &mut Ui, state: &mut EditorState, name: &'static str) {
             // persist after Play: keep-after-Stop does not apply.
             Op::Add(_)
             | Op::Remove(_)
+            | Op::ConvertToScript(_)
             | Op::PasteNewComponent
             | Op::Keep(..)
             | Op::EditMaterial(_)
@@ -397,6 +428,9 @@ fn apply(ui: &Ui, state: &mut EditorState, targets: &[Uid], ops: Vec<Op>) {
             }
             Op::Add(c) if !targets.is_empty() => state.add_component_to(targets, c),
             Op::Remove(c) if !targets.is_empty() => state.remove_component_from(targets, c),
+            Op::ConvertToScript(c) if !targets.is_empty() => {
+                state.convert_to_script(targets, c);
+            }
             Op::Reset(path) => {
                 state.reset_field(targets, &path);
             }
@@ -575,6 +609,8 @@ pub(crate) fn section_ui(
             .is_some_and(|like| values::paste_value(&registry, c, like.as_ref()).is_ok()),
     });
     let keep = keep_state(state, component);
+    let convertible =
+        removable && !state.is_playing() && registry.behaviour_script(component).is_some();
     let mut choice = None;
     widgets::section_with_menu(
         ui,
@@ -590,6 +626,7 @@ pub(crate) fn section_ui(
                 pastable,
                 can_remove,
                 keep,
+                convertible,
             );
         }),
         |ui| {
@@ -648,6 +685,7 @@ fn section_menu(
     pastable: bool,
     can_remove: bool,
     keep: Option<bool>,
+    convertible: bool,
 ) -> Option<Op> {
     let mut op = None;
     if ui
@@ -675,6 +713,19 @@ fn section_menu(
             .changed()
         {
             op = Some(Op::Keep(component.to_owned(), on));
+        }
+    }
+    if convertible {
+        ui.separator();
+        if ui
+            .button("Convert to Script")
+            .on_hover_text(format!(
+                "Replace {title} with a Luau script that does the same, with these values as its \
+                 properties, so you can change how it works (one undo step)"
+            ))
+            .clicked()
+        {
+            op = Some(Op::ConvertToScript(component));
         }
     }
     if can_remove {
@@ -1511,6 +1562,16 @@ pub(crate) fn field_control(
             crate::panes::asset_inspector::asset_list_field(ui, row, *len, mixed, t, ops);
         }
         FieldKind::List { len } => list_field(ui, state, row, *len, mixed, t, ops),
+        FieldKind::Entity => {
+            let mut uid = row
+                .value
+                .try_downcast_ref::<Option<Uid>>()
+                .copied()
+                .flatten();
+            if crate::script_props::entity_combo(ui, state, &mut uid, mixed, t) {
+                set(ops, row, uid);
+            }
+        }
         FieldKind::ReadOnly(text) => {
             let text = if mixed { MIXED } else { text.as_str() };
             ui.label(egui::RichText::new(text).font(t.mono()).color(t.text_faint));
@@ -1528,6 +1589,12 @@ fn list_open_id(path: &str) -> egui::Id {
 fn list_open(ctx: &egui::Context, path: &str, len: usize) -> bool {
     ctx.data(|d| d.get_temp::<bool>(list_open_id(path)))
         .unwrap_or(len <= 2)
+}
+
+/// Shows or hides the items of the list row at `path` (an
+/// `Interactable`'s `Interactable.actions`), as its chevron does.
+pub fn set_list_open(ctx: &egui::Context, path: &str, open: bool) {
+    ctx.data_mut(|d| d.insert_temp(list_open_id(path), open));
 }
 
 /// A list row: a chevron that shows or hides its items, the count, and

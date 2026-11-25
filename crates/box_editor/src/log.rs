@@ -330,6 +330,10 @@ pub fn init_with_file(buffer: &LogBuffer, file: Option<&std::path::Path>) -> boo
         .with(box_engine::terminal_log_layer())
         .with(buffer.layer().with_filter(default_filter()))
         .with(file_layer)
+        // Records only once enabled (crash reports, playtests' log_contains).
+        .with(box_engine::log_capture::CaptureLayer.with_filter(
+            tracing_subscriber::EnvFilter::new(box_engine::CAPTURE_LOG_FILTER),
+        ))
         .try_init()
         .is_ok()
 }

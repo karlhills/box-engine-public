@@ -25,6 +25,7 @@ The most consequential decisions for box-engine, with alternatives, trade-offs, 
 | D14 | M2 data-model placement | Command layer and undo in `box_core::edit`; `MeshRenderer` derived from saved `Primitive` + `StandardMaterial` components; editor overlays after tone mapping | Easy | High | M2 tests |
 | D16 | M4 asset runtime | Asset data in core resolved through `AssetLookup`; one `.material.json` kind switch; runtime-only instanced prefab entities; Play copies loaded assets and forwards reloads | Medium | High | M4 tests |
 | D15 | MCP server implementation | Synchronous JSON-RPC loop over stdio, no SDK; MCP 2026-07-28 plus 2025-11-25/2025-06-18 via initialize; live control over token-authenticated localhost TCP polled per frame | Easy | High | M3 tests |
+| D18 | Data-configured interactions | `Interactable` component on the prefab instance root (conditions, ordered actions, `Uid`/child targets), `GameVars` counters, inherited `Collidable(bool)`, one retained prompt | Medium | Medium-high | Ember bridge test |
 
 ## How the reviews changed the plan
 
@@ -459,6 +460,48 @@ The generality review suggested bringing rapier forward to M3. That was not adop
 **Reversibility.** High (one module and a glam feature).
 
 **Confidence.** High.
+
+---
+
+## D18. Data-configured interactions
+
+**Status.** Accepted (2026-11-21) and built. Design: [INTERACTIONS.md](INTERACTIONS.md); guide: [guide/interactions.md](guide/interactions.md).
+
+**Decision.** How a placed prop becomes something the player uses without game code.
+
+**Recommendation.** An `Interactable` component on the entity the player uses (usually a `PrefabInstance` root): trigger (press an action or touch), radius, prompt (text or string-table key), `requires` conditions on named `GameVars` numbers, and an ordered list of built-in actions (show/hide with collision, particles, light, vars, enable another interactable, sound, script signal or call, any reflected field). Targets are `This`, `Child(name)` (inside the prefab's contents) or `Entity(uid)`. Per-instance configuration is the component on the instance root, which is already saved per instance, so no prefab override system is added (D16 stands). A saved, inherited `Collidable(bool)` (box_physics) switches a subtree's colliders off so revealed geometry, glTF mesh colliders on prefab contents included, becomes walkable; a per-collider `enabled` field could not reach instanced children. One retained `box_ui` prompt. Luau hooks: `on_interact`, the `Interacted` event, `vars` and `interact` globals.
+
+**Alternatives.** (1) Keep writing interaction scripts per game: flexible but every game rewrites pickups, prompts and saving, and agents must write Luau for simple puzzles. (2) A general prefab override system (property patches on instanced contents): needed eventually for other cases, much larger, and not required here because the instance root holds the per-instance data. (3) A visual logic graph: a non-goal for the first release.
+
+**Trade-offs.** A fixed action vocabulary will not cover everything; `SetField`, `Signal` and `CallScript` are the escape hatches. Effects on prefab contents are not saved directly and are re-applied on load from `uses`.
+
+**Reversibility.** Medium (scene files hold the components).
+
+**Confidence.** Medium-high.
+
+---
+
+## D19. Behaviours and presets
+
+**Status.** Proposed (2026-11-24), not confirmed. Full text, alternatives and trade-offs: [BEHAVIOURS.md](BEHAVIOURS.md#d19-behaviours-and-presets-proposed).
+
+**Recommendation.** Engine components for the gameplay every small 3D game rewrites (player, camera, motion, health, spawner, simple chaser), scene-level `GameRules` with a built-in HUD, pause and end screens, all wired through D18's conditions and actions; presets as compiled-in commands files shared by the editor, CLI and MCP; every behaviour can be ejected into an equivalent Luau script.
+
+---
+
+## D20. In-editor assistant panel
+
+**Status.** Proposed (2026-11-24), not confirmed; phase A1 built (2026-11-25). Full text: [AI_PANEL.md](AI_PANEL.md#d20-in-editor-assistant-panel-proposed).
+
+**Recommendation.** An Assistant pane that runs an agent backend against `box mcp` and the editor's control socket, one undo group per turn; first backend an installed external agent (Claude Code, headless streaming), later a built-in Messages API loop. Off by default; nothing in the engine, player or exported games depends on it.
+
+---
+
+## D21. Navigation
+
+**Status.** Accepted (2026-11-24); N1 built. Full text: [NAVIGATION.md](NAVIGATION.md#d21-navigation-accepted-2026-11-24).
+
+**Recommendation.** A navmesh baked automatically from the static colliders in `Physics` with rerecast (a Recast port on our glam, no `unsafe`), in tiles rebuilt on worker threads when colliders change; A* and funnel queries in a small `box_nav` crate; a `NavAgent` component driving `KinematicCharacter`, used by B2's `Chaser`, Luau (`nav`), `box nav` and MCP `nav_path`. One agent size per scene, no off-mesh links or RVO avoidance at first.
 
 ---
 

@@ -558,10 +558,17 @@ mod tests {
         game.app(world)
     }
 
-    /// Updates until `done` holds (hot reload goes through the file watcher).
+    /// Updates until `done` holds. Hot reload normally goes through the file
+    /// watcher, but macOS FSEvents can lose events while other processes
+    /// write many files (a parallel cargo build, an rsync): after a second
+    /// without the change, rescan the folder as a watcher-less project would.
+    /// What these tests check is the settings reload, not event delivery.
     fn until(app: &mut App, mut done: impl FnMut(&World) -> bool) -> bool {
         let start = std::time::Instant::now();
         while start.elapsed() < Duration::from_secs(10) {
+            if start.elapsed() > Duration::from_secs(1) {
+                app.world.resource::<AssetServer>().rescan();
+            }
             app.update();
             if done(&app.world) {
                 return true;

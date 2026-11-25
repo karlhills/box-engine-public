@@ -395,7 +395,8 @@ fn interact(ui: &Ui, state: &mut EditorState, resp: &egui::Response, rect: Rect)
 
 /// An asset dragged from the browser over the viewport: a model, mesh or
 /// scene is placed where it is released (on the surface under the pointer,
-/// else on the ground plane); a material is assigned to the entity under
+/// a terrain included, else on the ground plane), standing on it by its
+/// lowest point; a material is assigned to the entity under
 /// the pointer. Each is one undo step.
 fn asset_drop(ui: &Ui, p: &egui::Painter, rect: Rect, state: &mut EditorState, t: &Tokens) {
     use crate::assets::RefType;
@@ -602,6 +603,11 @@ fn view_menu_ui(ui: &mut Ui, state: &mut EditorState) {
     });
     crate::widgets::checkbox_labeled(ui, &mut state.viewport.view.contacts, "Contact points")
         .on_hover_text("While playing: where rigid bodies touch, with their normals");
+    crate::widgets::checkbox_labeled(ui, &mut state.viewport.view.audio, "Audio ranges")
+        .on_hover_text(
+            "Sound sources' full-volume and silent distances; while playing, lines to the \
+             listener coloured by level",
+        );
     ui.add_space(2.0);
     ui.weak("Particle preview")
         .on_hover_text("Simulate particle emitters while editing (never saved)");

@@ -198,7 +198,8 @@ fn registry_lists_generators_with_names_categories_and_slots() {
     let r = registry();
     let names: Vec<_> = r.generators().iter().map(|g| g.name()).collect();
     // Ordered by category, then label: "Procedural", the engine's
-    // "Shapes" (Extrude, Lathe, Primitive, Sweep), then "Test".
+    // "Shapes" (Extrude, Lathe, Primitive, Sweep), "Terrain" (the hidden
+    // ground and path chunk generators), then "Test".
     assert_eq!(
         names,
         [
@@ -210,6 +211,8 @@ fn registry_lists_generators_with_names_categories_and_slots() {
             "Lathe",
             "Primitive",
             "Sweep",
+            "TerrainChunk",
+            "TerrainPathChunk",
             "Block"
         ]
     );

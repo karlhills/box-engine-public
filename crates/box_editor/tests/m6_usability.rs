@@ -250,8 +250,10 @@ fn nested_structs_are_closed_and_remembered_per_field_path() {
     d.click(&mut ed, "Wind");
     assert!(d.has("Strength") && d.has("Frequency"));
     assert!(fold_open(&d.ctx, "StandardMaterial.wind"));
-    // Another entity with a Standard Material: open too.
-    ed.state.select(Some(by_name(&ed, "Ground")));
+    // Another entity with a Standard Material (a copy of the cube; the
+    // ground's longer inspector puts Wind below the window): open too.
+    ed.state.duplicate_selection();
+    let edits = ed.state.edits.undo_len();
     d.frames(&mut ed, 2);
     assert!(d.has("Strength"));
     // Closing it closes it everywhere.
@@ -260,9 +262,8 @@ fn nested_structs_are_closed_and_remembered_per_field_path() {
     ed.state.select(Some(cube));
     d.frames(&mut ed, 2);
     assert!(!d.has("Strength"));
-    // Opening and closing is not an edit.
-    assert_eq!(ed.state.edits.undo_len(), 0);
-    assert!(!ed.state.is_dirty());
+    // Opening and closing is not an edit (the copy is the only one).
+    assert_eq!(ed.state.edits.undo_len(), edits);
 }
 
 #[test]
@@ -297,7 +298,13 @@ fn the_enabled_switch_sits_in_the_heading() {
 #[test]
 fn heading_menus_reset_copy_and_paste_the_whole_struct() {
     let (_dir, mut ed, mut d) = editor("menus", DEFAULT);
-    let (cube, ground) = (by_name(&ed, "Cube"), by_name(&ed, "Ground"));
+    let cube = by_name(&ed, "Cube");
+    // The other entity: a copy of the cube (the ground's longer inspector
+    // puts Wind below the window).
+    ed.state.select(Some(cube));
+    ed.state.duplicate_selection();
+    let ground = ed.state.selection[0];
+    ed.state.select(Some(cube));
     let swaying = WindSway {
         strength: 0.3,
         frequency: 2.0,

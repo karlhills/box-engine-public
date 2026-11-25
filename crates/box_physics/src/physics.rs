@@ -2,7 +2,7 @@
 //! `GlobalTransform`, and [`sync_physics`], the system that keeps it current
 //! and reports trigger overlaps.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use box_core::event::Events;
 use box_core::math::Ray;
@@ -17,7 +17,8 @@ use parry3d::query::{
 };
 use parry3d::shape::SharedShape;
 
-use box_core::mesh_asset::MeshAsset;
+use box_core::identity::{Name, Uid};
+use box_core::mesh_asset::{GeneratedMesh, MeshAsset};
 
 use crate::collider::{Collider, ColliderShape, MeshKey, MeshShapes, Resolved, mesh_key};
 use crate::query::{Pose, QueryFilter, QueryShape, RayHit, ShapeHit};
@@ -92,6 +93,16 @@ impl Slot {
     }
 }
 
+/// Where a collider was added, changed or removed (its bounds before or
+/// after), from [`Physics::take_changed_regions`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ChangedRegion {
+    /// The collider's entity; `None` for a merged box of many changes.
+    pub entity: Option<Entity>,
+    pub min: Vec3,
+    pub max: Vec3,
+}
+
 /// Resource: spatial queries over every entity with a `Collider` and a
 /// `GlobalTransform`.
 ///
@@ -113,6 +124,11 @@ pub struct Physics {
     stats: SyncStats,
     /// Triangle meshes of `ColliderShape::Mesh` colliders.
     mesh_shapes: MeshShapes,
+    /// Entities warned about a `Mesh`/`ConvexHull` collider with no mesh.
+    warned_no_mesh: HashSet<Entity>,
+    /// Bounds (before and after) of colliders added, changed or removed
+    /// since the last [`take_changed_regions`](Self::take_changed_regions).
+    changed: Vec<ChangedRegion>,
     /// Forces and impulses for the next dynamics step.
     #[cfg(feature = "dynamics")]
     pub(crate) commands: Vec<crate::dynamics::BodyCommand>,
@@ -157,6 +173,60 @@ impl Physics {
 
     fn accepted(&self, leaf: u32, filter: &QueryFilter) -> Option<&Slot> {
         self.slot(leaf).filter(|s| s.accepted_by(filter))
+    }
+
+    /// Records a changed region (cheap: a push; merged into one box past
+    /// 4,096 entries so an unread list stays small).
+    fn stamp(&mut self, entity: Entity, aabb: Aabb) {
+        if self.changed.len() >= 4096 {
+            // Keep the list small when nobody reads it: one box, no entity.
+            let (lo, hi) = self
+                .changed
+                .drain(..)
+                .fold((aabb.mins, aabb.maxs), |(lo, hi), c| {
+                    (lo.min(c.min), hi.max(c.max))
+                });
+            self.changed.push(ChangedRegion {
+                entity: None,
+                min: lo,
+                max: hi,
+            });
+        } else {
+            self.changed.push(ChangedRegion {
+                entity: Some(entity),
+                min: aabb.mins,
+                max: aabb.maxs,
+            });
+        }
+    }
+
+    /// The bounds (min, max) of every collider added, changed or removed
+    /// since the last call, before and after the change; empties the list.
+    /// Navigation rebuilds the tiles they touch.
+    pub fn take_changed_regions(&mut self) -> Vec<ChangedRegion> {
+        std::mem::take(&mut self.changed)
+    }
+
+    /// Appends to `out` the world-space triangles of every collider whose
+    /// bounds overlap `min`..`max` and that `keep` accepts (given its entity
+    /// and `Collider`). Round shapes are approximated (spheres and capsules
+    /// with 12 segments, cylinders with 16). Used to bake navigation.
+    pub fn triangles_in(
+        &self,
+        min: Vec3,
+        max: Vec3,
+        mut keep: impl FnMut(Entity, &Collider) -> bool,
+        out: &mut Vec<[Vec3; 3]>,
+    ) {
+        for s in self.slots.iter().flatten() {
+            if s.aabb.maxs.cmplt(min).any() || s.aabb.mins.cmpgt(max).any() {
+                continue;
+            }
+            if !keep(s.entity, &s.collider) {
+                continue;
+            }
+            shape_triangles(s.shape.as_ref(), &s.pose, out);
+        }
     }
 
     // ---- queries -------------------------------------------------------
@@ -336,8 +406,9 @@ impl Physics {
     #[profiling::function]
     fn sync(&mut self, world: &mut World) -> Vec<TriggerEvent> {
         self.stats = SyncStats::default();
-        let work = self.collect_work(world);
-        let gone = self.collect_removed(world);
+        let off = crate::collider::non_collidable_entities(world);
+        let work = self.collect_work(world, &off);
+        let gone = self.collect_removed(world, &off);
         if work.is_empty() && gone.is_empty() {
             return Vec::new();
         }
@@ -367,7 +438,7 @@ impl Physics {
     }
 
     /// Colliders that are new or differ from their cached copy.
-    fn collect_work(&mut self, world: &World) -> Vec<Work> {
+    fn collect_work(&mut self, world: &World, off: &HashSet<Entity>) -> Vec<Work> {
         let mut work = Vec::new();
         let mut query = world.query::<(
             Entity,
@@ -375,16 +446,26 @@ impl Physics {
             &GlobalTransform,
             Option<&Primitive>,
             Option<&MeshAsset>,
+            Option<&GeneratedMesh>,
             Option<&ColliderProxy>,
         )>();
-        for (entity, collider, global, primitive, mesh, proxy) in query.iter() {
+        for (entity, collider, global, primitive, mesh, generated, proxy) in query.iter() {
             self.stats.checked += 1;
+            if off.contains(&entity) {
+                // Switched off by `Collidable(false)`: removed by `collect_removed`.
+                continue;
+            }
             let primitive = match collider.shape {
                 ColliderShape::Primitive => primitive.map(|p| &p.shape),
                 _ => None,
             };
             let mesh = match collider.shape {
-                ColliderShape::Mesh | ColliderShape::ConvexHull => mesh_key(world, mesh),
+                ColliderShape::Mesh | ColliderShape::ConvexHull => {
+                    if mesh.is_none() && generated.is_none() {
+                        self.warn_no_mesh(world, entity, &collider.shape);
+                    }
+                    mesh_key(world, mesh, generated)
+                }
                 _ => None,
             };
             let slot = proxy.and_then(|p| Some((p.slot, self.owned_slot(p.slot, entity)?)));
@@ -402,20 +483,51 @@ impl Physics {
                 collider: collider.clone(),
                 primitive: primitive.cloned(),
                 mesh,
+                heights: generated.and_then(|g| g.heights.clone()),
                 global: global.0,
             });
         }
         work
     }
 
+    /// Warn once per entity that a `Mesh`/`ConvexHull` collider has neither
+    /// a `MeshAsset` nor a generator to take triangles from.
+    fn warn_no_mesh(&mut self, world: &World, entity: Entity, shape: &ColliderShape) {
+        if !self.warned_no_mesh.insert(entity) {
+            return;
+        }
+        let name = world.get::<Name>(entity).map(|n| n.0.clone());
+        let uid = world.get::<Uid>(entity).map(|u| *u);
+        let who = match (name, uid) {
+            (Some(n), Some(u)) => format!("`{n}` ({u})"),
+            (Some(n), None) => format!("`{n}`"),
+            (None, Some(u)) => format!("{u}"),
+            (None, None) => format!("{entity:?}"),
+        };
+        let kind = if *shape == ColliderShape::ConvexHull {
+            "ConvexHull"
+        } else {
+            "Mesh"
+        };
+        tracing::warn!(
+            target: "box_physics",
+            "{who}: Collider shape {kind} needs a MeshAsset or a generator (Primitive, Sweep, Lathe, ...) on the same entity; it collides with nothing"
+        );
+    }
+
     /// Entities whose collider went away: the component or the transform was
     /// removed, or the entity was despawned.
-    fn collect_removed(&self, world: &World) -> Vec<(Entity, u32)> {
+    fn collect_removed(&self, world: &World, off: &HashSet<Entity>) -> Vec<(Entity, u32)> {
         let mut gone: Vec<(Entity, u32)> = world
             .query::<Without<(Entity, &ColliderProxy), &Collider>>()
             .iter()
             .map(|(e, p)| (e, p.slot))
             .collect();
+        for &e in off {
+            if let Some(p) = world.get::<ColliderProxy>(e) {
+                gone.push((e, p.slot));
+            }
+        }
         gone.extend(
             world
                 .query::<Without<(Entity, &ColliderProxy), &GlobalTransform>>()
@@ -459,6 +571,10 @@ impl Physics {
         if shape_built {
             self.stats.shapes_built += 1;
         }
+        if let Some(old) = item.slot.and_then(|i| self.slot(i)).map(|s| s.aabb) {
+            self.stamp(item.entity, old);
+        }
+        self.stamp(item.entity, aabb);
         let slot = Slot {
             entity: item.entity,
             collider: item.collider,
@@ -522,9 +638,13 @@ impl Physics {
             return Some((old.shape.clone(), false, pose, old.scale));
         }
         if item.collider.shape.uses_mesh() {
-            let shape = self
-                .mesh_shapes
-                .get(world, item.mesh?, scale, &item.collider.shape)?;
+            let shape = self.mesh_shapes.get(
+                world,
+                item.mesh?,
+                scale,
+                &item.collider.shape,
+                item.heights.as_deref(),
+            )?;
             return Some((shape, true, pose, scale));
         }
         let resolved = Resolved::new(&item.collider.shape, item.primitive.as_ref())?;
@@ -591,6 +711,8 @@ impl Physics {
         if let Some(s) = self.slots.get_mut(index as usize)
             && let Some(old) = s.take()
         {
+            let bounds = old.aabb;
+            self.stamp(old.entity, bounds);
             if self.by_entity.get(&old.entity) == Some(&index) {
                 self.by_entity.remove(&old.entity);
             }
@@ -669,6 +791,8 @@ struct Work {
     collider: Collider,
     primitive: Option<Shape>,
     mesh: Option<MeshKey>,
+    /// The generated mesh's height grid, for a `Mesh` collider.
+    heights: Option<std::sync::Arc<box_core::mesh_asset::HeightGrid>>,
     global: Affine3A,
 }
 
@@ -719,6 +843,14 @@ fn ray_hit(entity: Entity, ray: &Ray, toi: f32, normal: Vec3) -> RayHit {
 /// shape, the primitive or the world scale changes. When anything changed the
 /// tree is refitted once (O(colliders)) and triggers are re-tested against
 /// the tree.
+/// [`sync_physics`] for edit worlds and tools that do not play: the query
+/// world follows the colliders, but no trigger events are sent and nothing
+/// warns about characters nobody moves.
+pub fn sync_physics_quiet(world: &mut World) {
+    world.resource_or_default::<Physics>();
+    let _ = world.resource_scope::<Physics, _>(|world, physics| physics.sync(world));
+}
+
 pub fn sync_physics(world: &mut World) {
     crate::character::warn_unmoved_characters(world);
     world.resource_or_default::<Physics>();
@@ -727,5 +859,59 @@ pub fn sync_physics(world: &mut World) {
         && let Some(queue) = world.get_resource_mut::<Events<TriggerEvent>>()
     {
         queue.send_batch(events);
+    }
+}
+
+/// The triangles of a parry shape placed at `pose`.
+fn shape_triangles(
+    shape: &dyn parry3d::shape::Shape,
+    pose: &parry3d::math::Pose,
+    out: &mut Vec<[Vec3; 3]>,
+) {
+    use parry3d::shape::TypedShape;
+    let mut push = |vertices: &[Vec3], indices: &[[u32; 3]]| {
+        for t in indices {
+            let p = |i: u32| pose.transform_point(vertices[i as usize]);
+            out.push([p(t[0]), p(t[1]), p(t[2])]);
+        }
+    };
+    match shape.as_typed_shape() {
+        TypedShape::Ball(b) => {
+            let (v, i) = b.to_trimesh(12, 8);
+            push(&v, &i);
+        }
+        TypedShape::Cuboid(c) => {
+            let (v, i) = c.to_trimesh();
+            push(&v, &i);
+        }
+        TypedShape::Capsule(c) => {
+            let (v, i) = c.to_trimesh(12, 6);
+            push(&v, &i);
+        }
+        TypedShape::Cylinder(c) => {
+            let (v, i) = c.to_trimesh(16);
+            push(&v, &i);
+        }
+        TypedShape::Cone(c) => {
+            let (v, i) = c.to_trimesh(16);
+            push(&v, &i);
+        }
+        TypedShape::ConvexPolyhedron(c) => {
+            let (v, i) = c.to_trimesh();
+            push(&v, &i);
+        }
+        TypedShape::TriMesh(m) => push(m.vertices(), m.indices()),
+        TypedShape::HeightField(h) => {
+            let (v, i) = h.to_trimesh();
+            push(&v, &i);
+        }
+        TypedShape::Triangle(t) => push(&[t.a, t.b, t.c], &[[0, 1, 2]]),
+        TypedShape::Compound(c) => {
+            for (local, sub) in c.shapes() {
+                let p = *pose * *local;
+                shape_triangles(sub.as_ref(), &p, out);
+            }
+        }
+        _ => {}
     }
 }

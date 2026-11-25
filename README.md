@@ -44,6 +44,7 @@ The engine was first proven on a construction vertical slice built against a pri
 | [docs/ASSETS.md](docs/ASSETS.md) | Asset pipeline, project layout, packaging |
 | [docs/PROCEDURAL.md](docs/PROCEDURAL.md) | Procedural modeling and world creation |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Milestones M0–M9 with acceptance criteria |
+| [docs/WORLD_BUILDING.md](docs/WORLD_BUILDING.md) | Proposed next milestone: terrain, paths, water, vegetation, buildings and agent tooling |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Decision records, trade-offs, confidence, review outcomes, open questions |
 | [docs/RISKS.md](docs/RISKS.md) | Risks, validation experiments, mitigations |
 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Step-by-step plan for Milestone 1 |

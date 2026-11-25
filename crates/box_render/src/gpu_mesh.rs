@@ -147,6 +147,7 @@ impl MeshCache {
         self.scratch.clear();
         let uv0 = mesh.uvs.first();
         let uv1 = mesh.uvs.get(1);
+        let custom = [mesh.custom.first(), mesh.custom.get(1)];
         self.scratch
             .extend((0..mesh.positions.len()).map(|i| GpuVertex {
                 position: mesh.positions[i].to_array(),
@@ -155,6 +156,7 @@ impl MeshCache {
                 color: mesh.colors.get(i).copied().unwrap_or([1.0; 4]),
                 tangent: mesh.tangents.get(i).map_or([0.0; 4], |t| t.to_array()),
                 uv1: uv1.map_or([0.0; 2], |uv| uv[i].to_array()),
+                custom: custom.map(|set| set.map_or([0.0; 4], |c| c[i].to_array())),
             }));
         let vertex_bytes: &[u8] = bytemuck::cast_slice(&self.scratch);
         let index_bytes: &[u8] = bytemuck::cast_slice(&mesh.indices);

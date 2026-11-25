@@ -18,8 +18,12 @@
 //! ```
 //!
 //! Methods: `status`, `world_query`, `apply_commands`, `screenshot`, `play`,
-//! `stop`, `pause`, `step_frames`, `read_log`, `frame_stats`. Error codes are
-//! stable strings ([`code`]). Requests are limited to [`MAX_REQUEST_BYTES`];
+//! `stop`, `pause`, `step_frames`, `read_log`, `frame_stats`, `send_input`
+//! (press, hold or move a named action of the playing game), `teleport`,
+//! `record_start`/`record_stop` (record the game's actions into a
+//! playtest), `playtest`/`playtest_status` (replay one live; see
+//! [`crate::playtest`]).
+//! Error codes are stable strings ([`code`]). Requests are limited to [`MAX_REQUEST_BYTES`];
 //! malformed input gets an error response, never a panic.
 //!
 //! **Threading.** The server never spawns threads and never touches the
@@ -38,7 +42,9 @@ use box_core::identity::{Name, Uid};
 use box_core::reflect::ReflectError;
 use box_core::scene;
 use box_core::world::{Entity, World};
-use box_render::Renderer;
+use box_render::{Renderer, ViewCamera};
+
+use crate::camera::CameraPose;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value as Json, json};
 
@@ -61,6 +67,9 @@ pub const DEFAULT_QUERY_LIMIT: usize = 100;
 pub const MAX_QUERY_LIMIT: usize = 10_000;
 /// Largest `step_frames` request.
 pub const MAX_STEP_FRAMES: u32 = 10_000;
+/// Longest `send_input`, in input frames (10 s at 60 fps).
+pub const MAX_INPUT_FRAMES: u32 = 600;
+
 /// Largest screenshot side, in pixels.
 pub const MAX_SCREENSHOT_SIZE: u32 = 8192;
 
@@ -91,6 +100,9 @@ pub mod code {
     pub const COMMAND_FAILED: &str = "command_failed";
     pub const RENDER: &str = "render";
     pub const INTERNAL: &str = "internal";
+    /// `audio_*` on a world without audio (no `AudioPlugin`, or a build
+    /// without the `audio` module).
+    pub const NO_AUDIO: &str = "no_audio";
     /// Client side: no discovery file, or nothing answers on its port.
     pub const NOT_RUNNING: &str = "not_running";
     /// Client side: no response in time.
@@ -344,10 +356,28 @@ pub trait ControlHost {
         Err(ControlError::unsupported("apply_commands"))
     }
 
+    /// `apply_commands` with `"save": true`: apply `commands` so they end up
+    /// in the scene file (an editor: to the edit world, undoable, then save
+    /// it; during Play to the play world and the parked edit world, saved
+    /// at Stop). Hosts that cannot save leave it unsupported.
+    fn apply_and_save(&mut self, commands: &[Command]) -> Result<Json, ControlError> {
+        let _ = commands;
+        Err(ControlError::new(
+            code::UNSUPPORTED,
+            "this host cannot save the scene: `save` needs the editor (or edit files with scene_apply)",
+        ))
+    }
+
     /// Capture the view. `size` is a requested size in pixels; `None` means
-    /// the current view size.
-    fn screenshot(&mut self, size: Option<(u32, u32)>) -> Result<Screenshot, ControlError> {
-        let _ = size;
+    /// the current view size. `view` is a camera to render from instead of
+    /// the host's own (a pose an agent asked for); it is not added to the
+    /// world.
+    fn screenshot(
+        &mut self,
+        size: Option<(u32, u32)>,
+        view: Option<&ViewCamera>,
+    ) -> Result<Screenshot, ControlError> {
+        let _ = (size, view);
         Err(ControlError::unsupported("screenshot"))
     }
 
@@ -382,6 +412,165 @@ pub trait ControlHost {
     fn frame_stats(&mut self) -> Result<Json, ControlError> {
         Err(ControlError::unsupported("frame_stats"))
     }
+
+    /// Start the game again from its scene, for `record_start` and
+    /// `playtest`: a fresh Play session (an editor, [`HeadlessHost`]) or a
+    /// freshly loaded app (the player) that has not run a frame yet, with
+    /// `seed` as the scripts' `math.random` seed
+    /// ([`box_script::ScriptSeed`]). `scene` (relative to the project root,
+    /// or a scene name) starts another scene where the host can; others
+    /// refuse a scene that is not theirs.
+    fn restart_play(&mut self, scene: Option<&str>, seed: Option<u32>) -> Result<(), ControlError> {
+        let _ = (scene, seed);
+        Err(ControlError::unsupported("restart_play"))
+    }
+
+    /// The world a game is playing in, for `send_input` and `teleport`;
+    /// [`ControlError::not_playing`] when there is none (an editor that is
+    /// not in Play).
+    fn play_world(&mut self, method: &str) -> Result<&mut World, ControlError> {
+        Err(ControlError::unsupported(method))
+    }
+
+    /// What the user is looking at (editors): the open scene, the
+    /// selection, the viewport camera, Play state and the assistant turn.
+    fn editor_context(&mut self) -> Result<Json, ControlError> {
+        Err(ControlError::unsupported("editor_context"))
+    }
+
+    /// Undoes the edits of the current assistant turn so far (editors).
+    fn undo_turn(&mut self) -> Result<Json, ControlError> {
+        Err(ControlError::unsupported("undo_turn"))
+    }
+}
+
+/// The kind of action `name` in the world's `ActionMap`, or an
+/// `invalid_params` error that lists the actions (with a did-you-mean).
+pub(crate) fn action_kind(
+    world: &World,
+    name: &str,
+) -> Result<box_core::action::ActionKind, ControlError> {
+    use box_core::action::ActionMap;
+    let map = world.get_resource::<ActionMap>();
+    map.and_then(|m| m.get(name)).cloned().ok_or_else(|| {
+        let names: Vec<String> = map
+            .map(|m| m.names().map(str::to_owned).collect())
+            .unwrap_or_default();
+        let mut message = format!(
+            "no action `{name}`; actions: {}",
+            if names.is_empty() {
+                "none".to_string()
+            } else {
+                names.join(", ")
+            }
+        );
+        if let Some(g) = box_core::reflect::did_you_mean(name, names.iter().map(String::as_str)) {
+            message.push_str(&format!(" (did you mean `{g}`?)"));
+        }
+        ControlError::invalid_params(message)
+    })
+}
+
+/// `send_input`: inject input into a named action of the playing world.
+fn send_input(world: &mut World, p: &InputParams) -> Result<Json, ControlError> {
+    use box_core::action::{ActionKind, Actions, InjectedInput};
+    use glam::Vec2;
+    if !(1..=MAX_INPUT_FRAMES).contains(&p.frames) {
+        return Err(ControlError::invalid_params(format!(
+            "`frames` must be 1..={MAX_INPUT_FRAMES}"
+        )));
+    }
+    let kind = action_kind(world, &p.action)?;
+    let value = match &p.value {
+        None => None,
+        Some(Json::Number(n)) => Some(Vec2::new(n.as_f64().unwrap_or(0.0) as f32, 0.0)),
+        Some(Json::Array(a)) if a.len() == 2 && a.iter().all(Json::is_number) => Some(Vec2::new(
+            a[0].as_f64().unwrap_or(0.0) as f32,
+            a[1].as_f64().unwrap_or(0.0) as f32,
+        )),
+        Some(_) => {
+            return Err(ControlError::invalid_params(
+                "`value` is a number (1D axis) or [x, y] (2D axis; +y is forward)",
+            ));
+        }
+    };
+    let (kind_name, input) = match (&kind, value) {
+        (ActionKind::Button { .. }, None) => ("button", InjectedInput::press(p.frames)),
+        (ActionKind::Button { .. }, Some(_)) => {
+            return Err(ControlError::invalid_params(format!(
+                "`{}` is a button: give no `value`",
+                p.action
+            )));
+        }
+        (ActionKind::Axis1 { .. }, Some(v)) if v.y == 0.0 => {
+            ("axis1", InjectedInput::axis(v, p.frames))
+        }
+        (ActionKind::Axis2 { .. }, Some(v)) => ("axis2", InjectedInput::axis(v, p.frames)),
+        (ActionKind::Axis1 { .. }, _) => {
+            return Err(ControlError::invalid_params(format!(
+                "`{}` is a 1D axis: give `value` as a number in -1..1",
+                p.action
+            )));
+        }
+        (ActionKind::Axis2 { .. }, None) => {
+            return Err(ControlError::invalid_params(format!(
+                "`{}` is a 2D axis: give `value` as [x, y] (+y is forward)",
+                p.action
+            )));
+        }
+    };
+    let actions = world
+        .get_resource_mut::<Actions>()
+        .ok_or_else(|| ControlError::new(code::INTERNAL, "the world has no Actions resource"))?;
+    actions.inject(&p.action, input);
+    Ok(json!({
+        "action": p.action,
+        "kind": kind_name,
+        "frames": input.frames,
+        "value": [input.value.x, input.value.y],
+    }))
+}
+
+/// `teleport`: move an entity of the playing world to a position (and
+/// yaw), stopping a character's motion and interpolation so it is drawn
+/// there at once.
+pub(crate) fn teleport(
+    world: &mut World,
+    entity: &str,
+    position: [f32; 3],
+    yaw: Option<f32>,
+) -> Result<Json, ControlError> {
+    use box_core::transform::Transform;
+    use glam::{Quat, Vec3};
+    let uid = edit::resolve_entity(world, entity)
+        .map_err(|e| ControlError::new(edit_error_code(&e), e.to_string()))?;
+    let e = world
+        .entity_by_uid(uid)
+        .ok_or_else(|| ControlError::new(code::ENTITY_NOT_FOUND, format!("no entity {uid}")))?;
+    let at = Vec3::from_array(position);
+    if !at.is_finite() || yaw.is_some_and(|y| !y.is_finite()) {
+        return Err(ControlError::invalid_params(
+            "position and yaw must be finite",
+        ));
+    }
+    let Some(t) = world.component_mut::<Transform>(e) else {
+        return Err(ControlError::invalid_params(format!(
+            "entity `{entity}` has no Transform"
+        )));
+    };
+    t.translation = at;
+    if let Some(yaw) = yaw {
+        t.rotation = Quat::from_rotation_y(yaw.to_radians());
+    }
+    #[cfg(feature = "physics")]
+    if let Some(c) = world.component_mut::<box_physics::KinematicCharacter>(e) {
+        c.velocity = Vec3::ZERO;
+        c.grounded = false;
+        c.ground_entity = None;
+        c.ground_pose = None;
+    }
+    box_core::interpolate::Interpolated::reset(world, e);
+    Ok(json!({ "entity": uid.to_string(), "position": position, "yaw": yaw }))
 }
 
 /// Saved entities in hierarchy pre-order, then every other entity by id.
@@ -523,21 +712,35 @@ pub fn apply_to_world(
     dry_run: bool,
     label: &str,
 ) -> Result<Json, ControlError> {
-    let created = if dry_run {
+    let applied = if dry_run {
         let mut scratch = EditStack::new();
-        let created = edit::apply_commands(world, &mut scratch, commands, label)
+        let applied = edit::apply_commands_with_warnings(world, &mut scratch, commands, label)
             .map_err(|e| ControlError::command(&e))?;
         scratch
             .undo(world)
             .map_err(|e| ControlError::new(code::INTERNAL, format!("dry-run undo: {e}")))?;
-        created
+        applied
     } else {
-        edit::apply_commands(world, stack, commands, label)
+        edit::apply_commands_with_warnings(world, stack, commands, label)
             .map_err(|e| ControlError::command(&e))?
     };
+    for w in &applied.warnings {
+        tracing::warn!("{w}");
+    }
+    // Files the commands need (Convert to Script), into the project.
+    let mut files_written = Vec::new();
+    if !dry_run
+        && !applied.files.is_empty()
+        && let Some(server) = world.get_resource::<box_assets::AssetServer>()
+    {
+        files_written =
+            crate::behaviours::scripts::write_missing_files(server.assets_dir(), &applied.files)
+                .map_err(|e| ControlError::new(code::INTERNAL, format!("writing scripts: {e}")))?;
+    }
     Ok(json!({
         "commands": commands.len(),
-        "created": created.iter().map(ToString::to_string).collect::<Vec<_>>(),
+        "created": applied.created.iter().map(ToString::to_string).collect::<Vec<_>>(),
+        "files_written": files_written,
         "dry_run": dry_run,
         "undoable": !dry_run,
     }))
@@ -964,6 +1167,9 @@ struct ApplyParams {
     commands: Json,
     #[serde(default)]
     dry_run: bool,
+    /// Also write the change to the scene file (editor only).
+    #[serde(default)]
+    save: bool,
 }
 
 #[derive(Deserialize)]
@@ -971,6 +1177,62 @@ struct ApplyParams {
 struct ScreenshotParams {
     width: Option<u32>,
     height: Option<u32>,
+    /// A camera pose to render from (with `look_at`, optional `fov`).
+    eye: Option<[f32; 3]>,
+    look_at: Option<[f32; 3]>,
+    fov: Option<f32>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct InputParams {
+    action: String,
+    #[serde(default = "one")]
+    frames: u32,
+    value: Option<Json>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TeleportParams {
+    entity: String,
+    position: [f32; 3],
+    /// Degrees about +Y (0 faces -Z).
+    yaw: Option<f32>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RecordStartParams {
+    /// Restart the game from its scene first (default true).
+    #[serde(default = "yes")]
+    restart: bool,
+    /// The player entity (default: the first named character).
+    player: Option<String>,
+    /// Scripts' `math.random` seed for the restart.
+    seed: Option<u32>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RecordStopParams {
+    /// Write the playtest: a name (`playtests/<name>.playtest.json`) or a
+    /// path relative to the project root.
+    save: Option<String>,
+    description: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PlaytestParams {
+    /// A playtest name or file (relative to the project root).
+    file: Option<String>,
+    /// A playtest given inline.
+    playtest: Option<Json>,
+}
+
+fn yes() -> bool {
+    true
 }
 
 #[derive(Deserialize)]
@@ -982,6 +1244,76 @@ struct StepParams {
 
 fn one() -> u32 {
     1
+}
+
+#[cfg(feature = "audio")]
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AudioLevelsParams {
+    /// Only the voices this target applies to (see `audio_mixer::resolve_target`).
+    target: Option<String>,
+}
+
+#[cfg(feature = "audio")]
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AudioMixParams {
+    target: Option<String>,
+    #[serde(default = "yes")]
+    on: bool,
+    #[serde(default)]
+    clear: bool,
+}
+
+/// `audio_levels`, `audio_solo`, `audio_mute` on the playing world (see
+/// [`crate::audio_mixer`]).
+#[cfg(feature = "audio")]
+fn audio_method(
+    method: &str,
+    params: Json,
+    host: &mut dyn ControlHost,
+) -> Result<Json, ControlError> {
+    use crate::audio_mixer::{self, MixList};
+    let no_audio = |e: String| ControlError::new(code::NO_AUDIO, e);
+    if method == "audio_levels" {
+        let p: AudioLevelsParams = parse(method, params)?;
+        let world = host.play_world(method)?;
+        if !world.contains_resource::<box_audio::Audio>() {
+            return Err(no_audio("this world has no audio (no AudioPlugin)".into()));
+        }
+        let filter = p
+            .target
+            .as_deref()
+            .map(|t| audio_mixer::resolve_target(world, t))
+            .transpose()
+            .map_err(ControlError::invalid_params)?;
+        return audio_mixer::levels_json(world, filter.as_ref()).map_err(no_audio);
+    }
+    let p: AudioMixParams = parse(method, params)?;
+    let list = if method == "audio_solo" {
+        MixList::Solo
+    } else {
+        MixList::Mute
+    };
+    let world = host.play_world(method)?;
+    if !world.contains_resource::<box_audio::Audio>() {
+        return Err(no_audio("this world has no audio (no AudioPlugin)".into()));
+    }
+    audio_mixer::set_mix(world, list, p.target.as_deref(), p.on, p.clear)
+        .map_err(ControlError::invalid_params)
+}
+
+#[cfg(not(feature = "audio"))]
+fn audio_method(
+    method: &str,
+    params: Json,
+    host: &mut dyn ControlHost,
+) -> Result<Json, ControlError> {
+    let _ = (params, host);
+    Err(ControlError::new(
+        code::NO_AUDIO,
+        format!("`{method}`: this build has no audio module (box_engine feature `audio`)"),
+    ))
 }
 
 #[derive(Deserialize)]
@@ -1013,10 +1345,26 @@ fn dispatch(
             Ok(status_json(kind, &host.status()))
         }
         "world_query" => host.world_query(&parse(method, params)?),
+        "editor_context" => {
+            no_params(params)?;
+            host.editor_context()
+        }
+        "undo_turn" => {
+            no_params(params)?;
+            host.undo_turn()
+        }
         "apply_commands" => {
             let p: ApplyParams = parse(method, params)?;
             let commands = edit::parse_commands(&p.commands.to_string())
                 .map_err(|e| ControlError::command_parse(&e))?;
+            if p.save {
+                if p.dry_run {
+                    return Err(ControlError::invalid_params(
+                        "`save` and `dry_run` cannot be combined",
+                    ));
+                }
+                return host.apply_and_save(&commands);
+            }
             host.apply_commands(&commands, p.dry_run)
         }
         "screenshot" => {
@@ -1038,7 +1386,30 @@ fn dispatch(
                     ));
                 }
             };
-            let shot = host.screenshot(size)?;
+            let view = match (p.eye, p.look_at) {
+                (None, None) => {
+                    if p.fov.is_some() {
+                        return Err(ControlError::invalid_params(
+                            "`fov` needs `eye` and `look_at`",
+                        ));
+                    }
+                    None
+                }
+                (Some(eye), Some(look_at)) => {
+                    let pose = CameraPose {
+                        eye,
+                        look_at,
+                        fov: p.fov,
+                    };
+                    Some(pose.view_camera().map_err(ControlError::invalid_params)?)
+                }
+                _ => {
+                    return Err(ControlError::invalid_params(
+                        "give both `eye` and `look_at`, or neither",
+                    ));
+                }
+            };
+            let shot = host.screenshot(size, view.as_ref())?;
             Ok(json!({
                 "mime_type": "image/png",
                 "width": shot.width,
@@ -1054,6 +1425,138 @@ fn dispatch(
                 _ => host.pause()?,
             };
             Ok(status_json(kind, &status))
+        }
+        "send_input" => {
+            let p: InputParams = parse(method, params)?;
+            send_input(host.play_world(method)?, &p)
+        }
+        "teleport" => {
+            let p: TeleportParams = parse(method, params)?;
+            teleport(host.play_world(method)?, &p.entity, p.position, p.yaw)
+        }
+        "record_start" => {
+            let p: RecordStartParams = parse(method, params)?;
+            if p.restart {
+                host.restart_play(None, p.seed)?;
+            } else if p.seed.is_some() {
+                return Err(ControlError::invalid_params(
+                    "`seed` applies to a restart: drop it or `restart: false`",
+                ));
+            }
+            let world = host.play_world(method)?;
+            if world.contains_resource::<crate::playtest::PlaytestRecorder>() {
+                return Err(ControlError::invalid_params(
+                    "already recording: call record_stop first",
+                ));
+            }
+            let recorder = crate::playtest::PlaytestRecorder::new(
+                world,
+                p.player.as_deref(),
+                !p.restart,
+                p.seed,
+            )?;
+            world.insert_resource(recorder);
+            tracing::info!(target: "box::control", restarted = p.restart, "recording a playtest");
+            Ok(json!({
+                "recording": true,
+                "restarted": p.restart,
+                "scene": crate::playtest::scene_relative(world),
+            }))
+        }
+        "record_stop" => {
+            let p: RecordStopParams = parse(method, params)?;
+            let world = host.play_world(method)?;
+            let Some(recorder) = world.remove_resource::<crate::playtest::PlaytestRecorder>()
+            else {
+                return Err(ControlError::invalid_params(
+                    "not recording: call record_start first",
+                ));
+            };
+            let mut playtest = recorder.finish(world);
+            playtest.description = p.description;
+            let mut out = json!({
+                "frames": playtest.frames(),
+                "steps": playtest.steps.len(),
+                "checks": playtest.checks(),
+                "playtest": serde_json::to_value(&playtest).unwrap_or(Json::Null),
+            });
+            if let Some(save) = &p.save {
+                let root = world
+                    .get_resource::<crate::scenes::Scenes>()
+                    .and_then(crate::scenes::Scenes::project_root)
+                    .map(Path::to_path_buf)
+                    .ok_or_else(|| {
+                        ControlError::new(code::UNSUPPORTED, "no project to save the playtest in")
+                    })?;
+                let path = crate::playtest::path_in_project(&root, save);
+                crate::playtest::write(&path, &playtest)?;
+                let rel = path.strip_prefix(&root).map_or_else(
+                    |_| path.display().to_string(),
+                    |r| r.to_string_lossy().replace('\\', "/"),
+                );
+                tracing::info!(target: "box::control", "recorded playtest saved to {rel}");
+                out["file"] = json!(rel);
+            }
+            Ok(out)
+        }
+        "playtest" => {
+            let p: PlaytestParams = parse(method, params)?;
+            let (playtest, name) = match (p.file, p.playtest) {
+                (Some(file), None) => {
+                    let root = host
+                        .play_world(method)
+                        .ok()
+                        .and_then(|w| w.get_resource::<crate::scenes::Scenes>())
+                        .and_then(crate::scenes::Scenes::project_root)
+                        .map(Path::to_path_buf)
+                        .or_else(|| host.status().project.map(PathBuf::from))
+                        .ok_or_else(|| {
+                            ControlError::new(
+                                code::UNSUPPORTED,
+                                "no project to read playtests from",
+                            )
+                        })?;
+                    let path = crate::playtest::path_in_project(&root, &file);
+                    (
+                        crate::playtest::Playtest::read(&path)?,
+                        crate::playtest::name_of(&path),
+                    )
+                }
+                (None, Some(inline)) => (
+                    crate::playtest::Playtest::from_json(inline)?,
+                    "inline".to_string(),
+                ),
+                _ => {
+                    return Err(ControlError::invalid_params(
+                        "give `file` (a playtest name or path) or `playtest` (inline)",
+                    ));
+                }
+            };
+            host.restart_play(playtest.scene.as_deref(), playtest.seed)?;
+            let world = host.play_world(method)?;
+            let total = playtest.frames();
+            let checks = playtest.checks();
+            let run = crate::playtest::PlaytestRun::new(playtest, &name, world)?;
+            world.insert_resource(run);
+            tracing::info!(target: "box::control", "replaying playtest `{name}` ({total} frames)");
+            Ok(json!({
+                "started": true,
+                "name": name,
+                "total_frames": total,
+                "checks": checks,
+                "note": "poll playtest_status until `finished`",
+            }))
+        }
+        "playtest_status" => {
+            no_params(params)?;
+            let world = host.play_world(method)?;
+            let Some(run) = world.get_resource::<crate::playtest::PlaytestRun>() else {
+                return Err(ControlError::invalid_params(
+                    "no playtest in this game: start one with `playtest`",
+                ));
+            };
+            serde_json::to_value(run.report(world))
+                .map_err(|e| ControlError::new(code::INTERNAL, e.to_string()))
         }
         "step_frames" => {
             let p: StepParams = parse(method, params)?;
@@ -1074,6 +1577,7 @@ fn dispatch(
             no_params(params)?;
             host.frame_stats()
         }
+        "audio_levels" | "audio_solo" | "audio_mute" => audio_method(method, params, host),
         other => Err(
             ControlError::new(code::UNKNOWN_METHOD, format!("unknown method `{other}`")).with(
                 "methods",
@@ -1087,7 +1591,16 @@ fn dispatch(
                     "pause",
                     "step_frames",
                     "read_log",
-                    "frame_stats"
+                    "frame_stats",
+                    "send_input",
+                    "teleport",
+                    "record_start",
+                    "record_stop",
+                    "playtest",
+                    "playtest_status",
+                    "audio_levels",
+                    "audio_solo",
+                    "audio_mute"
                 ]),
             ),
         ),
@@ -1445,6 +1958,10 @@ impl HeadlessHost {
     pub fn update(&mut self) {
         if let (Some(app), false) = (&mut self.play, self.paused) {
             app.tick(FIXED_DT);
+            // End the input frame, as a runner does.
+            if let Some(input) = app.world.get_resource_mut::<box_core::input::Input>() {
+                input.end_frame();
+            }
             self.frame += 1;
         }
     }
@@ -1497,7 +2014,11 @@ impl ControlHost for HeadlessHost {
         Ok(result)
     }
 
-    fn screenshot(&mut self, size: Option<(u32, u32)>) -> Result<Screenshot, ControlError> {
+    fn screenshot(
+        &mut self,
+        size: Option<(u32, u32)>,
+        view: Option<&ViewCamera>,
+    ) -> Result<Screenshot, ControlError> {
         let editing = self.play.is_none();
         let Some(renderer) = self.renderer.as_mut() else {
             return Err(ControlError::new(
@@ -1513,9 +2034,16 @@ impl ControlHost for HeadlessHost {
             // Meshes and global transforms of the edit world are derived in PostUpdate.
             app.update();
         }
-        let image = renderer
-            .capture(&mut app.world)
-            .map_err(|e| ControlError::new(code::RENDER, e.to_string()))?;
+        let image = match view {
+            Some(view) => {
+                let (w, h) = renderer.size();
+                let target = renderer.create_viewport_target(w, h);
+                renderer.render_to(&mut app.world, &target, Some(view));
+                renderer.read_viewport_target(&target)
+            }
+            None => renderer.capture(&mut app.world),
+        }
+        .map_err(|e| ControlError::new(code::RENDER, e.to_string()))?;
         Screenshot::from_rgba(&image)
     }
 
@@ -1533,6 +2061,31 @@ impl ControlHost for HeadlessHost {
         }
         self.paused = false;
         Ok(self.status())
+    }
+
+    fn restart_play(&mut self, scene: Option<&str>, seed: Option<u32>) -> Result<(), ControlError> {
+        if let Some(scene) = scene
+            && self.scene.as_deref() != Some(scene)
+        {
+            return Err(ControlError::invalid_params(format!(
+                "this host plays {}, not `{scene}`",
+                self.scene.as_deref().unwrap_or("an unnamed scene")
+            )));
+        }
+        #[cfg_attr(not(feature = "script"), allow(unused_mut))]
+        let mut world = scene::clone_world(&self.edit.world)
+            .map_err(|e| ControlError::new(code::INTERNAL, format!("play snapshot: {e}")))?;
+        #[cfg(feature = "script")]
+        if let Some(seed) = seed {
+            world.insert_resource(box_script::ScriptSeed(seed));
+        }
+        #[cfg(not(feature = "script"))]
+        let _ = seed;
+        self.play = Some(self.game.app(world));
+        self.paused = false;
+        self.frame = 0;
+        self.log("info", "restart");
+        Ok(())
     }
 
     fn stop(&mut self) -> Result<Status, ControlError> {
@@ -1561,6 +2114,11 @@ impl ControlHost for HeadlessHost {
         };
         for _ in 0..frames {
             app.tick(FIXED_DT);
+            // End the input frame, as a runner does, so actions are
+            // evaluated again next frame (send_input).
+            if let Some(input) = app.world.get_resource_mut::<box_core::input::Input>() {
+                input.end_frame();
+            }
         }
         self.frame += u64::from(frames);
         Ok(json!({ "frames": frames, "frame": self.frame }))
@@ -1578,6 +2136,13 @@ impl ControlHost for HeadlessHost {
             .last()
             .map_or(since.max(self.log.len() as u64), |e| e.seq + 1);
         Ok(LogPage { entries, next })
+    }
+
+    fn play_world(&mut self, method: &str) -> Result<&mut World, ControlError> {
+        match self.play.as_mut() {
+            Some(app) => Ok(&mut app.world),
+            None => Err(ControlError::not_playing(method)),
+        }
     }
 
     fn frame_stats(&mut self) -> Result<Json, ControlError> {

@@ -1,14 +1,29 @@
 {
   "examples": [
     {
+      "name": "first_game",
+      "title": "First Game",
+      "description": "A whole small game built only from presets, no code: collect twelve coins (two on moving platforms, two up a ramp), dodge spikes and a guard who chases you, then reach the goal before the timer runs out."
+    },
+    {
       "name": "collector_luau",
       "title": "Collector",
       "description": "A small complete game in Luau: run and jump around two arenas collecting gems, with a HUD, a pause menu, saves and two languages."
     },
     {
+      "name": "third_person_scripted",
+      "title": "Third-person (Luau)",
+      "description": "The third-person template written as Luau scripts instead of behaviours: player, follow camera, pickups and HUD, every line commented."
+    },
+    {
       "name": "cinder_keep",
       "title": "Cinder Keep",
       "description": "A short third-person action-platformer in Luau: dialogue, sword combat, an enemy wave and imported glTF levels."
+    },
+    {
+      "name": "ember_bridge",
+      "title": "Ember Bridge",
+      "description": "A puzzle made without code: carry embers to braziers to raise bridges. Interactable components with prompts, conditions and actions."
     },
     {
       "name": "script_rules",

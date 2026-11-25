@@ -22,10 +22,22 @@ export type AudioListenerPatch = {}
 export type AudioSource = { clip: string?, bus: "Effects" | "Ambience" | "Music", volume: number, pitch: number, looping: boolean, playing: boolean, fade_in: number, fade_out: number, spatial: boolean, min_distance: number, max_distance: number }
 --- The fields of `AudioSource` to change, each optional (what `set` takes).
 export type AudioSourcePatch = { clip: string?, bus: ("Effects" | "Ambience" | "Music")?, volume: number?, pitch: number?, looping: boolean?, playing: boolean?, fade_in: number?, fade_out: number?, spatial: boolean?, min_distance: number?, max_distance: number? }
+--- Floats the entity up and down around where it started. Copies placed in different spots bob out of step.
+export type Bobber = { enabled: boolean, height: number, period: number }
+--- The fields of `Bobber` to change, each optional (what `set` takes).
+export type BobberPatch = { enabled: boolean?, height: number?, period: number? }
 --- A perspective camera. Uses the entity's `GlobalTransform` (looks down −Z). The projection is an infinite reverse-Z perspective; the aspect ratio comes from the render target.
 export type Camera = { fov_y: number, near: number, active: boolean }
 --- The fields of `Camera` to change, each optional (what `set` takes).
 export type CameraPatch = { fov_y: number?, near: number?, active: boolean? }
+--- A simple enemy: waits (or walks its `patrol` points) until it sees the player within `sight`, then chases them along the navmesh at `chase_speed`, around walls and up stairs. Touching the player costs them `damage` (their `Health`, or a respawn without one) at most once per `attack_cooldown`. When it loses sight of the player it searches where it saw them last; beyond `give_up` it walks back home. Uses a `NavAgent` and a `KinematicCharacter` (added in Play when missing).
+export type Chaser = { enabled: boolean, speed: number, chase_speed: number, sight: number, give_up: number, line_of_sight: boolean, patrol: { vector }, wait: number, damage: number, attack_cooldown: number, reach: number }
+--- The fields of `Chaser` to change, each optional (what `set` takes).
+export type ChaserPatch = { enabled: boolean?, speed: number?, chase_speed: number?, sight: number?, give_up: number?, line_of_sight: boolean?, patrol: { vector }?, wait: number?, damage: number?, attack_cooldown: number?, reach: number? }
+--- Whether this entity's colliders and those of its descendants take part in physics (default `true`). `Collidable(false)` switches the whole subtree off: queries, triggers, characters and rigid bodies ignore its colliders until it is set back to `true` (a hidden bridge, a door that opened). A parent's `false` wins over its children's `true`. Saved in scenes. The physics counterpart of `Visible`, which only hides drawing.
+export type Collidable = boolean
+--- The fields of `Collidable` to change, each optional (what `set` takes).
+export type CollidablePatch = boolean
 --- A collision shape on an entity, placed by its `GlobalTransform`. Saved in scenes. Queries on `Physics` find colliders; trigger colliders also report overlaps as `TriggerEvent`s.
 export type Collider = { shape: "Primitive" | { Cuboid: { size: vector? } } | { Sphere: { radius: number? } } | { Capsule: { radius: number?, half_height: number? } } | { Cylinder: { radius: number?, height: number? } } | "Mesh" | "ConvexHull", offset: vector, is_trigger: boolean, layers: number, mask: number, friction: number, restitution: number }
 --- The fields of `Collider` to change, each optional (what `set` takes).
@@ -38,6 +50,26 @@ export type DirectionalLightPatch = { color: Color?, intensity: number?, shadows
 export type Extrude = { outline: { Rectangle: { size: vector?, corner_radius: number? } } | { Circle: { radius: number?, segments: number? } } | { Polygon: { sides: number?, radius: number? } } | { Star: { points: number?, outer_radius: number?, inner_radius: number? } } | { Custom: { points: { vector }? } }, hole: "None" | { Inset: { width: number? } } | { Circle: { radius: number?, segments: number?, offset: vector? } } | { Rectangle: { size: vector?, offset: vector? } } | { Custom: { rings: { { vector } }? } }, depth: number, bevel_width: number, bevel_segments: number, caps: boolean, smooth_angle: number }
 --- The fields of `Extrude` to change, each optional (what `set` takes).
 export type ExtrudePatch = { outline: ({ Rectangle: { size: vector?, corner_radius: number? } } | { Circle: { radius: number?, segments: number? } } | { Polygon: { sides: number?, radius: number? } } | { Star: { points: number?, outer_radius: number?, inner_radius: number? } } | { Custom: { points: { vector }? } })?, hole: ("None" | { Inset: { width: number? } } | { Circle: { radius: number?, segments: number?, offset: vector? } } | { Rectangle: { size: vector?, offset: vector? } } | { Custom: { rings: { { vector } }? } })?, depth: number?, bevel_width: number?, bevel_segments: number?, caps: boolean?, smooth_angle: number? }
+--- A camera that follows a target from behind and above. Put it on the entity with the `Camera`. In Play it becomes the active camera (other cameras are switched off), so the scene's starting camera need not be removed.
+export type FollowCamera = { enabled: boolean, target: string?, mode: "Orbit" | "Fixed", distance: number, height: number, pitch: number, smoothing: number, look_speed: number, mouse_sensitivity: number, capture_mouse: boolean }
+--- The fields of `FollowCamera` to change, each optional (what `set` takes).
+export type FollowCameraPatch = { enabled: boolean?, target: string?, mode: ("Orbit" | "Fixed")?, distance: number?, height: number?, pitch: number?, smoothing: number?, look_speed: number?, mouse_sensitivity: number?, capture_mouse: boolean? }
+--- Keeps an entity on the ground: its origin's height is the ground under it plus `offset`, recomputed when the ground, the entity's position on X and Z, or its parent moves. Move it freely on X and Z; its own height is owned by the ground. Not for parts made by a rule (a rule samples the ground itself).
+export type FollowGround = { offset: number }
+--- The fields of `FollowGround` to change, each optional (what `set` takes).
+export type FollowGroundPatch = { offset: number? }
+--- Hit points. Hits (the `Damage` action) lower `current`, then nothing can hurt it for `invulnerable` seconds; `Heal` raises it up to `max`. When it reaches 0, `on_zero` runs. Left empty, `on_zero` sends the player back to the last checkpoint (costing a life when the rules count lives, and refilling its health), and removes anything else (hides it, or despawns a spawned copy). Saved: `current` is its state.
+export type Health = { enabled: boolean, max: number, current: number, invulnerable: number, on_damage: { { Show: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Hide: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Toggle: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { StartParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { StopParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { SetLight: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, intensity: number? } } | { AddVar: { var: string?, amount: number? } } | { SetVar: { var: string?, value: number? } } | { SetEnabled: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, enabled: boolean? } } | { PlaySound: { clip: string?, volume: number? } } | { Signal: { name: string? } } | { CallScript: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, ["function"]: string? } } | { SetField: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, path: string?, value: string? } } | "Win" | "Lose" | "Respawn" | "SetCheckpoint" | { SwitchScene: { scene: string? } } | { Burst: { style: ("Sparkle" | "Dust" | "Flame")?, count: number? } } | { Damage: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Heal: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Despawn: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } }, on_zero: { { Show: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Hide: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Toggle: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { StartParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { StopParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { SetLight: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, intensity: number? } } | { AddVar: { var: string?, amount: number? } } | { SetVar: { var: string?, value: number? } } | { SetEnabled: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, enabled: boolean? } } | { PlaySound: { clip: string?, volume: number? } } | { Signal: { name: string? } } | { CallScript: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, ["function"]: string? } } | { SetField: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, path: string?, value: string? } } | "Win" | "Lose" | "Respawn" | "SetCheckpoint" | { SwitchScene: { scene: string? } } | { Burst: { style: ("Sparkle" | "Dust" | "Flame")?, count: number? } } | { Damage: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Heal: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Despawn: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } } }
+--- The fields of `Health` to change, each optional (what `set` takes).
+export type HealthPatch = { enabled: boolean?, max: number?, current: number?, invulnerable: number?, on_damage: ({ { Show: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Hide: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Toggle: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { StartParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { StopParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { SetLight: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, intensity: number? } } | { AddVar: { var: string?, amount: number? } } | { SetVar: { var: string?, value: number? } } | { SetEnabled: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, enabled: boolean? } } | { PlaySound: { clip: string?, volume: number? } } | { Signal: { name: string? } } | { CallScript: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, ["function"]: string? } } | { SetField: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, path: string?, value: string? } } | "Win" | "Lose" | "Respawn" | "SetCheckpoint" | { SwitchScene: { scene: string? } } | { Burst: { style: ("Sparkle" | "Dust" | "Flame")?, count: number? } } | { Damage: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Heal: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Despawn: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } })?, on_zero: ({ { Show: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Hide: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Toggle: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { StartParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { StopParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { SetLight: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, intensity: number? } } | { AddVar: { var: string?, amount: number? } } | { SetVar: { var: string?, value: number? } } | { SetEnabled: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, enabled: boolean? } } | { PlaySound: { clip: string?, volume: number? } } | { Signal: { name: string? } } | { CallScript: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, ["function"]: string? } } | { SetField: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, path: string?, value: string? } } | "Win" | "Lose" | "Respawn" | "SetCheckpoint" | { SwitchScene: { scene: string? } } | { Burst: { style: ("Sparkle" | "Dust" | "Flame")?, count: number? } } | { Damage: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Heal: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Despawn: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } })? }
+--- Something the player can use: press `action` within `radius` (or walk into it, with `trigger: Touch`); if every condition in `requires` holds, the `actions` run in order. Put it on the entity the player uses, usually a `PrefabInstance` root, so each placed copy has its own settings (its own `Entity` targets). Saved; `uses` is its state.
+export type Interactable = { enabled: boolean, trigger: "Press" | "Touch", action: string, radius: number, offset: vector, prompt: string, prompt_key: string, blocked_prompt: string, blocked_prompt_key: string, requires: { { AtLeast: { var: string?, value: number? } } | { Below: { var: string?, value: number? } } | { Equals: { var: string?, value: number? } } | { GroupDone: { group: string? } } | { TimeAbove: { seconds: number? } } }, actions: { { Show: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Hide: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Toggle: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { StartParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { StopParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { SetLight: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, intensity: number? } } | { AddVar: { var: string?, amount: number? } } | { SetVar: { var: string?, value: number? } } | { SetEnabled: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, enabled: boolean? } } | { PlaySound: { clip: string?, volume: number? } } | { Signal: { name: string? } } | { CallScript: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, ["function"]: string? } } | { SetField: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, path: string?, value: string? } } | "Win" | "Lose" | "Respawn" | "SetCheckpoint" | { SwitchScene: { scene: string? } } | { Burst: { style: ("Sparkle" | "Dust" | "Flame")?, count: number? } } | { Damage: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Heal: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Despawn: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } }, once: boolean, cooldown: number, uses: number, group: string }
+--- The fields of `Interactable` to change, each optional (what `set` takes).
+export type InteractablePatch = { enabled: boolean?, trigger: ("Press" | "Touch")?, action: string?, radius: number?, offset: vector?, prompt: string?, prompt_key: string?, blocked_prompt: string?, blocked_prompt_key: string?, requires: ({ { AtLeast: { var: string?, value: number? } } | { Below: { var: string?, value: number? } } | { Equals: { var: string?, value: number? } } | { GroupDone: { group: string? } } | { TimeAbove: { seconds: number? } } })?, actions: ({ { Show: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Hide: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Toggle: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { StartParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { StopParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { SetLight: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, intensity: number? } } | { AddVar: { var: string?, amount: number? } } | { SetVar: { var: string?, value: number? } } | { SetEnabled: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, enabled: boolean? } } | { PlaySound: { clip: string?, volume: number? } } | { Signal: { name: string? } } | { CallScript: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, ["function"]: string? } } | { SetField: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, path: string?, value: string? } } | "Win" | "Lose" | "Respawn" | "SetCheckpoint" | { SwitchScene: { scene: string? } } | { Burst: { style: ("Sparkle" | "Dust" | "Flame")?, count: number? } } | { Damage: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Heal: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Despawn: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } })?, once: boolean?, cooldown: number?, uses: number?, group: string? }
+--- Marks the player: the entity whose distance to interactables counts. Without one, the first `KinematicCharacter` is the interactor.
+export type Interactor = {}
+--- The fields of `Interactor` to change, each optional (what `set` takes).
+export type InteractorPatch = {}
 --- Draw this entity between its last two fixed-step transforms. For entities moved in `FixedUpdate` (characters, projectiles, moving platforms); see the module docs. Saved in scenes.
 export type Interpolated = { teleport_distance: number }
 --- The fields of `Interpolated` to change, each optional (what `set` takes).
@@ -62,10 +94,18 @@ export type MaterialRefPatch = { material: string? }
 export type MeshAsset = { mesh: string?, materials: { string? }, cast_shadows: boolean }
 --- The fields of `MeshAsset` to change, each optional (what `set` takes).
 export type MeshAssetPatch = { mesh: string?, materials: { string? }?, cast_shadows: boolean? }
+--- Moves the entity through a list of points, measured from where it starts, and carries characters standing on it (moving platforms). Runs at the fixed rate before characters move.
+export type Mover = { enabled: boolean, points: { vector }, speed: number, mode: "PingPong" | "Loop" | "Once", wait: number }
+--- The fields of `Mover` to change, each optional (what `set` takes).
+export type MoverPatch = { enabled: boolean?, points: { vector }?, speed: number?, mode: ("PingPong" | "Loop" | "Once")?, wait: number? }
 --- Display name, shown in the hierarchy. Scene files write it as the entity's `"name"` key. Renaming is a field edit of `Name`.
 export type Name = string
 --- The fields of `Name` to change, each optional (what `set` takes).
 export type NamePatch = string
+--- Walks the entity's `KinematicCharacter` to `destination` along the navmesh, around walls and up ramps and stairs, turning the entity to face where it goes. Set `destination` from a script (`e:move_to(point)`), an action (`SetField`) or another behaviour (a `Chaser`); clear it to stop. A `KinematicCharacter` is added in Play when missing.
+export type NavAgent = { enabled: boolean, speed: number, turn_rate: number, arrive_distance: number, destination: vector? }
+--- The fields of `NavAgent` to change, each optional (what `set` takes).
+export type NavAgentPatch = { enabled: boolean?, speed: number?, turn_rate: number?, arrive_distance: number?, destination: vector? }
 --- Saved on the owner of derived parts: per-part field values and hidden parts that replace what the rules decided. Edit it through the inspector of a part (Cmd+Alt+click it in the viewport), or as data.
 export type Overrides = { parts: { { rule: string, part: string, hidden: boolean, fields: { { path: string, value: string } } } } }
 --- The fields of `Overrides` to change, each optional (what `set` takes).
@@ -74,6 +114,10 @@ export type OverridesPatch = { parts: { { rule: string, part: string, hidden: bo
 export type ParticleEmitter = { playing: boolean, looping: boolean, duration: number, rate: number, rate_over_distance: number, bursts: { { time: number, count: number } }, max_particles: number, lifetime: vector, speed: vector, direction: vector, cone_angle: number, spawn_radius: number, gravity: vector, drag: number, size: { { t: number, value: number } }, size_random: number, color: { { t: number, color: Color } }, intensity: number, spin: vector, random_rotation: boolean, texture: string?, atlas: { x: number, y: number }, blend: "Alpha" | "Additive", soft_distance: number, lit: boolean, space: "World" | "Local", seed: number, despawn_when_finished: boolean }
 --- The fields of `ParticleEmitter` to change, each optional (what `set` takes).
 export type ParticleEmitterPatch = { playing: boolean?, looping: boolean?, duration: number?, rate: number?, rate_over_distance: number?, bursts: { { time: number, count: number } }?, max_particles: number?, lifetime: vector?, speed: vector?, direction: vector?, cone_angle: number?, spawn_radius: number?, gravity: vector?, drag: number?, size: { { t: number, value: number } }?, size_random: number?, color: { { t: number, color: Color } }?, intensity: number?, spin: vector?, random_rotation: boolean?, texture: string?, atlas: { x: number, y: number }?, blend: ("Alpha" | "Additive")?, soft_distance: number?, lit: boolean?, space: ("World" | "Local")?, seed: number?, despawn_when_finished: boolean? }
+--- The player: moves its `KinematicCharacter` with the `move` action (WASD, arrows, left stick) relative to the camera's view, jumps with `jump` (Space, gamepad South), runs while `run` is held (Shift, gamepad West), turns its body toward where it moves and feeds the body's animation state machine (`speed`, `grounded`, `jump`). Below `fall_limit` it respawns at the last checkpoint. It is the player for interactables and the follow camera.
+export type PlayerController = { enabled: boolean, speed: number, run_speed: number, jump: boolean, turn_rate: number, fall_limit: number, camera: string?, body: string? }
+--- The fields of `PlayerController` to change, each optional (what `set` takes).
+export type PlayerControllerPatch = { enabled: boolean?, speed: number?, run_speed: number?, jump: boolean?, turn_rate: number?, fall_limit: number?, camera: string?, body: string? }
 --- A point light at the entity's position, emitting equally in all directions.
 export type PointLight = { color: Color, intensity: number, range: number, shadows: boolean, shadow: { resolution: number, depth_bias: number, normal_bias: number } }
 --- The fields of `PointLight` to change, each optional (what `set` takes).
@@ -114,6 +158,14 @@ export type ShaderMaterialPatch = { shader: string?, params: ({ { name: string, 
 export type SkinBinding = { skin: string?, joints: { string } }
 --- The fields of `SkinBinding` to change, each optional (what `set` takes).
 export type SkinBindingPatch = { skin: string?, joints: { string }? }
+--- Makes copies of its template every `interval` seconds while fewer than `max_alive` are around, at random spots within `radius` of itself. The template is the entity in `template`, else the spawner's first child; it is hidden while playing, so keep it where the spawner is. Copies are not saved: a save game or Restart starts the spawner again.
+export type Spawner = { enabled: boolean, template: string?, interval: number, max_alive: number, total: number, radius: number, lifetime: number }
+--- The fields of `Spawner` to change, each optional (what `set` takes).
+export type SpawnerPatch = { enabled: boolean?, template: string?, interval: number?, max_alive: number?, total: number?, radius: number?, lifetime: number? }
+--- Turns the entity around an axis, forever (coins, fans, windmills).
+export type Spinner = { enabled: boolean, axis: vector, speed: number }
+--- The fields of `Spinner` to change, each optional (what `set` takes).
+export type SpinnerPatch = { enabled: boolean?, axis: vector?, speed: number? }
 --- A 3D spline: control points, interpolation mode, open or closed. Plain parameter data for geometry functions, and a saved component whose points are in its entity's local space (see the module docs).
 export type Spline = { points: { { position: vector, in_tangent: vector?, out_tangent: vector?, roll: number, scale: vector } }, mode: "CatmullRom" | "Bezier" | "Polyline", closed: boolean }
 --- The fields of `Spline` to change, each optional (what `set` takes).
@@ -127,9 +179,25 @@ export type StandardMaterial = { base_color: Color, roughness: number, metallic:
 --- The fields of `StandardMaterial` to change, each optional (what `set` takes).
 export type StandardMaterialPatch = { base_color: Color?, roughness: number?, metallic: number?, emissive: Color?, base_color_texture: string?, normal_texture: string?, orm_texture: string?, emissive_texture: string?, alpha_mode: ("Opaque" | { Mask: { cutoff: number? } } | "Blend" | "Additive" | "Multiply" | "Multiply2x")?, double_sided: boolean?, depth_fade: number?, wind: ({ strength: number, frequency: number, weight: { HeightRamp: { bottom: number?, top: number? } } | "VertexAlpha" })?, uv_scale: vector?, sort_bias: number?, depth_write: ("Auto" | "On" | "Off")?, depth_test: boolean?, prewrite_depth: boolean? }
 --- A profile swept along a spline: tubes, rails, kerbs, walls, paths. Reads the `Spline` on this entity, or on the entity named by `spline`; editing that spline regenerates the sweep.
-export type Sweep = { spline: string?, profile: { Rect: { width: number?, height: number? } } | { Circle: { radius: number?, segments: number? } } | { Custom: { points: { vector }?, closed: boolean? } }, tolerance: number, orientation: "Up" | "RotationMinimizing", caps: boolean }
+export type Sweep = { spline: string?, profile: { Rect: { width: number?, height: number? } } | { Circle: { radius: number?, segments: number? } } | { Custom: { points: { vector }?, closed: boolean? } }, tolerance: number, orientation: "Up" | "RotationMinimizing", caps: boolean, follow_ground: boolean, ground_offset: number }
 --- The fields of `Sweep` to change, each optional (what `set` takes).
-export type SweepPatch = { spline: string?, profile: ({ Rect: { width: number?, height: number? } } | { Circle: { radius: number?, segments: number? } } | { Custom: { points: { vector }?, closed: boolean? } })?, tolerance: number?, orientation: ("Up" | "RotationMinimizing")?, caps: boolean? }
+export type SweepPatch = { spline: string?, profile: ({ Rect: { width: number?, height: number? } } | { Circle: { radius: number?, segments: number? } } | { Custom: { points: { vector }?, closed: boolean? } })?, tolerance: number?, orientation: ("Up" | "RotationMinimizing")?, caps: boolean?, follow_ground: boolean?, ground_offset: number? }
+--- Heightfield ground shaped by `TerrainStamp`s and drawn in chunks (see the module docs). The terrain covers `size` metres on X and Z, centred on its entity.
+export type Terrain = { size: vector, cell_size: number, base_height: number, stamps: { { Hill: { center: vector?, radius: number?, height: number? } } | { Ridge: { points: { vector }?, width: number?, height: number? } } | { Basin: { center: vector?, radius: number?, depth: number? } } | { Flatten: { center: vector?, radius: number?, height: number?, bank: number? } } | { FlattenPath: { points: { vector }?, width: number?, bank: number? } } | { Noise: { seed: number?, scale: number?, amplitude: number?, octaves: number? } } }, layers: { grass: Color, dirt: Color, rock: Color, rock_slope: number, variation: number }, skirt: number, collide: boolean, show_walkability: boolean, walk_slope: number }
+--- The fields of `Terrain` to change, each optional (what `set` takes).
+export type TerrainPatch = { size: vector?, cell_size: number?, base_height: number?, stamps: ({ { Hill: { center: vector?, radius: number?, height: number? } } | { Ridge: { points: { vector }?, width: number?, height: number? } } | { Basin: { center: vector?, radius: number?, depth: number? } } | { Flatten: { center: vector?, radius: number?, height: number?, bank: number? } } | { FlattenPath: { points: { vector }?, width: number?, bank: number? } } | { Noise: { seed: number?, scale: number?, amplitude: number?, octaves: number? } } })?, layers: { grass: Color, dirt: Color, rock: Color, rock_slope: number, variation: number }?, skirt: number?, collide: boolean?, show_walkability: boolean?, walk_slope: number? }
+--- One chunk of a `Terrain`: generated by the `terrain` rule as a part of the terrain's entity, never saved. It holds the stamps that reach it, so editing a stamp regenerates only the chunks under it.
+export type TerrainChunk = { origin: vector, cells_x: number, cells_z: number, cell_size: number, base_height: number, stamps: { { Hill: { center: vector?, radius: number?, height: number? } } | { Ridge: { points: { vector }?, width: number?, height: number? } } | { Basin: { center: vector?, radius: number?, depth: number? } } | { Flatten: { center: vector?, radius: number?, height: number?, bank: number? } } | { FlattenPath: { points: { vector }?, width: number?, bank: number? } } | { Noise: { seed: number?, scale: number?, amplitude: number?, octaves: number? } } }, layers: { grass: Color, dirt: Color, rock: Color, rock_slope: number, variation: number }, skirt: number, skirt_edges: number, show_walkability: boolean, walk_slope: number }
+--- The fields of `TerrainChunk` to change, each optional (what `set` takes).
+export type TerrainChunkPatch = { origin: vector?, cells_x: number?, cells_z: number?, cell_size: number?, base_height: number?, stamps: ({ { Hill: { center: vector?, radius: number?, height: number? } } | { Ridge: { points: { vector }?, width: number?, height: number? } } | { Basin: { center: vector?, radius: number?, depth: number? } } | { Flatten: { center: vector?, radius: number?, height: number?, bank: number? } } | { FlattenPath: { points: { vector }?, width: number?, bank: number? } } | { Noise: { seed: number?, scale: number?, amplitude: number?, octaves: number? } } })?, layers: { grass: Color, dirt: Color, rock: Color, rock_slope: number, variation: number }?, skirt: number?, skirt_edges: number?, show_walkability: boolean?, walk_slope: number? }
+--- A dirt path following the XZ course of the `Spline` on this entity. Paths on the same terrain merge wherever their footprints touch.
+export type TerrainPath = { width: number, terrain: string? }
+--- The fields of `TerrainPath` to change, each optional (what `set` takes).
+export type TerrainPathPatch = { width: number?, terrain: string? }
+--- Runtime mesh parameters of one path chunk, owned by the terrain.
+export type TerrainPathChunk = { chunk: { origin: vector, cells_x: number, cells_z: number, cell_size: number, base_height: number, stamps: { { Hill: { center: vector?, radius: number?, height: number? } } | { Ridge: { points: { vector }?, width: number?, height: number? } } | { Basin: { center: vector?, radius: number?, depth: number? } } | { Flatten: { center: vector?, radius: number?, height: number?, bank: number? } } | { FlattenPath: { points: { vector }?, width: number?, bank: number? } } | { Noise: { seed: number?, scale: number?, amplitude: number?, octaves: number? } } }, layers: { grass: Color, dirt: Color, rock: Color, rock_slope: number, variation: number }, skirt: number, skirt_edges: number, show_walkability: boolean, walk_slope: number }, triangles: { { vector } } }
+--- The fields of `TerrainPathChunk` to change, each optional (what `set` takes).
+export type TerrainPathChunkPatch = { chunk: ({ origin: vector, cells_x: number, cells_z: number, cell_size: number, base_height: number, stamps: { { Hill: { center: vector?, radius: number?, height: number? } } | { Ridge: { points: { vector }?, width: number?, height: number? } } | { Basin: { center: vector?, radius: number?, depth: number? } } | { Flatten: { center: vector?, radius: number?, height: number?, bank: number? } } | { FlattenPath: { points: { vector }?, width: number?, bank: number? } } | { Noise: { seed: number?, scale: number?, amplitude: number?, octaves: number? } } }, layers: { grass: Color, dirt: Color, rock: Color, rock_slope: number, variation: number }, skirt: number, skirt_edges: number, show_walkability: boolean, walk_slope: number })?, triangles: { { vector } }? }
 --- Local transform relative to the parent (or the world, for roots).
 export type Transform = { translation: vector, rotation: Quat, scale: vector }
 --- The fields of `Transform` to change, each optional (what `set` takes).
@@ -160,12 +228,36 @@ export type AudioSettingsPatch = { master: number?, effects: number?, ambience: 
 export type Environment = { sky_zenith: Color, sky_horizon: Color, ground: Color, ambient_intensity: number, sun_disc_size: number, fog_density: number, fog_height_falloff: number, fog_base_height: number, exposure: number, tonemapper: "AgX" | "AcesFitted" | "None" | "Neutral", ambient_occlusion: { enabled: boolean, intensity: number, radius: number, bias: number, power: number, direct_lighting: number }, bloom: { enabled: boolean, intensity: number, scatter: number, threshold: number, knee: number }, color_grading: { temperature: number, tint: number, contrast: number, saturation: number, shadows: vector, midtones: vector, highlights: vector, shadows_end: number, highlights_start: number, lift: vector, gamma: vector, gain: vector }, sky: { gradient: "Simple" | { Layered: { upper: Color?, below_horizon: Color? } }, sun_glow: number, sun_disc: number, horizon_glow: number, stars: number }, aerial_haze: { enabled: boolean, color: Color, density: number, start_distance: number, max_opacity: number, sun_scatter: number, sky_height: number }, height_mist: { enabled: boolean, color: Color, top: number, bottom: number, max_opacity: number, near_fade: number }, distance_quieting: { enabled: boolean, start: number, ["end"]: number, desaturate: number, contrast: number, tone: Color }, vignette: { intensity: number, smoothness: number, rounded: boolean }, wind: { direction: vector, strength: number, gust_length: number, gust_speed: number } }
 --- The fields of `Environment` to change, each optional (what `set` takes).
 export type EnvironmentPatch = { sky_zenith: Color?, sky_horizon: Color?, ground: Color?, ambient_intensity: number?, sun_disc_size: number?, fog_density: number?, fog_height_falloff: number?, fog_base_height: number?, exposure: number?, tonemapper: ("AgX" | "AcesFitted" | "None" | "Neutral")?, ambient_occlusion: { enabled: boolean, intensity: number, radius: number, bias: number, power: number, direct_lighting: number }?, bloom: { enabled: boolean, intensity: number, scatter: number, threshold: number, knee: number }?, color_grading: { temperature: number, tint: number, contrast: number, saturation: number, shadows: vector, midtones: vector, highlights: vector, shadows_end: number, highlights_start: number, lift: vector, gamma: vector, gain: vector }?, sky: ({ gradient: "Simple" | { Layered: { upper: Color?, below_horizon: Color? } }, sun_glow: number, sun_disc: number, horizon_glow: number, stars: number })?, aerial_haze: { enabled: boolean, color: Color, density: number, start_distance: number, max_opacity: number, sun_scatter: number, sky_height: number }?, height_mist: { enabled: boolean, color: Color, top: number, bottom: number, max_opacity: number, near_fade: number }?, distance_quieting: { enabled: boolean, start: number, ["end"]: number, desaturate: number, contrast: number, tone: Color }?, vignette: { intensity: number, smoothness: number, rounded: boolean }?, wind: { direction: vector, strength: number, gust_length: number, gust_speed: number }? }
+--- What winning and losing mean in this scene. A scene resource (edit it in Scene Settings, or with `set_resource`); a scene without it has no built-in win, lose, pause or end screens.
+export type GameRules = { win: { { AtLeast: { var: string?, value: number? } } | { Below: { var: string?, value: number? } } | { Equals: { var: string?, value: number? } } | { GroupDone: { group: string? } } | { TimeAbove: { seconds: number? } } }, lose: { { AtLeast: { var: string?, value: number? } } | { Below: { var: string?, value: number? } } | { Equals: { var: string?, value: number? } } | { GroupDone: { group: string? } } | { TimeAbove: { seconds: number? } } }, time_limit: number, lives: number, menus: boolean, next_scene: string, win_title: string, lose_title: string }
+--- The fields of `GameRules` to change, each optional (what `set` takes).
+export type GameRulesPatch = { win: ({ { AtLeast: { var: string?, value: number? } } | { Below: { var: string?, value: number? } } | { Equals: { var: string?, value: number? } } | { GroupDone: { group: string? } } | { TimeAbove: { seconds: number? } } })?, lose: ({ { AtLeast: { var: string?, value: number? } } | { Below: { var: string?, value: number? } } | { Equals: { var: string?, value: number? } } | { GroupDone: { group: string? } } | { TimeAbove: { seconds: number? } } })?, time_limit: number?, lives: number?, menus: boolean?, next_scene: string?, win_title: string?, lose_title: string? }
+--- The state of the current game: phase, time, lives, checkpoint. A runtime resource of playing worlds (never in scene files; save games keep it through the `"game"` hook). Live tools read it with `world_query`.
+export type GameState = { phase: "Playing" | "Paused" | "Won" | "Lost", elapsed: number, lives_left: number, checkpoint: vector?, respawns: number }
+--- The fields of `GameState` to change, each optional (what `set` takes).
+export type GameStatePatch = { phase: ("Playing" | "Paused" | "Won" | "Lost")?, elapsed: number?, lives_left: number?, checkpoint: vector?, respawns: number? }
+--- Named numbers for puzzle and progress state (`embers`, `gate_open`); unset names read 0. A resource of playing worlds: it is kept across scene switches, saved in save games (hook `"vars"`), not stored in scene files. Scripts use the `vars` global; live tools read it with `world_query` (`include_resources`).
+export type GameVars = { values: { [string]: number } }
+--- The fields of `GameVars` to change, each optional (what `set` takes).
+export type GameVarsPatch = { values: { [string]: number }? }
+--- The built-in HUD: a panel in the top-left corner with game vars, group progress, lives and the time left. A scene resource; without it there is no built-in HUD. Styled by the theme's `hud` style.
+export type HudSettings = { enabled: boolean, vars: { { var: string, label: string } }, groups: boolean, lives: boolean, timer: boolean, health: boolean }
+--- The fields of `HudSettings` to change, each optional (what `set` takes).
+export type HudSettingsPatch = { enabled: boolean?, vars: { { var: string, label: string } }?, groups: boolean?, lives: boolean?, timer: boolean?, health: boolean? }
+--- How characters that are not the player find their way: the size of the agent the walkable area is computed for and how finely it is sampled. A scene resource (Scene Settings); without it the defaults apply, which match the default `KinematicCharacter`.
+export type NavSettings = { enabled: boolean, agent_radius: number, agent_height: number, max_slope: number, step_height: number, cell_size: number, tile_size: number }
+--- The fields of `NavSettings` to change, each optional (what `set` takes).
+export type NavSettingsPatch = { enabled: boolean?, agent_radius: number?, agent_height: number?, max_slope: number?, step_height: number?, cell_size: number?, tile_size: number? }
 --- Project-wide simulation settings: a settings resource (`assets/settings/PhysicsSettings.json`, Game ▸ Project Settings).
 export type PhysicsSettings = { gravity: vector, solver_iterations: number }
 --- The fields of `PhysicsSettings` to change, each optional (what `set` takes).
 export type PhysicsSettingsPatch = { gravity: vector?, solver_iterations: number? }
 
 -- Events
+--- Sent each time an `Interactable` is used, after its actions ran. Scripts: `events.on("Interacted", function(e) ... end)`, with `e.entity` and `e.interactor` uids (`world.entity(uid)`).
+export type Interacted = { entity: string?, interactor: string? }
+--- The fields of `Interacted` to change, each optional (what `set` takes).
+export type InteractedPatch = { entity: string?, interactor: string? }
 --- Event: play a clip once. Send it with `world.send(PlaySound::new(..))` from any stage; it starts in the same frame's `PostUpdate` (a clip that is not loaded yet starts when it is, or is dropped with a warning after `PENDING_TIMEOUT` seconds).
 export type PlaySound = { clip: string?, position: vector?, volume: number, pitch: number, bus: "Effects" | "Ambience" | "Music", min_distance: number, max_distance: number }
 --- The fields of `PlaySound` to change, each optional (what `set` takes).
@@ -340,6 +432,13 @@ declare extern type Entity with
     function world_rotation(self): Quat
     --- Where an `Interpolated` entity is drawn this frame: between its last two fixed-step positions. Use it to follow an entity moved in `on_fixed_update` smoothly (a camera).
     function interpolated_position(self): vector
+    -- nav
+    --- Walks this character to `position` along the navmesh, around walls, through doors and up stairs (adds a `NavAgent` if it has none; needs a `KinematicCharacter`). Call it again to change the goal: a goal that moved less than a metre does not replan.
+    function move_to(self, position: vector): ()
+    --- Stops walking (clears the `NavAgent` destination).
+    function stop(self): ()
+    --- Where its walk stands: "idle", "baking" (the navmesh is not ready: it walks straight), "moving", "arrived", "unreachable" (it walks as close as it can) or "off_mesh".
+    function nav_status(self): string
     --- A copy of this entity's `AmbientVolume` component, or nil when it has none.
     function get(self, component: "AmbientVolume"): AmbientVolume?
     --- Patches this entity's `AmbientVolume` component with the given fields.
@@ -360,10 +459,22 @@ declare extern type Entity with
     function get(self, component: "AudioSource"): AudioSource?
     --- Patches this entity's `AudioSource` component with the given fields.
     function set(self, component: "AudioSource", value: AudioSourcePatch): ()
+    --- A copy of this entity's `Bobber` component, or nil when it has none.
+    function get(self, component: "Bobber"): Bobber?
+    --- Patches this entity's `Bobber` component with the given fields.
+    function set(self, component: "Bobber", value: BobberPatch): ()
     --- A copy of this entity's `Camera` component, or nil when it has none.
     function get(self, component: "Camera"): Camera?
     --- Patches this entity's `Camera` component with the given fields.
     function set(self, component: "Camera", value: CameraPatch): ()
+    --- A copy of this entity's `Chaser` component, or nil when it has none.
+    function get(self, component: "Chaser"): Chaser?
+    --- Patches this entity's `Chaser` component with the given fields.
+    function set(self, component: "Chaser", value: ChaserPatch): ()
+    --- A copy of this entity's `Collidable` component, or nil when it has none.
+    function get(self, component: "Collidable"): Collidable?
+    --- Patches this entity's `Collidable` component with the given fields.
+    function set(self, component: "Collidable", value: CollidablePatch): ()
     --- A copy of this entity's `Collider` component, or nil when it has none.
     function get(self, component: "Collider"): Collider?
     --- Patches this entity's `Collider` component with the given fields.
@@ -376,6 +487,26 @@ declare extern type Entity with
     function get(self, component: "Extrude"): Extrude?
     --- Patches this entity's `Extrude` component with the given fields.
     function set(self, component: "Extrude", value: ExtrudePatch): ()
+    --- A copy of this entity's `FollowCamera` component, or nil when it has none.
+    function get(self, component: "FollowCamera"): FollowCamera?
+    --- Patches this entity's `FollowCamera` component with the given fields.
+    function set(self, component: "FollowCamera", value: FollowCameraPatch): ()
+    --- A copy of this entity's `FollowGround` component, or nil when it has none.
+    function get(self, component: "FollowGround"): FollowGround?
+    --- Patches this entity's `FollowGround` component with the given fields.
+    function set(self, component: "FollowGround", value: FollowGroundPatch): ()
+    --- A copy of this entity's `Health` component, or nil when it has none.
+    function get(self, component: "Health"): Health?
+    --- Patches this entity's `Health` component with the given fields.
+    function set(self, component: "Health", value: HealthPatch): ()
+    --- A copy of this entity's `Interactable` component, or nil when it has none.
+    function get(self, component: "Interactable"): Interactable?
+    --- Patches this entity's `Interactable` component with the given fields.
+    function set(self, component: "Interactable", value: InteractablePatch): ()
+    --- A copy of this entity's `Interactor` component, or nil when it has none.
+    function get(self, component: "Interactor"): Interactor?
+    --- Patches this entity's `Interactor` component with the given fields.
+    function set(self, component: "Interactor", value: InteractorPatch): ()
     --- A copy of this entity's `Interpolated` component, or nil when it has none.
     function get(self, component: "Interpolated"): Interpolated?
     --- Patches this entity's `Interpolated` component with the given fields.
@@ -400,10 +531,18 @@ declare extern type Entity with
     function get(self, component: "MeshAsset"): MeshAsset?
     --- Patches this entity's `MeshAsset` component with the given fields.
     function set(self, component: "MeshAsset", value: MeshAssetPatch): ()
+    --- A copy of this entity's `Mover` component, or nil when it has none.
+    function get(self, component: "Mover"): Mover?
+    --- Patches this entity's `Mover` component with the given fields.
+    function set(self, component: "Mover", value: MoverPatch): ()
     --- A copy of this entity's `Name` component, or nil when it has none.
     function get(self, component: "Name"): Name?
     --- Patches this entity's `Name` component with the given fields.
     function set(self, component: "Name", value: NamePatch): ()
+    --- A copy of this entity's `NavAgent` component, or nil when it has none.
+    function get(self, component: "NavAgent"): NavAgent?
+    --- Patches this entity's `NavAgent` component with the given fields.
+    function set(self, component: "NavAgent", value: NavAgentPatch): ()
     --- A copy of this entity's `Overrides` component, or nil when it has none.
     function get(self, component: "Overrides"): Overrides?
     --- Patches this entity's `Overrides` component with the given fields.
@@ -412,6 +551,10 @@ declare extern type Entity with
     function get(self, component: "ParticleEmitter"): ParticleEmitter?
     --- Patches this entity's `ParticleEmitter` component with the given fields.
     function set(self, component: "ParticleEmitter", value: ParticleEmitterPatch): ()
+    --- A copy of this entity's `PlayerController` component, or nil when it has none.
+    function get(self, component: "PlayerController"): PlayerController?
+    --- Patches this entity's `PlayerController` component with the given fields.
+    function set(self, component: "PlayerController", value: PlayerControllerPatch): ()
     --- A copy of this entity's `PointLight` component, or nil when it has none.
     function get(self, component: "PointLight"): PointLight?
     --- Patches this entity's `PointLight` component with the given fields.
@@ -452,6 +595,14 @@ declare extern type Entity with
     function get(self, component: "SkinBinding"): SkinBinding?
     --- Patches this entity's `SkinBinding` component with the given fields.
     function set(self, component: "SkinBinding", value: SkinBindingPatch): ()
+    --- A copy of this entity's `Spawner` component, or nil when it has none.
+    function get(self, component: "Spawner"): Spawner?
+    --- Patches this entity's `Spawner` component with the given fields.
+    function set(self, component: "Spawner", value: SpawnerPatch): ()
+    --- A copy of this entity's `Spinner` component, or nil when it has none.
+    function get(self, component: "Spinner"): Spinner?
+    --- Patches this entity's `Spinner` component with the given fields.
+    function set(self, component: "Spinner", value: SpinnerPatch): ()
     --- A copy of this entity's `Spline` component, or nil when it has none.
     function get(self, component: "Spline"): Spline?
     --- Patches this entity's `Spline` component with the given fields.
@@ -468,6 +619,22 @@ declare extern type Entity with
     function get(self, component: "Sweep"): Sweep?
     --- Patches this entity's `Sweep` component with the given fields.
     function set(self, component: "Sweep", value: SweepPatch): ()
+    --- A copy of this entity's `Terrain` component, or nil when it has none.
+    function get(self, component: "Terrain"): Terrain?
+    --- Patches this entity's `Terrain` component with the given fields.
+    function set(self, component: "Terrain", value: TerrainPatch): ()
+    --- A copy of this entity's `TerrainChunk` component, or nil when it has none.
+    function get(self, component: "TerrainChunk"): TerrainChunk?
+    --- Patches this entity's `TerrainChunk` component with the given fields.
+    function set(self, component: "TerrainChunk", value: TerrainChunkPatch): ()
+    --- A copy of this entity's `TerrainPath` component, or nil when it has none.
+    function get(self, component: "TerrainPath"): TerrainPath?
+    --- Patches this entity's `TerrainPath` component with the given fields.
+    function set(self, component: "TerrainPath", value: TerrainPathPatch): ()
+    --- A copy of this entity's `TerrainPathChunk` component, or nil when it has none.
+    function get(self, component: "TerrainPathChunk"): TerrainPathChunk?
+    --- Patches this entity's `TerrainPathChunk` component with the given fields.
+    function set(self, component: "TerrainPathChunk", value: TerrainPathChunkPatch): ()
     --- A copy of this entity's `Transform` component, or nil when it has none.
     function get(self, component: "Transform"): Transform?
     --- Patches this entity's `Transform` component with the given fields.
@@ -512,7 +679,7 @@ declare world: {
     --- Calls `f(entity, a, b, ...)` for every entity with the named components, passing copies of their values: convenient for reading many entities (about 0.6 µs per row).
     each: (components: string | { string }, f: (Entity, ...any) -> ()) -> (),
     --- A copy of a registered resource (`world.resource("Environment")`) or one of its fields (`"Environment.exposure"`), or nil when the world has none.
-    resource: ((name: "AudioSettings") -> AudioSettings?) & ((name: "Environment") -> Environment?) & ((name: "PhysicsSettings") -> PhysicsSettings?) & ((name: string) -> any),
+    resource: ((name: "AudioSettings") -> AudioSettings?) & ((name: "Environment") -> Environment?) & ((name: "GameRules") -> GameRules?) & ((name: "GameState") -> GameState?) & ((name: "GameVars") -> GameVars?) & ((name: "HudSettings") -> HudSettings?) & ((name: "NavSettings") -> NavSettings?) & ((name: "PhysicsSettings") -> PhysicsSettings?) & ((name: string) -> any),
     --- Patches a resource, or one field (`world.set_resource("Environment.exposure", 1.5)`), with the given value.
     set_resource: (name: string, value: any) -> (),
     --- Removes an entity and its descendants (like `e:despawn()`). Returns false if it was already gone.
@@ -724,7 +891,25 @@ declare events: {
     --- Removes a handler. Returns true if it existed.
     off: (id: number) -> boolean,
     --- Sends an event. A registered event type (`"PlaySound"`) is built from its default patched with `payload` and sent on its queue, where native systems and script handlers read it; any other name is a script signal, delivered to `events.on` handlers with `payload` as is (a signal sent during `on_update` arrives next frame).
-    send: ((name: "PlaySound", event: PlaySoundPatch?) -> ()) & ((name: string, payload: any?) -> ()),
+    send: ((name: "Interacted", event: InteractedPatch?) -> ()) & ((name: "PlaySound", event: PlaySoundPatch?) -> ()) & ((name: string, payload: any?) -> ()),
+}
+
+-- ground
+--- The ground at a point.
+export type GroundHit = {
+    --- Height of the ground in metres.
+    height: number,
+    --- The surface normal (unit length, pointing up out of the ground).
+    normal: vector,
+    --- The point on the ground: `x`, `height`, `z`.
+    position: vector,
+}
+--- The terrain under a point: heights of the drawn and walked surface of every `Terrain` (the highest where they overlap). Also available in rules, where sampling it makes the rule re-run where the terrain changes.
+declare ground: {
+    --- The ground height at world `x`, `z` in metres, or nil where there is no terrain.
+    height: (x: number, z: number) -> number?,
+    --- Height, normal and point of the ground at world `x`, `z`, or nil where there is no terrain.
+    at: (x: number, z: number) -> GroundHit?,
 }
 
 -- ui
@@ -1004,6 +1189,58 @@ declare camera: {
     screen_size: () -> vector,
 }
 
+-- vars
+--- A change of a game variable, as `vars.on_change` handlers receive it.
+export type VarChange = {
+    --- The variable's name.
+    name: string,
+    --- The new value.
+    value: number,
+    --- The value before the change.
+    old: number,
+}
+--- Game variables: named numbers for puzzle and progress state (`embers`, `gate_open`), shared with `Interactable` conditions and actions, kept across scene switches and saved in save games. Unset names read 0.
+declare vars: {
+    --- The value of `name` (0 when unset).
+    get: (name: string) -> number,
+    --- Sets `name` to `value`.
+    set: (name: string, value: number) -> (),
+    --- Adds `amount` (negative: subtracts) to `name` and returns the new value.
+    add: (name: string, amount: number) -> number,
+    --- Every variable that was set, by name.
+    all: () -> { [string]: number },
+    --- Calls `handler` in the next Update after `name` changes (by a script, an `Interactable` or a loaded save). Returns an id for `vars.off`; removed with the script.
+    on_change: (name: string, handler: (change: VarChange) -> ()) -> number,
+    --- Removes an `on_change` handler.
+    off: (id: number) -> (),
+}
+
+-- interact
+--- Interactables (`Interactable` components): what the player can use, and using them from scripts.
+declare interact: {
+    --- The interactable whose prompt shows now (the nearest one in range), or nil.
+    focus: () -> Entity?,
+    --- Uses `entity`'s `Interactable` in the next Update as if the player pressed its action: its conditions, cooldown and `once` apply, its distance does not.
+    use: (entity: Entity) -> (),
+    --- True when `entity`'s `Interactable` is enabled, not used up and its conditions hold.
+    can_use: (entity: Entity) -> boolean,
+}
+
+-- nav
+--- Where characters the game moves can walk: the navmesh, built from the scene's static colliders.
+declare nav: {
+    --- True once the navmesh is built and no part of it is being rebuilt (right after a scene starts, or after colliders change, it is not: paths may be missing or change soon).
+    ready: () -> boolean,
+    --- The corners of the shortest walkable path from `from` to `to` (feet positions), start first; nil when `to` cannot be reached or there is no navmesh yet.
+    path: (from: vector, to: vector) -> { vector }?,
+    --- Whether something can walk from `from` to `to`.
+    reachable: (from: vector, to: vector) -> boolean,
+    --- The nearest walkable point to `position` (within 2 m sideways and 3 m up or down), or nil.
+    closest: (position: vector) -> vector?,
+    --- A random walkable point within `radius` metres of `center`, reachable from it (wander targets, spawn spots). The same `seed` gives the same point; without one it changes every frame.
+    random_near: (center: vector, radius: number, seed: number?) -> vector?,
+}
+
 -- Script modules
 --- One declared script property: what each entry of a module's `properties` table takes. Every field is optional. A bare value (`speed = 4`, `enabled = true`, `tint = Color.rgb(1, 0, 0)`) is shorthand for a declaration with only a `default`.
 export type PropertyDecl = {
@@ -1047,6 +1284,8 @@ export type ScriptModule = {
     on_trigger_enter: ((self: ScriptSelf, other: Entity) -> ())?,
     --- Called when an overlap reported by `on_trigger_enter` ends.
     on_trigger_exit: ((self: ScriptSelf, other: Entity) -> ())?,
+    --- Called when the player uses this entity's `Interactable` (after its built-in actions ran), with the entity that used it. Runs in the next Update.
+    on_interact: ((self: ScriptSelf, interactor: Entity) -> ())?,
     --- Called when this rigid body or character starts touching `other`; `impulse` is the contact impulse in newton-seconds. Needs the engine's `dynamics` feature (on in the prebuilt editor and player).
     on_collision_enter: ((self: ScriptSelf, other: Entity, impulse: number) -> ())?,
     --- Called when a contact reported by `on_collision_enter` ends. Needs the `dynamics` feature.
@@ -1091,14 +1330,30 @@ export type RuleComponents = {
     AudioListener: AudioListenerPatch?,
     --- A `AudioSource` component on the part (its default values patched with these fields).
     AudioSource: AudioSourcePatch?,
+    --- A `Bobber` component on the part (its default values patched with these fields).
+    Bobber: BobberPatch?,
     --- A `Camera` component on the part (its default values patched with these fields).
     Camera: CameraPatch?,
+    --- A `Chaser` component on the part (its default values patched with these fields).
+    Chaser: ChaserPatch?,
+    --- A `Collidable` component on the part (its default values patched with these fields).
+    Collidable: CollidablePatch?,
     --- A `Collider` component on the part (its default values patched with these fields).
     Collider: ColliderPatch?,
     --- A `DirectionalLight` component on the part (its default values patched with these fields).
     DirectionalLight: DirectionalLightPatch?,
     --- A `Extrude` component on the part (its default values patched with these fields).
     Extrude: ExtrudePatch?,
+    --- A `FollowCamera` component on the part (its default values patched with these fields).
+    FollowCamera: FollowCameraPatch?,
+    --- A `FollowGround` component on the part (its default values patched with these fields).
+    FollowGround: FollowGroundPatch?,
+    --- A `Health` component on the part (its default values patched with these fields).
+    Health: HealthPatch?,
+    --- A `Interactable` component on the part (its default values patched with these fields).
+    Interactable: InteractablePatch?,
+    --- A `Interactor` component on the part (its default values patched with these fields).
+    Interactor: InteractorPatch?,
     --- A `Interpolated` component on the part (its default values patched with these fields).
     Interpolated: InterpolatedPatch?,
     --- A `Joint` component on the part (its default values patched with these fields).
@@ -1111,10 +1366,16 @@ export type RuleComponents = {
     MaterialRef: MaterialRefPatch?,
     --- A `MeshAsset` component on the part (its default values patched with these fields).
     MeshAsset: MeshAssetPatch?,
+    --- A `Mover` component on the part (its default values patched with these fields).
+    Mover: MoverPatch?,
+    --- A `NavAgent` component on the part (its default values patched with these fields).
+    NavAgent: NavAgentPatch?,
     --- A `Overrides` component on the part (its default values patched with these fields).
     Overrides: OverridesPatch?,
     --- A `ParticleEmitter` component on the part (its default values patched with these fields).
     ParticleEmitter: ParticleEmitterPatch?,
+    --- A `PlayerController` component on the part (its default values patched with these fields).
+    PlayerController: PlayerControllerPatch?,
     --- A `PointLight` component on the part (its default values patched with these fields).
     PointLight: PointLightPatch?,
     --- A `PrefabInstance` component on the part (its default values patched with these fields).
@@ -1135,6 +1396,10 @@ export type RuleComponents = {
     ShaderMaterial: ShaderMaterialPatch?,
     --- A `SkinBinding` component on the part (its default values patched with these fields).
     SkinBinding: SkinBindingPatch?,
+    --- A `Spawner` component on the part (its default values patched with these fields).
+    Spawner: SpawnerPatch?,
+    --- A `Spinner` component on the part (its default values patched with these fields).
+    Spinner: SpinnerPatch?,
     --- A `Spline` component on the part (its default values patched with these fields).
     Spline: SplinePatch?,
     --- A `SpotLight` component on the part (its default values patched with these fields).
@@ -1143,6 +1408,14 @@ export type RuleComponents = {
     StandardMaterial: StandardMaterialPatch?,
     --- A `Sweep` component on the part (its default values patched with these fields).
     Sweep: SweepPatch?,
+    --- A `Terrain` component on the part (its default values patched with these fields).
+    Terrain: TerrainPatch?,
+    --- A `TerrainChunk` component on the part (its default values patched with these fields).
+    TerrainChunk: TerrainChunkPatch?,
+    --- A `TerrainPath` component on the part (its default values patched with these fields).
+    TerrainPath: TerrainPathPatch?,
+    --- A `TerrainPathChunk` component on the part (its default values patched with these fields).
+    TerrainPathChunk: TerrainPathChunkPatch?,
     --- A `Transform` component on the part (its default values patched with these fields).
     Transform: TransformPatch?,
     --- A `Transient` component on the part (its default values patched with these fields).

@@ -1,0 +1,44 @@
+{
+  "name": "player",
+  "title": "Player",
+  "category": "Gameplay",
+  "description": "A character you control: WASD or the left stick to move, Space to jump, Shift to run, with a camera that follows it.",
+  "entities": [
+    {
+      "name": "Player",
+      "components": {
+        "Transform": { "translation": [0.0, 0.9, 0.0] },
+        "PlayerController": { "camera": "$uid:Player Camera" },
+        "KinematicCharacter": {},
+        "Collider": { "shape": { "Capsule": { "radius": 0.4, "half_height": 0.5 } } },
+        "Interpolated": {},
+        "Health": {}
+      }
+    },
+    {
+      "name": "Body",
+      "parent": "Player",
+      "components": {
+        "Primitive": { "shape": { "Capsule": { "radius": 0.4, "half_height": 0.5 } } },
+        "StandardMaterial": { "base_color": [0.14, 0.38, 0.86, 1.0], "roughness": 0.55 }
+      }
+    },
+    {
+      "name": "Visor",
+      "parent": "Player",
+      "components": {
+        "Transform": { "translation": [0.0, 0.45, -0.32] },
+        "Primitive": { "shape": { "Cuboid": { "size": [0.5, 0.16, 0.2] } }, "cast_shadows": false },
+        "StandardMaterial": { "base_color": [0.95, 0.92, 0.85, 1.0], "roughness": 0.3, "emissive": [0.3, 0.3, 0.28, 1.0] }
+      }
+    },
+    {
+      "name": "Player Camera",
+      "components": {
+        "Transform": { "translation": [0.0, 3.5, 7.5], "rotation": [-0.1741, 0.0, 0.0, 0.9847] },
+        "Camera": { "active": true },
+        "FollowCamera": { "target": "$uid:Player" }
+      }
+    }
+  ]
+}

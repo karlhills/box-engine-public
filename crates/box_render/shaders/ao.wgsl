@@ -11,7 +11,9 @@
 @group(1) @binding(1) var ao_normal: texture_2d<f32>;
 @group(1) @binding(2) var ao_raw: texture_2d<f32>;
 
-const SAMPLES: i32 = 12;
+// 12 samples left low-frequency mottling the 4x4 blur cannot remove in
+// broad occluded areas (a wall behind a tree crown); 24 is visibly clean.
+const SAMPLES: i32 = 24;
 // Turns of the sample spiral.
 const SPIRAL_TURNS: f32 = 7.0;
 // Largest sampling radius in half-resolution pixels (texture cache).

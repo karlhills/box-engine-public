@@ -64,6 +64,7 @@ jobs:
           - physics,audio
           - physics,audio,script
           - physics,audio,dynamics
+          - navigation
     steps:
       - uses: actions/checkout@v4
       - name: System libraries

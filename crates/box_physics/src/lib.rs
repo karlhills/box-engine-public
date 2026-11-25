@@ -6,7 +6,8 @@
 //!   friction and restitution). [`ColliderShape::Mesh`] collides with the
 //!   triangles of the entity's `MeshAsset` (imported level geometry; the
 //!   glTF importer's `colliders` setting adds it to every mesh node, except
-//!   nodes named `*-nocol`);
+//!   nodes named `*-nocol`) or, without one, of the mesh its generator made
+//!   (`GeneratedMesh`);
 //!   [`ColliderShape::ConvexHull`] is the solid hull of those vertices, for
 //!   props on dynamic bodies.
 //! - [`Physics`]: resource with [`raycast`](Physics::raycast),
@@ -54,14 +55,16 @@ mod query;
 pub use character::{
     CharacterPlugin, KinematicCharacter, SlideOptions, SlideResult, move_characters,
 };
-pub use collider::{Collider, ColliderShape};
+pub use collider::{Collidable, Collider, ColliderShape, non_collidable_entities};
 #[cfg(feature = "dynamics")]
 pub use dynamics::{
     AxisLocks, BodyKind, CollisionEvent, CollisionKind, ContactPoint, Dynamics, DynamicsStats,
     Joint, JointKind, PhysicsSettings, RigidBody, Velocity, step_dynamics,
 };
 pub use mesh::{MeshHit, MeshRayCache};
-pub use physics::{Physics, SyncStats, TriggerEvent, TriggerKind, sync_physics};
+pub use physics::{
+    ChangedRegion, Physics, SyncStats, TriggerEvent, TriggerKind, sync_physics, sync_physics_quiet,
+};
 pub use query::{Pose, QueryFilter, QueryShape, RayHit, ShapeHit};
 
 use box_core::app::{App, Plugin, Stage};
@@ -90,6 +93,7 @@ pub fn register_physics_types(registry: &mut Registry) {
 /// `KinematicCharacter`): what a build without rigid bodies registers.
 pub fn register_query_types(registry: &mut Registry) {
     for result in [
+        registry.register::<Collidable>(),
         registry.register::<Collider>(),
         registry.register::<KinematicCharacter>(),
     ] {

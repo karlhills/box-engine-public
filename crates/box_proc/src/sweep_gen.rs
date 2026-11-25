@@ -18,8 +18,9 @@ use box_core::reflect::{
 use glam::{Affine3A, Vec2, Vec3};
 
 use crate::generator::{GenContext, GenOutput, Generator};
+use crate::ground::GroundView;
 use crate::inputs::Inputs;
-use crate::spline::{Orientation, Path, Sampling, Spline};
+use crate::spline::{ControlPoint, Orientation, Path, Sampling, Spline, SplineMode};
 use crate::sweep::{JointEnd, Profile, SweepParams, sweep};
 
 /// The cross-section a [`Sweep`] carries along its spline (x across the
@@ -116,6 +117,14 @@ pub struct Sweep {
     pub orientation: SweepOrientation,
     /// Close the ends of an open spline (closed profiles only).
     pub caps: bool,
+    /// Lay the path on the ground (a `Terrain`): each point's height is
+    /// the ground under it plus `ground_offset`, sampled at least once per
+    /// terrain cell, and the sweep follows when the terrain changes. Parts
+    /// of the path off every terrain keep the spline's height.
+    pub follow_ground: bool,
+    /// Height of the path above the ground with `follow_ground`.
+    #[reflect(@Unit("m"))]
+    pub ground_offset: f32,
 }
 
 impl Default for Sweep {
@@ -126,6 +135,8 @@ impl Default for Sweep {
             tolerance: 0.01,
             orientation: SweepOrientation::default(),
             caps: true,
+            follow_ground: false,
+            ground_offset: 0.0,
         }
     }
 }
@@ -139,23 +150,122 @@ impl Sweep {
     /// Sweeps along `spline` given in this entity's local space (what
     /// [`Generator::generate`] does once it has the spline).
     pub fn sweep_local(&self, spline: &Spline) -> GenOutput {
-        let tolerance = if self.tolerance.is_finite() && self.tolerance > 0.0 {
+        self.sweep_path(self.path(spline))
+    }
+
+    fn tolerance(&self) -> f32 {
+        if self.tolerance.is_finite() && self.tolerance > 0.0 {
             self.tolerance.max(1e-4)
         } else {
             0.01
-        };
-        let orientation = match self.orientation {
+        }
+    }
+
+    fn orientation(&self) -> Orientation {
+        match self.orientation {
             SweepOrientation::Up => Orientation::Up(Vec3::Y),
             SweepOrientation::RotationMinimizing => Orientation::RotationMinimizing(Vec3::Y),
-        };
-        let path = Path::from_spline(
+        }
+    }
+
+    fn path(&self, spline: &Spline) -> Path {
+        Path::from_spline(
             spline,
             Sampling::Adaptive {
-                tolerance,
+                tolerance: self.tolerance(),
                 max_step: f32::MAX,
             },
-            orientation,
-        );
+            self.orientation(),
+        )
+    }
+
+    /// The path along `spline` (this entity's local space, `to_world` its
+    /// world transform) laid on `ground` plus `ground_offset`: sampled at
+    /// least every ground cell, each sample's height from the ground under
+    /// it.
+    fn ground_path(&self, spline: &Spline, to_world: &Affine3A, ground: &GroundView) -> Path {
+        let step = ground.cell_size().max(0.1);
+        let to_local = to_world.inverse();
+        let offset = if self.ground_offset.is_finite() {
+            self.ground_offset
+        } else {
+            0.0
+        };
+        let conform = |p: Vec3| {
+            let mut w = to_world.transform_point3(p);
+            if let Some(h) = ground.height(w.x, w.z) {
+                w.y = h + offset;
+            }
+            to_local.transform_point3(w)
+        };
+        if spline.mode == SplineMode::Polyline {
+            // Corners stay at the control points; long sides get points.
+            let pts = &spline.points;
+            let n = pts.len();
+            let sides = if spline.closed && n > 2 {
+                n
+            } else {
+                n.saturating_sub(1)
+            };
+            let mut out: Vec<ControlPoint> = Vec::new();
+            for i in 0..sides {
+                let (a, b) = (pts[i], pts[(i + 1) % n]);
+                let pieces = (a.position.distance(b.position) / step)
+                    .ceil()
+                    .clamp(1.0, 4096.0) as usize;
+                for k in 0..pieces {
+                    let t = k as f32 / pieces as f32;
+                    let mut c = ControlPoint::new(conform(a.position.lerp(b.position, t)));
+                    c.roll = a.roll + (b.roll - a.roll) * t;
+                    c.scale = a.scale.lerp(b.scale, t);
+                    out.push(c);
+                }
+            }
+            if !(spline.closed && n > 2)
+                && let Some(last) = pts.last()
+            {
+                let mut c = *last;
+                c.position = conform(c.position);
+                c.in_tangent = None;
+                c.out_tangent = None;
+                out.push(c);
+            }
+            return Path::from_control_points(&out, spline.closed, self.orientation());
+        }
+        let curve = spline.curve();
+        let mut samples = curve.sample(Sampling::Adaptive {
+            tolerance: self.tolerance(),
+            max_step: step,
+        });
+        for s in &mut samples {
+            s.position = conform(s.position);
+        }
+        // Tangents and distances of the laid path.
+        let n = samples.len();
+        let closed = curve.is_closed();
+        let at = |i: isize| -> Vec3 {
+            if closed {
+                samples[i.rem_euclid(n as isize) as usize].position
+            } else {
+                samples[i.clamp(0, n as isize - 1) as usize].position
+            }
+        };
+        let tangents: Vec<Vec3> = (0..n as isize)
+            .map(|i| (at(i + 1) - at(i - 1)).normalize_or(samples[i as usize].tangent))
+            .collect();
+        let mut distance = 0.0;
+        for i in 0..n {
+            if i > 0 {
+                distance += samples[i].position.distance(samples[i - 1].position);
+            }
+            samples[i].tangent = tangents[i];
+            samples[i].distance = distance;
+        }
+        let frames = curve.frames(&samples, self.orientation());
+        Path::from_frames(frames, closed, self.orientation())
+    }
+
+    fn sweep_path(&self, path: Path) -> GenOutput {
         let end = if self.caps {
             JointEnd::Cap
         } else {
@@ -200,6 +310,12 @@ impl Generator for Sweep {
             return;
         };
         inputs.component::<Spline>(uid);
+        if self.follow_ground {
+            inputs.ground();
+            if let Some(own) = owner {
+                inputs.world_transform(own);
+            }
+        }
         if Some(uid) != owner {
             inputs.world_transform(uid);
             if let Some(own) = owner {
@@ -233,7 +349,18 @@ impl Generator for Sweep {
                 _ => Cow::Borrowed(spline),
             }
         };
-        self.sweep_local(&spline)
+        if !self.follow_ground {
+            return self.sweep_local(&spline);
+        }
+        let to_world = owner
+            .and_then(|o| ctx.world_transform(o))
+            .unwrap_or(Affine3A::IDENTITY);
+        match ctx.ground().filter(|g| !g.is_empty()) {
+            Some(g) => self.sweep_path(self.ground_path(&spline, &to_world, g.view())),
+            None => self
+                .sweep_local(&spline)
+                .warn("follow_ground is on but there is no Terrain to follow"),
+        }
     }
 }
 

@@ -32,7 +32,7 @@ use bevy_reflect::{PartialReflect, ReflectMut, ReflectRef, TypeInfo};
 use box_core::asset_ref::{AssetId, AssetRef};
 use box_core::color::Color;
 use box_core::identity::Uid;
-use box_core::reflect::{ReflectDefault, Registry, did_you_mean};
+use box_core::reflect::{Registry, did_you_mean};
 use box_core::world::Entity;
 use glam::{Quat, Vec2, Vec3, Vec3A};
 use mlua::{
@@ -74,11 +74,26 @@ pub fn from_vector(v: Vector) -> Vec3 {
     Vec3::new(v.x(), v.y(), v.z())
 }
 
-/// A `vector`, or a table with `x`, `y`, `z` (missing components from
-/// `like`).
+/// A `vector`, a table with `x`, `y`, `z`, or a list of up to three
+/// numbers `{x, y, z}` (missing components from `like`).
 pub fn to_vec3(v: &Value, like: Vec3, what: &str) -> LuaResult<Vec3> {
     match v {
         Value::Vector(v) => Ok(from_vector(*v)),
+        Value::Table(t) if t.raw_len() > 0 => {
+            let n = t.raw_len();
+            if n > 3 {
+                return Err(mlua::Error::runtime(format!(
+                    "{what}: expected a vector or at most 3 numbers, got a list of {n}"
+                )));
+            }
+            let mut out = like;
+            for i in 0..n {
+                out[i] = t.raw_get::<f32>(i + 1).map_err(|_| {
+                    mlua::Error::runtime(format!("{what}[{}]: expected a number", i + 1))
+                })?;
+            }
+            Ok(out)
+        }
         Value::Table(t) => Ok(Vec3::new(
             t.get::<Option<f32>>("x")?.unwrap_or(like.x),
             t.get::<Option<f32>>("y")?.unwrap_or(like.y),
@@ -372,13 +387,11 @@ pub fn reflect_to_lua(lua: &Lua, registry: &Registry, v: &dyn PartialReflect) ->
 
 // ----- Luau -> reflection (patch) -----
 
-/// A default value of the registered type `type_id` (`#[reflect(Default)]`).
+/// A default value of the registered type `type_id`
+/// ([`Registry::default_value`]: its `#[reflect(Default)]`, else an empty
+/// container or `None`).
 pub fn default_of(registry: &Registry, type_id: TypeId) -> Option<Box<dyn PartialReflect>> {
-    registry
-        .type_registry()
-        .get(type_id)?
-        .data::<ReflectDefault>()
-        .map(|d| d.default().into_partial_reflect())
+    registry.default_value(type_id)
 }
 
 fn err(path: &str, message: impl std::fmt::Display) -> mlua::Error {

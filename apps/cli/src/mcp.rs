@@ -20,9 +20,10 @@
 use std::io::{self, BufRead, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use box_engine::Project;
+use box_engine::box_core::glam::Vec3;
 use box_engine::control::{ClientError, ControlClient, base64_encode};
 use serde_json::{Map, Value as Json, json};
 
@@ -53,10 +54,11 @@ const UNSUPPORTED_PROTOCOL_VERSION: i64 = -32022;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 
 const INSTRUCTIONS: &str = "box-engine game engine tools. \
-Project tools (check, registry, scene_list, scene_show, scene_apply, render, import) read and edit project files and need no running editor. \
-Live tools (status, world_query, apply_commands, screenshot, play, stop, pause, step_frames, read_log, frame_stats) drive a running editor or player that enabled its control socket: an editor started with `box-editor <project> --control` (or with File ▸ Allow Agent Control turned on), a player started with `box-player <project> --control` or `box run <project> --control`; without one they fail with error code `not_running`. \
+Project tools (check, registry, scene_list, scene_show, scene_apply, render, walk_route, import, playtest, read_asset, write_asset) read and edit project files and need no running editor. \
+Live tools (status, editor_context, undo_turn, world_query, apply_commands, screenshot, play, stop, pause, step_frames, send_input, teleport, record_start, record_stop, read_log, frame_stats, audio_levels, audio_solo, audio_mute; playtest with live=true) drive a running editor or player that enabled its control socket: an editor started with `box-editor <project> --control` (or with File ▸ Allow Agent Control turned on), a player started with `box-player <project> --control` or `box run <project> --control`; without one they fail with error code `not_running`. \
 Paths are relative to the project root (the directory holding box.project.json); `scene` defaults to the project's start scene. \
 Call `registry` first to learn component names, field paths, ranges and units; then edit with `scene_apply` (files) or `apply_commands` (live, undoable in the editor). \
+For repeatable playtests: record_start (restarts the game from its scene), drive it with send_input (or let a person play), record_stop with save=<name> writes playtests/<name>.playtest.json; then call playtest after every change and compare `passed`, the checks and the fingerprint. \
 Errors are tool results with isError=true and a JSON body {\"error\": {\"code\", \"message\", ...}} whose code is stable.";
 
 /// `box mcp --help` text after the options: how to register the server
@@ -71,7 +73,7 @@ pub fn registration_help() -> String {
   claude mcp add box -- {exe} mcp --project /absolute/path/to/my-game
 Other clients: command `{exe}`, arguments `mcp --project <project dir>`.
 
-Project tools (check, registry, scene_list, scene_show, scene_apply, render, import) work on files.
+Project tools (check, registry, scene_list, scene_show, scene_apply, render, import, playtest) work on files.
 Live tools (status, world_query, apply_commands, screenshot, play, stop, ...) need a running
 editor or player with live control on:
   box-editor <project> --control   (or File ▸ Allow Agent Control in the editor)
@@ -394,6 +396,30 @@ impl McpServer {
                     .map_err(|e| e.to_json())
             }
             "render" => render(&project, &mut args),
+            "walk_route" => {
+                let scene = scene_path(&project, args.str("scene")?);
+                let mut fields = args.map.clone();
+                fields.remove("scene");
+                fields.remove("project");
+                let spec: box_engine::route::RouteSpec =
+                    serde_json::from_value(Json::Object(fields))
+                        .map_err(|e| args.invalid(e.to_string()))?;
+                crate::walk_cmd::walk_spec(&scene, &spec)
+                    .map(ToolOutput::from_cli)
+                    .map_err(|e| e.to_json())
+            }
+            "nav_path" => {
+                let scene = scene_path(&project, args.str("scene")?);
+                let from = args
+                    .point("from")?
+                    .ok_or_else(|| args.invalid("`from` is required: [x, y, z]".to_string()))?;
+                let to = args
+                    .point("to")?
+                    .ok_or_else(|| args.invalid("`to` is required: [x, y, z]".to_string()))?;
+                crate::nav_cmd::nav_between(&scene, from, to)
+                    .map(ToolOutput::from_cli)
+                    .map_err(|e| e.to_json())
+            }
             "import" => {
                 let file = args.str("file")?.unwrap_or_default();
                 let file = std::path::absolute(&file)
@@ -404,8 +430,20 @@ impl McpServer {
                     to: args.str("to")?,
                 }))
             }
-            "status" | "play" | "stop" | "pause" | "frame_stats" => {
-                live(&project, tool.name, json!({}), Duration::from_secs(30))
+            "status" | "play" | "stop" | "pause" | "frame_stats" | "editor_context"
+            | "undo_turn" => live(&project, tool.name, json!({}), Duration::from_secs(30)),
+            "read_asset" => {
+                let path = args.str("path")?.unwrap_or_default();
+                box_engine::agent_files::read(&project, &path)
+                    .map(|json| ToolOutput { json, image: None })
+                    .map_err(|e| e.to_json())
+            }
+            "write_asset" => {
+                let path = args.str("path")?.unwrap_or_default();
+                let text = args.str("text")?.unwrap_or_default();
+                box_engine::agent_files::write(&project, &path, &text)
+                    .map(|json| ToolOutput { json, image: None })
+                    .map_err(|e| e.to_json())
             }
             "world_query" => {
                 let mut p = Map::new();
@@ -432,10 +470,11 @@ impl McpServer {
             "apply_commands" => {
                 let commands = args.required("commands")?;
                 let dry_run = args.bool("dry_run")?.unwrap_or(false);
+                let save = args.bool("save")?.unwrap_or(false);
                 live(
                     &project,
                     "apply_commands",
-                    json!({ "commands": commands, "dry_run": dry_run }),
+                    json!({ "commands": commands, "dry_run": dry_run, "save": save }),
                     Duration::from_secs(30),
                 )
             }
@@ -446,6 +485,15 @@ impl McpServer {
                 }
                 if let Some(h) = args.int("height", 1, 8192)? {
                     p.insert("height".into(), json!(h));
+                }
+                if let Some(eye) = args.point("eye")? {
+                    p.insert("eye".into(), json!(eye.to_array()));
+                }
+                if let Some(look_at) = args.point("look_at")? {
+                    p.insert("look_at".into(), json!(look_at.to_array()));
+                }
+                if let Some(fov) = args.float("fov", 1.0, 170.0)? {
+                    p.insert("fov".into(), json!(fov));
                 }
                 let mut out = live(
                     &project,
@@ -463,6 +511,72 @@ impl McpServer {
                 out.image = Some(data);
                 Ok(out)
             }
+            "send_input" => {
+                let mut p = Map::new();
+                p.insert("action".into(), args.required("action")?);
+                if let Some(f) = args.int("frames", 1, 600)? {
+                    p.insert("frames".into(), json!(f));
+                }
+                if let Some(v) = args.map.get("value").filter(|v| !v.is_null()) {
+                    p.insert("value".into(), v.clone());
+                }
+                live(
+                    &project,
+                    "send_input",
+                    Json::Object(p),
+                    Duration::from_secs(10),
+                )
+            }
+            "teleport" => {
+                let mut p = Map::new();
+                p.insert("entity".into(), args.required("entity")?);
+                let position = args
+                    .point("position")?
+                    .ok_or_else(|| args.invalid("`position` is required".into()))?;
+                p.insert("position".into(), json!(position.to_array()));
+                if let Some(yaw) = args.float("yaw", -360.0, 360.0)? {
+                    p.insert("yaw".into(), json!(yaw));
+                }
+                live(
+                    &project,
+                    "teleport",
+                    Json::Object(p),
+                    Duration::from_secs(10),
+                )
+            }
+            "record_start" => {
+                let mut p = Map::new();
+                if let Some(v) = args.bool("restart")? {
+                    p.insert("restart".into(), json!(v));
+                }
+                if let Some(v) = args.str("player")? {
+                    p.insert("player".into(), json!(v));
+                }
+                if let Some(v) = args.int("seed", 0, u64::from(u32::MAX))? {
+                    p.insert("seed".into(), json!(v));
+                }
+                live(
+                    &project,
+                    "record_start",
+                    Json::Object(p),
+                    Duration::from_secs(120),
+                )
+            }
+            "record_stop" => {
+                let mut p = Map::new();
+                for key in ["save", "description"] {
+                    if let Some(v) = args.str(key)? {
+                        p.insert(key.into(), json!(v));
+                    }
+                }
+                live(
+                    &project,
+                    "record_stop",
+                    Json::Object(p),
+                    Duration::from_secs(30),
+                )
+            }
+            "playtest" => playtest(&project, &mut args),
             "step_frames" => {
                 let frames = args.int("frames", 1, 10_000)?.unwrap_or(1);
                 live(
@@ -485,6 +599,35 @@ impl McpServer {
                     "read_log",
                     Json::Object(p),
                     Duration::from_secs(30),
+                )
+            }
+            "audio_levels" => {
+                let mut p = Map::new();
+                if let Some(t) = args.str("target")? {
+                    p.insert("target".into(), json!(t));
+                }
+                live(
+                    &project,
+                    "audio_levels",
+                    Json::Object(p),
+                    Duration::from_secs(10),
+                )
+            }
+            "audio_solo" | "audio_mute" => {
+                let mut p = Map::new();
+                if let Some(t) = args.str("target")? {
+                    p.insert("target".into(), json!(t));
+                }
+                for key in ["on", "clear"] {
+                    if let Some(v) = args.bool(key)? {
+                        p.insert(key.into(), json!(v));
+                    }
+                }
+                live(
+                    &project,
+                    tool.name,
+                    Json::Object(p),
+                    Duration::from_secs(10),
                 )
             }
             other => Err(error_json(
@@ -594,16 +737,142 @@ fn registry(name: Option<String>, project: Option<PathBuf>) -> Result<ToolOutput
     let found = ["components", "resources"]
         .iter()
         .any(|l| out.json[*l].as_array().is_some_and(|a| !a.is_empty()));
-    if !found {
-        return Err(error_json(
-            "unknown_type",
-            format!("no registered component or resource named `{name}`"),
-        ));
+    if found {
+        if let Some(obj) = out.json.as_object_mut() {
+            obj.remove("presets");
+        }
+        return Ok(out);
     }
-    Ok(out)
+    // A preset (`pickup`, `Pickup`): its entities and what to pass add_preset.
+    let preset = out.json["presets"].as_array().and_then(|ps| {
+        ps.iter()
+            .find(|p| {
+                p["name"]
+                    .as_str()
+                    .is_some_and(|n| n.eq_ignore_ascii_case(&name))
+                    || p["title"]
+                        .as_str()
+                        .is_some_and(|t| t.eq_ignore_ascii_case(&name))
+            })
+            .cloned()
+    });
+    if let Some(p) = preset {
+        let use_it = format!(
+            "{{\"op\": \"add_preset\", \"preset\": \"{}\", \"at\": [x, y, z]}}",
+            p["name"].as_str().unwrap_or_default()
+        );
+        return Ok(ToolOutput {
+            json: json!({ "preset": p, "place_with": use_it }),
+            image: None,
+        });
+    }
+    // A field type (`Condition`, `InteractAction`): its JSON form.
+    let registry = box_engine::scene_glue::shared_engine_registry();
+    let path = registry
+        .type_registry()
+        .get_with_short_type_path(&name)
+        .map(|r| r.type_info().type_path().to_string());
+    if let Some(path) = path {
+        return Ok(ToolOutput {
+            json: json!({
+                "type": name,
+                "json_form": crate::friendly_type(&path, &registry),
+                "note": "a field type, not a component: it appears inside components (see the fields that use it)",
+            }),
+            image: None,
+        });
+    }
+    Err(error_json(
+        "unknown_type",
+        format!(
+            "no registered component, resource, preset or field type named `{name}` (registry with no name lists them all)"
+        ),
+    ))
 }
 
 static RENDER_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// `playtest`: replay headless through `box playtest`, or with `live` in the
+/// running editor or player (restarted from its scene), polling
+/// `playtest_status` until every step ran.
+fn playtest(project: &Path, args: &mut Args) -> Result<ToolOutput, Json> {
+    let file = args.str("file")?;
+    let inline = args.map.get("playtest").filter(|v| !v.is_null()).cloned();
+    let live_run = args.bool("live")?.unwrap_or(false);
+    let capture_every = args.int("capture_every", 1, 100_000)?.map(|n| n as u32);
+    if file.is_some() && inline.is_some() {
+        return Err(args.invalid("give `file` or `playtest`, not both".into()));
+    }
+    if live_run {
+        if capture_every.is_some() {
+            return Err(args.invalid("`capture_every` is for headless replays (live=false)".into()));
+        }
+        let mut p = Map::new();
+        match (file, inline) {
+            (Some(f), None) => p.insert("file".into(), json!(f)),
+            (None, Some(v)) => p.insert("playtest".into(), v),
+            _ => return Err(args.invalid("give `file` (or `playtest`) for a live replay".into())),
+        };
+        let started = live(
+            project,
+            "playtest",
+            Json::Object(p),
+            Duration::from_secs(120),
+        )?;
+        let frames = started.json["total_frames"].as_u64().unwrap_or(0);
+        // Real time, with room for slow frames and a paused host.
+        let deadline = Instant::now() + Duration::from_secs(frames / 15 + 60);
+        loop {
+            std::thread::sleep(Duration::from_millis(200));
+            let status = live(
+                project,
+                "playtest_status",
+                json!({}),
+                Duration::from_secs(30),
+            )?;
+            if status.json["finished"] == true {
+                return Ok(status);
+            }
+            if Instant::now() > deadline {
+                return Err(error_json(
+                    "timeout",
+                    format!(
+                        "the live playtest did not finish in time ({} of {frames} frames); is the game paused? playtest_status reads its progress",
+                        status.json["frames"]
+                    ),
+                ));
+            }
+        }
+    }
+    let (file, temporary) = match (file, inline) {
+        (Some(f), None) => (Some(f), None),
+        (None, Some(v)) => {
+            let parsed = box_engine::playtest::Playtest::from_json(v)
+                .map_err(|e| error_json(e.code, e.message))?;
+            let n = RENDER_COUNTER.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!(
+                "box-mcp-inline-{}-{n}.playtest.json",
+                std::process::id()
+            ));
+            box_engine::playtest::write(&path, &parsed)
+                .map_err(|e| error_json(e.code, e.message))?;
+            (Some(path.display().to_string()), Some(path))
+        }
+        (None, None) => (None, None),
+        _ => unreachable!("checked above"),
+    };
+    let result = cli(Command::Playtest(crate::PlaytestArgs {
+        project: Some(project.to_path_buf()),
+        file,
+        capture_every,
+        capture_dir: None,
+        size: None,
+    }));
+    if let Some(path) = temporary {
+        let _ = std::fs::remove_file(path);
+    }
+    result
+}
 
 fn render(project: &Path, args: &mut Args) -> Result<ToolOutput, Json> {
     let width = args.int("width", 1, 4096)?.unwrap_or(1280) as u32;
@@ -617,11 +886,32 @@ fn render(project: &Path, args: &mut Args) -> Result<ToolOutput, Json> {
             (std::env::temp_dir().join(name), true)
         }
     };
+    let eye = args.point("eye")?;
+    let look_at = args.point("look_at")?;
+    if eye.is_some() != look_at.is_some() {
+        return Err(args.invalid("`eye` and `look_at` go together".into()));
+    }
+    let camera = args.str("camera")?;
+    let overview = args.bool("overview")?.unwrap_or(false);
+    if [camera.is_some(), eye.is_some(), overview]
+        .iter()
+        .filter(|b| **b)
+        .count()
+        > 1
+    {
+        return Err(args.invalid("give one of `camera`, `eye`/`look_at` and `overview`".into()));
+    }
     let result = cli(Command::Render(RenderArgs {
         scene: scene_path(project, args.str("scene")?),
         out: out.clone(),
         size: (width, height),
-        camera: args.str("camera")?,
+        camera,
+        eye,
+        look_at,
+        fov: args.float("fov", 1.0, 170.0)?.map(|f| f as f32),
+        overview,
+        views: None,
+        nav: args.bool("nav")?.unwrap_or(false),
         frames,
     }));
     let png = std::fs::read(&out);
@@ -706,6 +996,34 @@ impl Args {
         }
     }
 
+    fn float(&self, key: &str, min: f64, max: f64) -> Result<Option<f64>, Json> {
+        match self.map.get(key) {
+            None | Some(Json::Null) => Ok(None),
+            Some(v) => match v.as_f64().filter(|n| (min..=max).contains(n)) {
+                Some(n) => Ok(Some(n)),
+                None => Err(self.invalid(format!("`{key}` must be a number in {min}..={max}"))),
+            },
+        }
+    }
+
+    /// A point `[x, y, z]`.
+    fn point(&self, key: &str) -> Result<Option<Vec3>, Json> {
+        match self.map.get(key) {
+            None | Some(Json::Null) => Ok(None),
+            Some(Json::Array(items)) if items.len() == 3 => {
+                let mut v = [0.0f32; 3];
+                for (out, item) in v.iter_mut().zip(items) {
+                    *out =
+                        item.as_f64().filter(|n| n.is_finite()).ok_or_else(|| {
+                            self.invalid(format!("`{key}` must be [x, y, z] numbers"))
+                        })? as f32;
+                }
+                Ok(Some(Vec3::from_array(v)))
+            }
+            Some(_) => Err(self.invalid(format!("`{key}` must be [x, y, z]"))),
+        }
+    }
+
     fn required(&self, key: &str) -> Result<Json, Json> {
         match self.map.get(key) {
             None | Some(Json::Null) => Err(self.invalid(format!("`{key}` is required"))),
@@ -758,7 +1076,7 @@ const TOOLS: &[Tool] = &[
     Tool {
         name: "registry",
         title: "List component and resource types",
-        description: "List the registered component and resource types: name, docs, and fields with type, range, unit, default and docs. Use the names and field paths in scene_apply/apply_commands (`path` is Component.field, e.g. \"StandardMaterial.roughness\"). In a native project the game's own types are included (marked \"game\": true, from <project>/.box/registry.json, which the game's editor and player write) and scene_apply validates and edits them like engine types. Pass `name` to get one type, e.g. {\"name\": \"Transform\"}.",
+        description: "List the registered component and resource types: name, docs, and fields with type, range, unit, default and docs. Use the names and field paths in scene_apply/apply_commands (`path` is Component.field, e.g. \"StandardMaterial.roughness\"). In a native project the game's own types are included (marked \"game\": true, from <project>/.box/registry.json, which the game's editor and player write) and scene_apply validates and edits them like engine types. Pass `name` to get one type, e.g. {\"name\": \"Transform\"}; a preset name (\"pickup\") returns the preset and how to place it, a field type (\"Condition\") its JSON form.",
         properties: &[
             (
                 "name",
@@ -803,7 +1121,7 @@ const TOOLS: &[Tool] = &[
     Tool {
         name: "render",
         title: "Render a scene file",
-        description: "Render a scene file headlessly on the GPU and return the PNG as an image, plus metadata (camera used, objects, triangles). Uses `camera` (uid or name), else the scene's first active camera, else an automatic camera framing the scene. Needs a GPU (error code no_gpu otherwise). Example: {\"width\": 960, \"height\": 540}.",
+        description: "Render a scene file headlessly on the GPU and return the PNG as an image, plus metadata (camera used, objects, triangles). The view: `eye` + `look_at` (a temporary camera; the scene is not changed), `overview` (the whole scene from above at an angle), `camera` (uid or name), else the scene's first active camera, else an automatic camera framing the scene. Needs a GPU (error code no_gpu otherwise). Example: {\"eye\": [12, 6, 14], \"look_at\": [0, 1, 0], \"width\": 960, \"height\": 540}.",
         properties: &[
             SCENE,
             (
@@ -819,12 +1137,116 @@ const TOOLS: &[Tool] = &[
                 r#"{"type": "string", "description": "Camera entity (uid or unique name)."}"#,
             ),
             (
+                "eye",
+                r#"{"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3, "description": "Render from this point [x, y, z] (metres) with a temporary camera; needs look_at."}"#,
+            ),
+            (
+                "look_at",
+                r#"{"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3, "description": "The point [x, y, z] the eye camera looks at."}"#,
+            ),
+            (
+                "fov",
+                r#"{"type": "number", "minimum": 1, "maximum": 170, "description": "Vertical field of view in degrees for eye and overview."}"#,
+            ),
+            (
+                "overview",
+                r#"{"type": "boolean", "description": "Frame the whole scene from above at an angle."}"#,
+            ),
+            (
+                "nav",
+                r#"{"type": "boolean", "description": "Draw the navmesh (where enemies can walk) over the image."}"#,
+            ),
+            (
                 "frames",
                 r#"{"type": "integer", "minimum": 1, "maximum": 600, "description": "Frames to simulate before the capture. Default 4."}"#,
             ),
             (
                 "out",
                 r#"{"type": "string", "description": "Also save the PNG here (relative to the project root). Default: not saved."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &[],
+        read_only: true,
+    },
+    Tool {
+        name: "walk_route",
+        title: "Walk a route",
+        description: "Check that a route is walkable: a probe character (the scene's first KinematicCharacter's size, else the default) walks the waypoints in order against the scene's colliders, without playing or changing anything. Per leg: reached or stuck_at (where it stopped making progress), time, max_step_up (biggest rise of the ground between two steps: kerbs and stairs show their height), falls and max_drop (drops higher than the step height), steepest_slope (degrees). A failed leg is reported and the walk goes on from its waypoint. Waypoints are near the ground (within 2 m above it). Example: {\"waypoints\": [[0, 0, 10], [0, 0, -2], [12, 0, -3]]}.",
+        properties: &[
+            SCENE,
+            (
+                "waypoints",
+                r#"{"type": "array", "minItems": 2, "items": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3}, "description": "Points [x, y, z] to walk to, in order; the walk starts on the ground at the first."}"#,
+            ),
+            (
+                "speed",
+                r#"{"type": "number", "description": "Walking speed, m/s. Default 4."}"#,
+            ),
+            (
+                "reach",
+                r#"{"type": "number", "description": "How close (horizontally) counts as reaching a waypoint, metres. Default 0.5."}"#,
+            ),
+            (
+                "radius",
+                r#"{"type": "number", "description": "Probe capsule radius (default: the scene's character)."}"#,
+            ),
+            (
+                "height",
+                r#"{"type": "number", "description": "Probe capsule height."}"#,
+            ),
+            (
+                "step_height",
+                r#"{"type": "number", "description": "Highest step climbed without jumping."}"#,
+            ),
+            (
+                "max_slope",
+                r#"{"type": "number", "description": "Steepest walkable slope, degrees."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &["waypoints"],
+        read_only: true,
+    },
+    Tool {
+        name: "nav_path",
+        title: "Navmesh path",
+        description: "Where enemies and other agents can walk: the navmesh path between two points of a scene (feet positions), baked from its static colliders as in the game, without playing or changing anything. status is complete (points: the corners, length in metres), unreachable (points end at the reachable point nearest the goal; a wall, a gap, a hidden bridge) or no_start (no walkable ground near `from`). Use it to check that an enemy can reach the player. Example: {\"from\": [0, 0, 0], \"to\": [12, 0, -8]}.",
+        properties: &[
+            SCENE,
+            (
+                "from",
+                r#"{"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3, "description": "Start [x, y, z], at the feet."}"#,
+            ),
+            (
+                "to",
+                r#"{"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3, "description": "Goal [x, y, z]."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &["from", "to"],
+        read_only: true,
+    },
+    Tool {
+        name: "playtest",
+        title: "Replay playtests",
+        description: "Replay a playtest (playtests/<name>.playtest.json, see record_start/record_stop) and report every check: passed, frame, message, expected and actual values, plus `fingerprint` (names and positions at the end: equal fingerprints mean the same end state). Headless by default: the scene loads fresh, inputs are the game's named actions per 1/60 s frame with a fixed step, so a replay is deterministic and comparable after every change; without `file` every playtest of the project runs. live=true replays in the running editor or player instead (restarted from its scene; real time). passed=false is still a successful call. A file: {\"scene\"?, \"seed\"?, \"teleport\"?: {\"entity\", \"position\", \"yaw\"?}, \"steps\": [{\"input\": {\"move\": [0, 1], \"jump\": true}, \"frames\": 30}, {\"wait\": 10}, {\"check\": \"entity_near\", \"entity\": \"Player\", \"point\": [0, 1, -4], \"radius\": 1}, {\"check\": \"entity_gone\", \"entity\": \"Gem 1\"}, {\"check\": \"component_equals\", \"entity\": \"Door\", \"path\": \"Transform.translation.y\", \"value\": 3, \"tolerance\": 0.1}, {\"check\": \"event_seen\", \"event\": \"PlaySound\", \"fields\"?: {...}}, {\"check\": \"log_contains\", \"text\": \"score 20\"}]}.",
+        properties: &[
+            (
+                "file",
+                r#"{"type": "string", "description": "A playtest name (playtests/<name>.playtest.json) or a path relative to the project root. Default: every playtest (headless)."}"#,
+            ),
+            (
+                "playtest",
+                r#"{"type": "object", "description": "A playtest given inline instead of a file."}"#,
+            ),
+            (
+                "live",
+                r#"{"type": "boolean", "description": "Replay in the running editor or player instead of headless. Default false."}"#,
+            ),
+            (
+                "capture_every",
+                r#"{"type": "integer", "minimum": 1, "description": "Headless: save a PNG every N frames (and the last) under <project>/.box/playtests/<name>/; needs a GPU."}"#,
             ),
             PROJECT,
         ],
@@ -894,15 +1316,23 @@ const TOOLS: &[Tool] = &[
     Tool {
         name: "apply_commands",
         title: "Live: apply edit commands",
-        description: "Live: apply edit commands to the running editor's scene as one transaction, through the same command layer as the editor UI, so the user can undo it as one step. During Play the commands edit the Play world and are discarded on stop. In a player (box-player --control) they edit the running world and are neither saved nor undoable. Same command format as scene_apply. Example: {\"commands\": [{\"op\": \"set\", \"entity\": \"Cube\", \"path\": \"Transform.translation.y\", \"value\": 2.0}]}.",
-        properties: &[COMMANDS, DRY_RUN, PROJECT],
+        description: "Live: apply edit commands to the running editor's scene as one transaction, through the same command layer as the editor UI, so the user can undo it as one step. During Play the commands edit the Play world and are discarded on stop. In a player (box-player --control) they edit the running world and are neither saved nor undoable. With `save: true` (editor only) a fix lands in the scene file once: applied to the edit scene (undoable) and saved; during Play it is applied to the Play world and to the edit scene, which is saved at Stop. Same command format as scene_apply. Example: {\"commands\": [{\"op\": \"set\", \"entity\": \"Cube\", \"path\": \"Transform.translation.y\", \"value\": 2.0}], \"save\": true}.",
+        properties: &[
+            COMMANDS,
+            DRY_RUN,
+            (
+                "save",
+                r#"{"type": "boolean", "description": "Also write the change to the scene file (editor only; during Play, at Stop). Default false."}"#,
+            ),
+            PROJECT,
+        ],
         required: &["commands"],
         read_only: false,
     },
     Tool {
         name: "screenshot",
         title: "Live: screenshot",
-        description: "Live: capture the running editor's viewport or the player's view as a PNG image. Give both `width` and `height` to render at that size, or neither for the current view size.",
+        description: "Live: capture the running editor's viewport or the player's view as a PNG image. Give both `width` and `height` to render at that size, or neither for the current view size. Give `eye` and `look_at` to render from that pose instead (a temporary camera: the world is not changed, the game camera keeps running). Example: {\"eye\": [10, 8, 12], \"look_at\": [0, 1, 0]}.",
         properties: &[
             (
                 "width",
@@ -911,6 +1341,18 @@ const TOOLS: &[Tool] = &[
             (
                 "height",
                 r#"{"type": "integer", "minimum": 1, "maximum": 8192, "description": "Height in pixels (with width)."}"#,
+            ),
+            (
+                "eye",
+                r#"{"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3, "description": "Render from this point [x, y, z] (with look_at)."}"#,
+            ),
+            (
+                "look_at",
+                r#"{"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3, "description": "The point [x, y, z] the eye looks at."}"#,
+            ),
+            (
+                "fov",
+                r#"{"type": "number", "minimum": 1, "maximum": 170, "description": "Vertical field of view in degrees (with eye)."}"#,
             ),
             PROJECT,
         ],
@@ -956,6 +1398,138 @@ const TOOLS: &[Tool] = &[
         read_only: false,
     },
     Tool {
+        name: "send_input",
+        title: "Live: send input",
+        description: "Live, during Play: press, hold or move a named action of the game (from its ActionMap: the names the game reads, not keys), for `frames` input frames (default 1: a tap). A button takes no value; a 1D axis a number in -1..1; a 2D axis [x, y] with +y forward (as the game's own stick or WASD). Frames only pass while the game runs: follow with step_frames when paused. An unknown action lists the game's actions. Example: {\"action\": \"move\", \"value\": [0, 1], \"frames\": 90}.",
+        properties: &[
+            (
+                "action",
+                r#"{"type": "string", "description": "Action name, as the game's ActionMap defines it."}"#,
+            ),
+            (
+                "frames",
+                r#"{"type": "integer", "minimum": 1, "maximum": 600, "description": "Input frames to hold it. Default 1."}"#,
+            ),
+            (
+                "value",
+                r#"{"description": "Axis value: a number for a 1D axis, [x, y] for a 2D axis. None for a button."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &["action"],
+        read_only: false,
+    },
+    Tool {
+        name: "teleport",
+        title: "Live: teleport",
+        description: "Live, during Play: move an entity (uid or unique name, e.g. the player) to `position`, optionally facing `yaw` degrees (0 faces -Z); a character's motion and interpolation are reset so it is drawn there at once. Not saved. Example: {\"entity\": \"Player\", \"position\": [4, 1, -6]}.",
+        properties: &[
+            (
+                "entity",
+                r#"{"type": "string", "description": "Entity uid or unique name."}"#,
+            ),
+            (
+                "position",
+                r#"{"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3, "description": "World position [x, y, z]."}"#,
+            ),
+            (
+                "yaw",
+                r#"{"type": "number", "description": "Facing, degrees about +Y."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &["entity", "position"],
+        read_only: false,
+    },
+    Tool {
+        name: "record_start",
+        title: "Live: start recording a playtest",
+        description: "Live: start recording the game's named actions each frame (what send_input injects and what a person presses), to save as a playtest with record_stop. By default the game first restarts from its scene (a fresh Play session or a freshly loaded player), so the recording starts from the same state a replay does; restart=false records from where the game is (the playtest then starts with a teleport of the player, other state is not restored).",
+        properties: &[
+            (
+                "restart",
+                r#"{"type": "boolean", "description": "Restart the game from its scene first. Default true."}"#,
+            ),
+            (
+                "player",
+                r#"{"type": "string", "description": "The player entity (uid or name) for the end-position check. Default: the first named KinematicCharacter."}"#,
+            ),
+            (
+                "seed",
+                r#"{"type": "integer", "minimum": 0, "description": "Scripts' math.random seed for the restart (default 1)."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &[],
+        read_only: false,
+    },
+    Tool {
+        name: "record_stop",
+        title: "Live: stop recording a playtest",
+        description: "Live: stop recording and return the playtest: the frames resampled to 1/60 s, equal frames merged into input and wait steps, then checks for what changed (entity_gone for named scene entities that disappeared, entity_near for where the player ended, radius 1 m). With `save`, write it to playtests/<name>.playtest.json (or a path relative to the project root); edit or add checks there, then replay with `playtest`.",
+        properties: &[
+            (
+                "save",
+                r#"{"type": "string", "description": "A playtest name (playtests/<name>.playtest.json) or a path relative to the project root."}"#,
+            ),
+            (
+                "description",
+                r#"{"type": "string", "description": "What the run does, saved in the file."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &[],
+        read_only: false,
+    },
+    Tool {
+        name: "read_asset",
+        title: "Read a project text file",
+        description: "Read a text file under the project's assets/ folder (.luau, .json, .wgsl, .md, .txt; at most 1 MB): a script, a data table, a string table, a settings file. `path` is relative to assets/ (\"scripts/door.luau\"). Returns path, bytes and text.",
+        properties: &[
+            (
+                "path",
+                r#"{"type": "string", "description": "File under assets/, e.g. \"scripts/door.luau\"."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &["path"],
+        read_only: true,
+    },
+    Tool {
+        name: "write_asset",
+        title: "Write a project text file",
+        description: "Create or replace a text file under the project's assets/ folder (.luau, .json, .wgsl, .md, .txt; at most 1 MB). A running editor hot-reloads it. The old contents are kept in .box/assistant/ so the editor's Assistant panel can undo the write with its turn. Prefer behaviours and presets (add_preset in apply_commands) to new scripts.",
+        properties: &[
+            (
+                "path",
+                r#"{"type": "string", "description": "File under assets/, e.g. \"scripts/door.luau\"."}"#,
+            ),
+            (
+                "text",
+                r#"{"type": "string", "description": "The whole new contents."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &["path", "text"],
+        read_only: false,
+    },
+    Tool {
+        name: "editor_context",
+        title: "Live: what the user sees in the editor",
+        description: "Live (editor): the open scene, the selected entities (uid, name), the viewport camera (eye, a point it looks at, fov in degrees), whether Play is running, the open assistant turn and the next undo step. \"This\" or \"here\" in the user's words usually means the selection or what the camera looks at.",
+        properties: &[PROJECT],
+        required: &[],
+        read_only: true,
+    },
+    Tool {
+        name: "undo_turn",
+        title: "Live: undo this assistant turn",
+        description: "Live (editor): undo every scene edit the current assistant turn made so far, as one step (for example after a failed attempt), and keep working in the same turn. Returns undone=false when there was nothing to undo.",
+        properties: &[PROJECT],
+        required: &[],
+        read_only: false,
+    },
+    Tool {
         name: "read_log",
         title: "Live: read the log",
         description: "Live: read log records (seq, time, level, target, message), oldest first. Pass the returned `next` as `since` to get only newer records.",
@@ -980,6 +1554,64 @@ const TOOLS: &[Tool] = &[
         properties: &[PROJECT],
         required: &[],
         read_only: true,
+    },
+    Tool {
+        name: "audio_levels",
+        title: "Live: audio levels",
+        description: "Live, during Play: the audio mix at the listener. Returns output (device/capture/silent; `measured` is false on a silent output, where levels are null), listener position and forward, bus volumes (AudioSettings), the solo/mute state, the mixed output level (capture output), per-bus levels, and every playing voice loudest first: name (source entity or one-shot clip), entity uid, clip, bus, volume, distance, min/max_distance, attenuation (distance gain, 0..1, also in dB), pan (-1 left..1 right), expected_gain (volume x attenuation x bus x master), level {rms, rms_db, peak, peak_db, left, right} measured after distance, panning, bus and master volume (before solo/mute), and muted/soloed/audible. `target` filters to the voices an entity (and its children), bus or clip covers. Example: {\"target\": \"Pond\"}.",
+        properties: &[
+            (
+                "target",
+                r#"{"type": "string", "description": "Only voices of this target: an entity uid or unique name (its sources and the sources below it), a bus (`ambience`, `bus:music`) or a clip (`clip:audio/pond.ogg`)."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &[],
+        read_only: true,
+    },
+    Tool {
+        name: "audio_solo",
+        title: "Live: solo audio",
+        description: "Live, during Play: solo an entity (with every sound source below it in the hierarchy), a bus or a clip, so only soloed sounds are heard; several solos add up. Runtime only: nothing is saved, and it ends with Play (or the game). `on: false` unsolos it; `clear: true` removes every solo. Levels stay measured for silenced voices (audio_levels). Returns the target, the voices it covers now and the solo/mute state. Example: {\"target\": \"Orchard\"}.",
+        properties: &[
+            (
+                "target",
+                r#"{"type": "string", "description": "Entity uid or unique name, bus (`ambience`, `bus:effects`) or clip (`clip:audio/pond.ogg`)."}"#,
+            ),
+            (
+                "on",
+                r#"{"type": "boolean", "description": "Solo (true, default) or unsolo (false)."}"#,
+            ),
+            (
+                "clear",
+                r#"{"type": "boolean", "description": "Remove every solo (give no target)."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &[],
+        read_only: false,
+    },
+    Tool {
+        name: "audio_mute",
+        title: "Live: mute audio",
+        description: "Live, during Play: mute an entity (with every sound source below it), a bus or a clip; muted sounds keep playing silently and keep their measured level. Runtime only: nothing is saved, and it ends with Play (or the game). `on: false` unmutes; `clear: true` removes every mute. Example: {\"target\": \"bus:music\"}.",
+        properties: &[
+            (
+                "target",
+                r#"{"type": "string", "description": "Entity uid or unique name, bus (`ambience`, `bus:effects`) or clip (`clip:audio/pond.ogg`)."}"#,
+            ),
+            (
+                "on",
+                r#"{"type": "boolean", "description": "Mute (true, default) or unmute (false)."}"#,
+            ),
+            (
+                "clear",
+                r#"{"type": "boolean", "description": "Remove every mute (give no target)."}"#,
+            ),
+            PROJECT,
+        ],
+        required: &[],
+        read_only: false,
     },
 ];
 

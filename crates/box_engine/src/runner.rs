@@ -348,7 +348,7 @@ fn run_windowed(app: App, options: RunOptions) -> Result<RunSummary> {
     })
 }
 
-fn set_window_size(world: &mut World, width: u32, height: u32, scale: f64) {
+pub(crate) fn set_window_size(world: &mut World, width: u32, height: u32, scale: f64) {
     *world.resource_or_default::<WindowSize>() = WindowSize {
         width,
         height,

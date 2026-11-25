@@ -77,6 +77,19 @@ pub fn is_hidden(world: &World, e: Entity) -> bool {
     false
 }
 
+/// True when `e` or an ancestor is [`Transient`] (walks the parents).
+pub fn is_transient(world: &World, e: Entity) -> bool {
+    let mut cur = Some(e);
+    for _ in 0..4096 {
+        let Some(c) = cur else { return false };
+        if world.has::<Transient>(c) {
+            return true;
+        }
+        cur = world.parent(c);
+    }
+    false
+}
+
 /// Entities that are [`Transient`] or below one.
 pub fn transient_entities(world: &World) -> HashSet<Entity> {
     let mut out = HashSet::new();

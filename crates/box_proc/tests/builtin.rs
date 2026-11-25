@@ -1,5 +1,5 @@
 //! Golden output hashes of the built-in generators (`Primitive`, `Lathe`,
-//! `Extrude`). Changing one's output without bumping its `VERSION` fails
+//! `Extrude`, `TerrainChunk`). Changing one's output without bumping its `VERSION` fails
 //! here; fixtures are in `tests/golden/`. Re-record a deliberate change
 //! with `BOX_UPDATE_GOLDEN=1 cargo test -p box_proc --test builtin` after
 //! bumping the version, and review `cargo test -p box_engine --test golden`.
@@ -225,6 +225,76 @@ fn extrude_golden_hashes() {
                         offset: Vec2::new(5.0, 0.0),
                     },
                     ..Extrude::default()
+                },
+                0,
+            ),
+        ],
+    );
+}
+
+#[test]
+fn terrain_chunk_golden_hashes() {
+    use box_proc::terrain::{TerrainChunk, TerrainStamp};
+    use glam::Vec2;
+    let stamps = vec![
+        TerrainStamp::Noise {
+            seed: 4,
+            scale: 12.0,
+            amplitude: 0.7,
+            octaves: 3,
+        },
+        TerrainStamp::Hill {
+            center: Vec2::new(10.0, 6.0),
+            radius: 14.0,
+            height: 4.0,
+        },
+        TerrainStamp::Ridge {
+            points: vec![Vec2::new(-20.0, 20.0), Vec2::new(20.0, 28.0)],
+            width: 12.0,
+            height: 3.0,
+        },
+        TerrainStamp::Basin {
+            center: Vec2::new(-8.0, -6.0),
+            radius: 6.0,
+            depth: 1.2,
+        },
+        TerrainStamp::Flatten {
+            center: Vec2::new(0.0, 14.0),
+            radius: 3.0,
+            height: 1.5,
+            bank: 3.0,
+        },
+        TerrainStamp::FlattenPath {
+            points: vec![Vec3::new(-16.0, 0.2, -16.0), Vec3::new(16.0, 1.2, 16.0)],
+            width: 2.5,
+            bank: 1.5,
+        },
+    ];
+    assert_golden::<TerrainChunk>(
+        &dir(),
+        &[
+            GoldenCase::new(
+                "every_stamp",
+                TerrainChunk {
+                    origin: Vec2::new(-16.0, -16.0),
+                    stamps: stamps.clone(),
+                    ..TerrainChunk::default()
+                },
+                0,
+            ),
+            GoldenCase::new(
+                "corner_with_skirt_walkability",
+                TerrainChunk {
+                    origin: Vec2::new(-32.0, -32.0),
+                    cells_x: 16,
+                    cells_z: 24,
+                    cell_size: 2.0,
+                    stamps,
+                    skirt: 2.0,
+                    skirt_edges: 1 | 4,
+                    show_walkability: true,
+                    walk_slope: 20.0,
+                    ..TerrainChunk::default()
                 },
                 0,
             ),

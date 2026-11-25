@@ -86,6 +86,7 @@ The engine calls these functions when the module defines them ([reference](../re
 | `on_destroy(self)` | After the entity or its Script is gone. |
 | `on_trigger_enter(self, other)` / `on_trigger_exit(self, other)` | A trigger collider starts or stops overlapping another collider. Both entities are told. |
 | `on_collision_enter(self, other, impulse)` / `on_collision_exit(self, other)` | A rigid body or character starts or stops touching another collider. |
+| `on_interact(self, interactor)` | The player used this entity's `Interactable` (after its actions ran; see [Interactions](interactions.md)). |
 | `on_save(self)` / `on_load(self, data)` | A save game is written or loaded. |
 | `on_reload(self)` | The file was saved and reloaded during Play. |
 
@@ -264,6 +265,8 @@ function Score.on_start(self)
     end)
 end
 ```
+
+Many simple game rules need no events at all: an `Interactable` with conditions on game variables (`vars`) covers pickups, switches and keys ([Interactions](interactions.md)).
 
 Handlers run in the Update stage before `on_update`; a signal sent during `on_update` arrives in the next frame. A handler belongs to the instance that added it and stops when that instance does, so there is nothing to clean up.
 

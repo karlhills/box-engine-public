@@ -50,7 +50,8 @@ fn schema_only_components_are_edited_and_load_with_the_real_types() {
     let applied = apply_commands_with_warnings(&mut world, &mut stack, &commands, "agent").unwrap();
     assert_eq!(applied.warnings.len(), 1, "{:?}", applied.warnings);
     assert!(
-        applied.warnings[0].contains("Health.max") && applied.warnings[0].contains("clamped"),
+        applied.warnings[0].message.contains("Health.max")
+            && applied.warnings[0].message.contains("clamped"),
         "{:?}",
         applied.warnings
     );

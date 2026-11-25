@@ -228,6 +228,65 @@ pub(crate) struct Targets {
     ao: OnceLock<AoTargets>,
     /// Bloom mip chain, created the first time bloom is drawn.
     bloom: OnceLock<BloomTargets>,
+    /// The opaque scene's colour, created the first time a material reads it.
+    scene_color: OnceLock<SceneColorTarget>,
+}
+
+/// The resolved colour of the opaque scene (opaque surfaces, sky, scene
+/// lines), sampled by transparent material shaders, and the frame bind
+/// group that binds it.
+struct SceneColorTarget {
+    _texture: wgpu::Texture,
+    view: wgpu::TextureView,
+    /// The group and what it was made for: the frame generation and whether
+    /// it binds the prepass targets.
+    frame_bind_group: std::sync::Mutex<Option<((u64, bool), wgpu::BindGroup)>>,
+}
+
+impl SceneColorTarget {
+    fn new(device: &wgpu::Device, format: wgpu::TextureFormat, (w, h): (u32, u32)) -> Self {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("opaque scene color"),
+            size: wgpu::Extent3d {
+                width: w,
+                height: h,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&Default::default());
+        Self {
+            _texture: texture,
+            view,
+            frame_bind_group: std::sync::Mutex::new(None),
+        }
+    }
+
+    /// The frame bind group with this colour, made by `make` when missing
+    /// or made for another `key`.
+    fn frame_bind_group(
+        &self,
+        key: (u64, bool),
+        make: impl FnOnce() -> wgpu::BindGroup,
+    ) -> wgpu::BindGroup {
+        let mut slot = self
+            .frame_bind_group
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        match &*slot {
+            Some((k, group)) if *k == key => group.clone(),
+            _ => {
+                let group = make();
+                *slot = Some((key, group.clone()));
+                group
+            }
+        }
+    }
 }
 
 /// The selection outline's mask and the composite's bind group.
@@ -396,6 +455,9 @@ struct FramePlan {
     /// Run the depth + normal prepass (ambient occlusion, or a visible
     /// depth-fading material).
     prepass: bool,
+    /// Copy the opaque scene's colour before the transparent draws (a
+    /// visible transparent material shader reads it).
+    scene_color: bool,
     /// Run ambient occlusion (implies `prepass`).
     ao: bool,
     /// Bloom scatter (the upsample blend), when bloom is on.
@@ -1771,6 +1833,7 @@ impl Renderer {
         self.draw_list.clear();
         self.instances.begin_frame();
         let mut scene_depth_visible = false;
+        let mut scene_color_visible = false;
         let wind_scale = if self.materials.any_wind() && env.wind.direction != glam::Vec2::ZERO {
             env.wind.strength.max(0.0) * crate::materials::WIND_REACH
         } else {
@@ -1893,6 +1956,7 @@ impl Renderer {
                         _ => NO_PIPELINE,
                     };
                     scene_depth_visible |= visible && entry.scene_depth;
+                    scene_color_visible |= visible && entry.scene_color;
                     casts |= shadow_pipeline != NO_PIPELINE;
                     self.draw_list.push(DrawItem {
                         slot,
@@ -2173,7 +2237,12 @@ impl Renderer {
         }
         post::write_grading(&env.color_grading, &mut globals);
         post::write_look(&env, aspect, &mut globals);
-        globals.scene_depth = [if prepass_on { 1.0 } else { 0.0 }, 0.0, 0.0, 0.0];
+        globals.scene_depth = [
+            if prepass_on { 1.0 } else { 0.0 },
+            if scene_color_visible { 1.0 } else { 0.0 },
+            0.0,
+            0.0,
+        ];
         if let Some(t) = world.get_resource::<Time>() {
             globals.time = [t.elapsed, t.delta, 0.0, 0.0];
         }
@@ -2210,6 +2279,7 @@ impl Renderer {
             lines,
             outline: outline_scissor,
             prepass: prepass_on,
+            scene_color: scene_color_visible,
             ao: ao_on,
             bloom: bloom_on.then_some(bloom.scatter.clamp(0.0, 1.0)),
         }
@@ -2326,6 +2396,8 @@ impl Renderer {
                     &frame.shadow_sampler,
                     [ao, depth, scene_depth],
                     frame.local_shadow_view(),
+                    &frame.placeholder_bloom,
+                    &frame.linear_sampler,
                 )
             });
             (ao, group)
@@ -2421,32 +2493,74 @@ impl Renderer {
             }
         }
 
+        // With a scene colour copy the scene is drawn in two passes: the
+        // opaque one resolves into the copy, the transparent one (which
+        // samples it) into the HDR target. Otherwise one pass draws both.
+        let scene_color = plan.scene_color.then(|| {
+            let sc = targets
+                .scene_color
+                .get_or_init(|| SceneColorTarget::new(&self.device, self.hdr_format, targets.size));
+            let frame = &self.frame;
+            let group = sc.frame_bind_group((frame.frame_generation, ao.is_some()), || {
+                let views = match ao {
+                    Some(ao) => [&ao.ao, &ao.half_depth, &ao.prepass_depth],
+                    None => [
+                        &frame.placeholder_ao,
+                        &frame.placeholder_ao_depth,
+                        &frame.placeholder_depth,
+                    ],
+                };
+                frame_bind_group(
+                    &self.device,
+                    &self.layouts,
+                    [&frame.globals_buffer, &frame.light_buffer],
+                    &frame.shadow_array_view,
+                    &frame.shadow_sampler,
+                    views,
+                    frame.local_shadow_view(),
+                    &sc.view,
+                    &frame.linear_sampler,
+                )
+            });
+            (sc, group)
+        });
         {
             profiling::scope!("scene pass");
+            // Kept only when display lines or the selection outline test
+            // against it after tone mapping.
+            let depth_store =
+                if plan.lines[LineLayer::Display as usize] > 0 || plan.outline.is_some() {
+                    wgpu::StoreOp::Store
+                } else {
+                    wgpu::StoreOp::Discard
+                };
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("hdr scene pass"),
                 timestamp_writes: self.timestamps("main"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &targets.msaa_view,
                     depth_slice: None,
-                    resolve_target: Some(&targets.hdr_view),
+                    resolve_target: Some(match &scene_color {
+                        Some((sc, _)) => &sc.view,
+                        None => &targets.hdr_view,
+                    }),
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                        store: wgpu::StoreOp::Discard,
+                        store: if scene_color.is_some() {
+                            wgpu::StoreOp::Store
+                        } else {
+                            wgpu::StoreOp::Discard
+                        },
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &targets.depth_view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(0.0),
-                        // Kept only when display lines or the selection
-                        // outline test against it after tone mapping.
-                        store: if plan.lines[LineLayer::Display as usize] > 0
-                            || plan.outline.is_some()
-                        {
+                        store: if scene_color.is_some() {
                             wgpu::StoreOp::Store
                         } else {
-                            wgpu::StoreOp::Discard
+                            depth_store
                         },
                     }),
                     stencil_ops: None,
@@ -2487,6 +2601,34 @@ impl Renderer {
                 }
             };
             draws += lines(&mut pass, LineLayer::Scene, &self.pipelines.debug_depth);
+
+            if let Some((_, group)) = &scene_color {
+                drop(pass);
+                pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("hdr transparent pass"),
+                    timestamp_writes: self.timestamps("transparent"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &targets.msaa_view,
+                        depth_slice: None,
+                        resolve_target: Some(&targets.hdr_view),
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Load,
+                            store: wgpu::StoreOp::Discard,
+                        },
+                    })],
+                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                        view: &targets.depth_view,
+                        depth_ops: Some(wgpu::Operations {
+                            load: wgpu::LoadOp::Load,
+                            store: depth_store,
+                        }),
+                        stencil_ops: None,
+                    }),
+                    ..Default::default()
+                });
+                pass.set_bind_group(0, group, &[]);
+                pass.set_bind_group(1, &self.instances.bind_group, &[]);
+            }
 
             // Transparent surfaces and particle emitters, back to front,
             // after the sky: depth tested against opaque geometry, not
@@ -3122,6 +3264,7 @@ impl Targets {
             outline: OnceLock::new(),
             ao: OnceLock::new(),
             bloom: OnceLock::new(),
+            scene_color: OnceLock::new(),
         }
     }
 }
@@ -3188,7 +3331,8 @@ impl OutlineTargets {
 }
 
 /// Group 0 of scene passes: globals, shadow map and sampler, local lights,
-/// AO, AO depth, the prepass (scene) depth and the local shadow map.
+/// AO, AO depth, the prepass (scene) depth, the local shadow map and the
+/// opaque scene's colour with its sampler.
 fn frame_bind_group(
     device: &wgpu::Device,
     layouts: &Layouts,
@@ -3197,6 +3341,8 @@ fn frame_bind_group(
     shadow_sampler: &wgpu::Sampler,
     [ao, ao_depth, scene_depth]: [&wgpu::TextureView; 3],
     local_shadow: &wgpu::TextureView,
+    scene_color: &wgpu::TextureView,
+    scene_sampler: &wgpu::Sampler,
 ) -> wgpu::BindGroup {
     device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("frame bind group"),
@@ -3233,6 +3379,14 @@ fn frame_bind_group(
             wgpu::BindGroupEntry {
                 binding: 8,
                 resource: wgpu::BindingResource::TextureView(local_shadow),
+            },
+            wgpu::BindGroupEntry {
+                binding: 9,
+                resource: wgpu::BindingResource::TextureView(scene_color),
+            },
+            wgpu::BindGroupEntry {
+                binding: 10,
+                resource: wgpu::BindingResource::Sampler(scene_sampler),
             },
         ],
     })
@@ -3379,15 +3533,6 @@ impl FrameResources {
             dimension: Some(wgpu::TextureViewDimension::D2Array),
             ..Default::default()
         });
-        let frame_bind_group = frame_bind_group(
-            device,
-            layouts,
-            [&globals_buffer, &light_buffer],
-            &shadow_array_view,
-            &shadow_sampler,
-            [&placeholder_ao, &placeholder_ao_depth, &placeholder_depth],
-            &placeholder_local_shadow,
-        );
         let linear_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("linear clamp sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
@@ -3397,6 +3542,18 @@ impl FrameResources {
             min_filter: wgpu::FilterMode::Linear,
             ..Default::default()
         });
+        // The bloom placeholder (HDR format) doubles as the scene colour's.
+        let frame_bind_group = frame_bind_group(
+            device,
+            layouts,
+            [&globals_buffer, &light_buffer],
+            &shadow_array_view,
+            &shadow_sampler,
+            [&placeholder_ao, &placeholder_ao_depth, &placeholder_depth],
+            &placeholder_local_shadow,
+            &placeholder_bloom,
+            &linear_sampler,
+        );
         let shadow_pass_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("shadow pass uniforms"),
             size: (CASCADE_COUNT + LOCAL_SHADOW_VIEWS) as u64 * UNIFORM_SLOT,
@@ -3422,6 +3579,14 @@ impl FrameResources {
                 wgpu::BindGroupEntry {
                     binding: 7,
                     resource: wgpu::BindingResource::TextureView(&placeholder_depth),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 9,
+                    resource: wgpu::BindingResource::TextureView(&placeholder_bloom),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 10,
+                    resource: wgpu::BindingResource::Sampler(&linear_sampler),
                 },
             ],
         });
@@ -3493,6 +3658,8 @@ impl FrameResources {
                 &self.placeholder_depth,
             ],
             self.local_shadow_view(),
+            &self.placeholder_bloom,
+            &self.linear_sampler,
         );
     }
 

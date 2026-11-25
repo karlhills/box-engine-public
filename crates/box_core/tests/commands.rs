@@ -221,7 +221,7 @@ fn spawn_with_a_partial_enum_variant_keeps_the_variant() {
     )
     .unwrap();
     let applied = apply_commands_with_warnings(&mut w, &mut stack, &commands, "Spawn").unwrap();
-    assert_eq!(applied.warnings, Vec::<String>::new());
+    assert!(applied.warnings.is_empty(), "{:?}", applied.warnings);
     let shape = |i: usize| {
         let e = w.entity_by_uid(applied.created[i]).unwrap();
         w.get::<Primitive>(e).unwrap().shape.clone()
@@ -245,8 +245,88 @@ fn a_field_without_a_variant_default_is_warned_about() {
     let applied = apply_commands_with_warnings(&mut w, &mut stack, &commands, "Spawn").unwrap();
     assert_eq!(applied.warnings.len(), 1, "{:?}", applied.warnings);
     assert!(
-        applied.warnings[0].contains("`Npc.behaviour.Patrol.speed`"),
+        applied.warnings[0]
+            .message
+            .contains("`Npc.behaviour.Patrol.speed`"),
         "{:?}",
         applied.warnings
     );
+    assert_eq!(applied.warnings[0].kind.code(), "field_defaulted");
+}
+
+#[test]
+fn wrong_vector_lengths_name_the_field_and_the_form() {
+    let mut w = build_world(1, 3);
+    let mut stack = EditStack::new();
+    let commands = parse_commands(
+        r#"[{ "op": "spawn", "name": "Post",
+        "components": { "Transform": { "translation": [1.0, 2.0] } } }]"#,
+    )
+    .unwrap();
+    let err = apply_commands(&mut w, &mut stack, &commands, "Spawn").unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("`Transform.translation`: a Vec3 is 3 numbers [x, y, z], got 2 items"),
+        "{msg}"
+    );
+}
+
+#[test]
+fn commands_take_srgb_colours_and_degree_or_look_at_rotations() {
+    use box_core::color::Color;
+    use box_core::material::StandardMaterial;
+    use glam::{EulerRot, Quat, Vec3};
+    let mut w = build_world(1, 5);
+    let mut stack = EditStack::new();
+    let commands = parse_commands(
+        r##"[
+        { "op": "spawn", "name": "Lamp", "components": {
+            "Transform": { "translation": [0.0, 2.0, 5.0], "rotation": { "look_at": [0.0, 2.0, 0.0] } },
+            "StandardMaterial": { "base_color": "#ff8000" } } },
+        { "op": "spawn", "name": "Post", "components": {
+            "StandardMaterial": { "base_color": { "srgb": [0.5, 0.5, 0.5] } } } },
+        { "op": "set", "entity": "Post", "path": "Transform.rotation", "value": { "euler_deg": [0.0, 90.0, 0.0] } }
+    ]"##,
+    )
+    .unwrap();
+    let applied = apply_commands_with_warnings(&mut w, &mut stack, &commands, "Spawn").unwrap();
+    assert!(applied.warnings.is_empty(), "{:?}", applied.warnings);
+    let lamp = w.find_by_name("Lamp").unwrap();
+    let t = *w.get::<Transform>(lamp).unwrap();
+    // Looking from z = 5 towards the origin is looking along -Z: no turn.
+    assert!(
+        t.rotation.dot(Quat::IDENTITY).abs() > 0.99999,
+        "{:?}",
+        t.rotation
+    );
+    let c = w.get::<StandardMaterial>(lamp).unwrap().base_color;
+    assert_eq!(c, Color::hex(0xff8000));
+    let post = w.find_by_name("Post").unwrap();
+    let c = w.get::<StandardMaterial>(post).unwrap().base_color;
+    assert_eq!(c, Color::srgb(0.5, 0.5, 0.5));
+    let r = w.get::<Transform>(post).unwrap().rotation;
+    let expected = Quat::from_euler(EulerRot::YXZ, 90f32.to_radians(), 0.0, 0.0);
+    assert!(r.dot(expected).abs() > 0.99999, "{r:?} vs {expected:?}");
+    assert!(
+        (r * Vec3::NEG_Z - Vec3::NEG_X).length() < 1e-4,
+        "yaw 90 faces -X"
+    );
+
+    // look_at alone has no translation to look from.
+    let bad = parse_commands(
+        r#"[{ "op": "set", "entity": "Post", "path": "Transform.rotation", "value": { "look_at": [1, 0, 0] } }]"#,
+    )
+    .unwrap();
+    let msg = apply_commands(&mut w, &mut stack, &bad, "Set")
+        .unwrap_err()
+        .to_string();
+    assert!(msg.contains("needs the translation"), "{msg}");
+    let bad = parse_commands(
+        r##"[{ "op": "set", "entity": "Post", "path": "StandardMaterial.base_color", "value": "#ff80" }]"##,
+    )
+    .unwrap();
+    let msg = apply_commands(&mut w, &mut stack, &bad, "Set")
+        .unwrap_err()
+        .to_string();
+    assert!(msg.contains("#rrggbb"), "{msg}");
 }

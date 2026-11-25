@@ -359,6 +359,7 @@ fn empty_mesh_asset_materials_use_the_imported_ones() {
 
 /// The glTF `colliders` import setting gives mesh nodes a triangle-mesh
 /// collider, except nodes named `*-nocol` (M8 gap report item 1).
+#[cfg(feature = "physics")]
 #[test]
 fn gltf_collider_setting_skips_nocol_nodes() {
     use box_engine::box_proc::glb::{GlbMaterial, GlbNode, write_scene_glb};

@@ -15,7 +15,9 @@
         },
         "tolerance": 0.009999999776482582,
         "orientation": "RotationMinimizing",
-        "caps": true
+        "caps": true,
+        "follow_ground": false,
+        "ground_offset": 0.0
       },
       "owner": "00000000-0000-0000-0000-000000005ee9",
       "inputs": [
@@ -104,7 +106,9 @@
         },
         "tolerance": 0.009999999776482582,
         "orientation": "RotationMinimizing",
-        "caps": true
+        "caps": true,
+        "follow_ground": false,
+        "ground_offset": 0.0
       },
       "owner": "00000000-0000-0000-0000-000000005ee9",
       "inputs": [
@@ -207,7 +211,9 @@
         },
         "tolerance": 0.009999999776482582,
         "orientation": "Up",
-        "caps": true
+        "caps": true,
+        "follow_ground": false,
+        "ground_offset": 0.0
       },
       "owner": "00000000-0000-0000-0000-000000005ee9",
       "inputs": [
@@ -296,7 +302,9 @@
         },
         "tolerance": 0.009999999776482582,
         "orientation": "Up",
-        "caps": true
+        "caps": true,
+        "follow_ground": false,
+        "ground_offset": 0.0
       },
       "owner": "00000000-0000-0000-0000-000000005ee9",
       "inputs": [
@@ -455,7 +463,9 @@
         },
         "tolerance": 0.009999999776482582,
         "orientation": "RotationMinimizing",
-        "caps": true
+        "caps": true,
+        "follow_ground": false,
+        "ground_offset": 0.0
       },
       "owner": "00000000-0000-0000-0000-000000005ee9",
       "inputs": [
@@ -627,7 +637,9 @@
         },
         "tolerance": 0.004999999888241291,
         "orientation": "RotationMinimizing",
-        "caps": false
+        "caps": false,
+        "follow_ground": false,
+        "ground_offset": 0.0
       },
       "owner": "00000000-0000-0000-0000-000000005ee9",
       "inputs": [

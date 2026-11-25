@@ -262,7 +262,7 @@ fn q(v: f32, scale: f32) -> i64 {
 /// their order), and every triangle corner hashes its vertex's attributes,
 /// so re-indexing, welding or splitting vertices does not change it, while
 /// moving a triangle to another material slot does. Which optional channels
-/// exist (tangents, UV sets, colours) is part of the hash. A mesh without
+/// exist (tangents, UV sets, colours, custom sets) is part of the hash. A mesh without
 /// groups counts as one group in slot 0. Indices out of range hash as a
 /// marker instead of panicking.
 pub fn mesh_hash(mesh: &MeshData) -> u64 {
@@ -278,6 +278,13 @@ pub fn mesh_hash(mesh: &MeshData) -> u64 {
     h.write_u8(u8::from(tangents));
     h.write_u8(u8::from(colors));
     h.write_u64(uv_sets.len() as u64);
+    // Written only when present, so meshes without custom data keep the
+    // hashes they had before the channel existed.
+    let custom_sets: Vec<&Vec<glam::Vec4>> = mesh.custom.iter().filter(|c| has(c.len())).collect();
+    if !custom_sets.is_empty() {
+        h.write_str("custom");
+        h.write_u64(custom_sets.len() as u64);
+    }
 
     let mut groups: Vec<(u32, u32, u32)> = if mesh.groups.is_empty() {
         vec![(0, 0, mesh.indices.len() as u32)]
@@ -327,6 +334,11 @@ pub fn mesh_hash(mesh: &MeshData) -> u64 {
             if colors {
                 for c in mesh.colors[i] {
                     h.write_i64(q(c, DIRECTION_STEP));
+                }
+            }
+            for set in &custom_sets {
+                for c in set[i].to_array() {
+                    h.write_i64(q(c, POSITION_STEP));
                 }
             }
         }
@@ -392,6 +404,20 @@ mod tests {
             },
         ];
         m
+    }
+
+    #[test]
+    fn mesh_hash_covers_custom_sets() {
+        let plain = MeshData::plane(1.0, 1.0);
+        let n = plain.positions.len();
+        let with = |v: f32| {
+            let mut m = plain.clone();
+            m.custom = vec![vec![glam::Vec4::splat(v); n]];
+            m
+        };
+        assert_ne!(mesh_hash(&plain), mesh_hash(&with(0.0)), "a set exists");
+        assert_ne!(mesh_hash(&with(0.0)), mesh_hash(&with(0.5)), "its values");
+        assert_eq!(mesh_hash(&with(0.5)), mesh_hash(&with(0.5)));
     }
 
     #[test]

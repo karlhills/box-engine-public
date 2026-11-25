@@ -3,7 +3,11 @@
 //! [`MaterialRef`]: a saved link from a `Primitive` entity to a material
 //! asset file.
 
+use std::sync::Arc;
+
 use crate::asset_ref::AssetRef;
+use crate::assets::Handle;
+use crate::mesh::MeshData;
 use crate::reflect::{Reflect, ReflectComponent, ReflectDefault};
 
 /// Draws the mesh asset `mesh` with `materials`, one per material group of
@@ -36,6 +40,57 @@ impl Default for MeshAsset {
             materials: Vec::new(),
             cast_shadows: true,
         }
+    }
+}
+
+/// Runtime-only link from a generator entity (a `Primitive` or any other
+/// registered generator) to the mesh the generator runtime made for it, so
+/// systems below the generator crate (physics: `ColliderShape::Mesh` and
+/// `ConvexHull`) can use generated meshes like `MeshAsset` meshes.
+///
+/// Inserted empty when the entity becomes a generator entity, set after
+/// each flush (`mesh` is `None` when the generator emitted nothing) and
+/// removed with the generator. Never saved (not registered); never insert it
+/// by hand.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct GeneratedMesh {
+    pub mesh: Option<Handle<MeshData>>,
+    /// The same surface as a regular height grid, when the generator gave
+    /// one (terrain chunks): `Mesh` colliders use it as a heightfield,
+    /// which is much cheaper to build and query than the triangles.
+    pub heights: Option<Arc<HeightGrid>>,
+}
+
+/// A surface as a regular grid of heights in its entity's space: samples
+/// `columns` along X and `rows` along Z, `cell_size` apart, starting at
+/// `origin` (x, z). Each cell is two triangles split along one diagonal,
+/// as the drawn mesh splits it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HeightGrid {
+    pub origin: glam::Vec2,
+    pub cell_size: f32,
+    /// Samples along X (at least 2).
+    pub columns: u32,
+    /// Samples along Z (at least 2).
+    pub rows: u32,
+    /// Row by row (Z), X within a row: `heights[row * columns + column]`.
+    pub heights: Vec<f32>,
+    /// Per cell (row by row, `(rows - 1) * (columns - 1)`): the cell is
+    /// split from its (x0, z0) corner to its (x1, z1) corner; otherwise from
+    /// (x1, z0) to (x0, z1).
+    pub main_diagonal: Vec<bool>,
+}
+
+impl HeightGrid {
+    /// Whether the sizes agree with each other.
+    pub fn is_valid(&self) -> bool {
+        let (c, r) = (self.columns as usize, self.rows as usize);
+        c >= 2
+            && r >= 2
+            && self.heights.len() == c * r
+            && self.main_diagonal.len() == (c - 1) * (r - 1)
+            && self.cell_size > 0.0
+            && self.heights.iter().all(|h| h.is_finite())
     }
 }
 

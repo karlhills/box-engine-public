@@ -10,7 +10,7 @@ use std::time::Duration;
 use box_assets::{AssetPlugin, AssetServer, LoadState};
 use box_audio::{
     Audio, AudioBus, AudioClip, AudioListener, AudioOutput, AudioPlugin, AudioSettings,
-    AudioSource, OutputKind, OutputLevels, PlaySound, VoiceState, wav,
+    AudioSource, MixTarget, OutputKind, OutputLevels, PlaySound, VoiceInfo, VoiceState, wav,
 };
 use box_core::asset_ref::AssetRef;
 use box_core::prelude::*;
@@ -286,6 +286,140 @@ fn live_volume_and_pitch_edits_glide_on_the_playing_voice() {
     f.app.world.component_mut::<AudioSource>(e).unwrap().playing = true;
     f.run(0.2);
     assert!(f.audio().source_voice(e).is_some());
+}
+
+fn loop_source(volume: f32) -> AudioSource {
+    AudioSource {
+        fade_in: 0.0,
+        fade_out: 0.0,
+        volume,
+        ..AudioSource::ambience("audio/loop.wav")
+    }
+}
+
+fn voice(f: &Fixture, e: Entity) -> VoiceInfo {
+    f.audio().source_voice(e).expect("playing").clone()
+}
+
+/// RMS of the loop clip (a 0.5 sine) as played.
+const LOOP_RMS: f32 = 0.5 * std::f32::consts::FRAC_1_SQRT_2;
+
+#[test]
+fn each_voice_is_metered_at_the_listener_after_bus_and_master() {
+    let mut f = Fixture::capture("meters");
+    let loud = f.app.world.spawn((Transform::default(), loop_source(1.0)));
+    let soft = f.app.world.spawn((Transform::default(), loop_source(0.25)));
+    f.run(0.3);
+    let (a, b) = (voice(&f, loud), voice(&f, soft));
+    let (la, lb) = (a.level.unwrap(), b.level.unwrap());
+    eprintln!("meters: loud {la:?}, soft {lb:?}, mix {:?}", f.levels());
+    assert!(la.frames > 0, "measured this frame");
+    assert!(near(la.rms(), LOOP_RMS, 0.05), "loud {la:?}");
+    assert!(near(lb.rms(), LOOP_RMS * 0.25, 0.05), "soft {lb:?}");
+    assert!(near(la.peak, 0.5, 0.05));
+    assert!(a.audible && !a.muted && !a.soloed);
+    // Both are the same sine in phase: the mix is their sum.
+    assert!(near(f.levels().rms(), la.rms() + lb.rms(), 0.05));
+    // Bus and master volumes are part of the level.
+    f.app.world.insert_resource(AudioSettings {
+        master: 0.5,
+        ambience: 0.5,
+        ..Default::default()
+    });
+    f.run(0.3);
+    let la = voice(&f, loud).level.unwrap();
+    assert!(
+        near(la.rms(), LOOP_RMS * 0.25, 0.05),
+        "bus x master: {la:?}"
+    );
+}
+
+#[test]
+fn positional_voices_report_distance_attenuation_and_pan() {
+    let mut f = Fixture::capture("meter_spatial");
+    let e = f.app.world.spawn((
+        Transform::from_xyz(6.0, 0.0, -2.0),
+        AudioSource {
+            fade_in: 0.0,
+            ..AudioSource::ambience("audio/loop.wav").spatial(2.0, 20.0)
+        },
+    ));
+    f.run(0.3);
+    let v = voice(&f, e);
+    let s = v.spatial(f.audio().listener()).unwrap();
+    let level = v.level.unwrap();
+    eprintln!("spatial meter: {s:?}, level {level:?}");
+    assert!(near(s.distance, 40f32.sqrt(), 1e-4));
+    assert!(s.attenuation > 0.05 && s.attenuation < 1.0);
+    assert!(s.pan > 0.2, "on the right");
+    // The meter hears what kira mixed: the computed gains match it.
+    assert!(near(level.left, LOOP_RMS * s.attenuation * s.left, 0.05));
+    assert!(near(level.right, LOOP_RMS * s.attenuation * s.right, 0.05));
+    // Non-positional voices have no spatial data.
+    let flat = f.app.world.spawn((Transform::default(), loop_source(1.0)));
+    f.run(0.1);
+    assert!(voice(&f, flat).spatial(f.audio().listener()).is_none());
+}
+
+#[test]
+fn solo_and_mute_silence_voices_but_keep_their_levels() {
+    let mut f = Fixture::capture("solo_mute");
+    let group = f.app.world.spawn((Transform::default(),));
+    let pond = f.app.world.spawn((Transform::default(), loop_source(1.0)));
+    f.app.world.set_parent(pond, Some(group)).unwrap();
+    let orchard = f.app.world.spawn((Transform::default(), loop_source(0.25)));
+    f.run(0.3);
+    let both = f.levels().rms();
+    let mute = |f: &mut Fixture, t: MixTarget, on: bool| {
+        f.app.world.resource_mut::<Audio>().mute(t, on);
+    };
+    let solo = |f: &mut Fixture, t: MixTarget, on: bool| {
+        f.app.world.resource_mut::<Audio>().solo(t, on);
+    };
+
+    // Mute the group: the pond (below it) is silent, its level kept.
+    mute(&mut f, MixTarget::Entity(group), true);
+    f.run(0.3);
+    let p = voice(&f, pond);
+    assert!(p.muted && !p.audible);
+    assert!(near(p.level.unwrap().rms(), LOOP_RMS, 0.05), "level kept");
+    assert!(
+        near(f.levels().rms(), LOOP_RMS * 0.25, 0.05),
+        "only the orchard"
+    );
+    mute(&mut f, MixTarget::Entity(group), false);
+    f.run(0.3);
+    assert!(near(f.levels().rms(), both, 0.05));
+
+    // Solo the orchard: only it plays.
+    solo(&mut f, MixTarget::Entity(orchard), true);
+    f.run(0.3);
+    assert!(!voice(&f, pond).audible && voice(&f, orchard).soloed);
+    assert!(near(f.levels().rms(), LOOP_RMS * 0.25, 0.05));
+    // Muting a soloed voice silences it: nothing is heard.
+    mute(&mut f, MixTarget::Entity(orchard), true);
+    f.run(0.3);
+    assert!(f.levels().peak < 1e-4);
+    f.app.world.resource_mut::<Audio>().clear_mix();
+    f.run(0.3);
+    assert!(near(f.levels().rms(), both, 0.05));
+
+    // A bus: the effects bus solo silences the ambience loops; a one-shot
+    // on it plays, and a clip target catches it.
+    solo(&mut f, MixTarget::Bus(AudioBus::Effects), true);
+    f.app.world.send(PlaySound::new("audio/tone.wav"));
+    f.run(0.1);
+    assert!(near(f.levels().rms(), LOOP_RMS, 0.1), "{:?}", f.levels());
+    mute(
+        &mut f,
+        MixTarget::Clip(AssetRef::path("audio/tone.wav")),
+        true,
+    );
+    f.run(0.1);
+    assert!(f.levels().peak < 1e-4);
+    let mix = f.audio().mix().clone();
+    assert_eq!(mix.soloed, vec![MixTarget::Bus(AudioBus::Effects)]);
+    assert_eq!(mix.muted.len(), 1);
 }
 
 #[test]

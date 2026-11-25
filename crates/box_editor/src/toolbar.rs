@@ -25,6 +25,7 @@ pub(crate) fn add_menu(ui: &mut Ui, state: &mut EditorState) {
     for kind in NewEntity::ALL {
         if kind == NewEntity::Empty {
             generator_menus(ui, state);
+            preset_menus(ui, state);
         }
         if kind.starts_group() {
             ui.separator();
@@ -60,6 +61,27 @@ fn generator_menus(ui: &mut Ui, state: &mut EditorState) {
                 }
                 if button.clicked() {
                     state.add_generator(g.name);
+                }
+            }
+        });
+    }
+}
+
+/// Add ▸ Gameplay ▸ `<preset>`: the registered presets (a Player, a
+/// Pickup), one submenu per category.
+fn preset_menus(ui: &mut Ui, state: &mut EditorState) {
+    let presets = state.preset_entries();
+    let mut categories: Vec<String> = presets.iter().map(|p| p.category.clone()).collect();
+    categories.dedup();
+    for category in categories {
+        ui.menu_button(&category, |ui| {
+            for p in presets.iter().filter(|p| p.category == category) {
+                let mut button = ui.button(&p.title);
+                if !p.description.is_empty() {
+                    button = button.on_hover_text(&p.description);
+                }
+                if button.clicked() {
+                    state.add_preset(&p.name);
                 }
             }
         });
@@ -260,6 +282,7 @@ pub fn toolbar_ui(ui: &mut Ui, state: &mut EditorState) {
                 menu_item(ui, state, "edit.select_none");
                 menu_item(ui, state, "edit.hide");
                 menu_item(ui, state, "edit.show_all");
+                menu_item(ui, state, "edit.snap_to_ground");
                 menu_item(ui, state, "edit.bake");
                 menu_item(ui, state, "edit.hide_part");
                 ui.separator();
@@ -270,6 +293,10 @@ pub fn toolbar_ui(ui: &mut Ui, state: &mut EditorState) {
                 menu_item(ui, state, "view.frame");
                 menu_item(ui, state, "view.scene_settings");
                 menu_item(ui, state, "view.rules");
+                menu_item(ui, state, "view.mixer");
+                menu_item(ui, state, "view.assistant");
+                menu_item(ui, state, "view.audio_ranges");
+                menu_item(ui, state, "view.navigation");
                 menu_item(ui, state, "view.reset_camera");
                 ui.separator();
                 menu_item(ui, state, "view.save_layout");

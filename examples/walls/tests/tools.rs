@@ -533,7 +533,13 @@ fn the_rule_list_shows_both_rules_and_switching_one_off_removes_its_parts() {
     assert!(ed.state.run_action("view.rules").is_ok());
     assert!(ed.state.rules_panel_open());
     d.frames(&mut ed, 2);
-    let rows = ed.state.rule_rows();
+    let engine_rules = Game::new().rules();
+    let rows: Vec<_> = ed
+        .state
+        .rule_rows()
+        .into_iter()
+        .filter(|r| engine_rules.get(r.name).is_none())
+        .collect();
     let names: Vec<(&str, &str, Vec<&str>)> = rows
         .iter()
         .map(|r| (r.name, r.intent, r.reads.clone()))
@@ -550,7 +556,14 @@ fn the_rule_list_shows_both_rules_and_switching_one_off_removes_its_parts() {
     ed.state.set_rule_enabled(plan::RULE, false);
     d.frames(&mut ed, 2);
     assert!(part_of::<WallGen>(&ed, a).is_none());
-    assert!(!ed.state.rule_rows()[0].enabled);
+    let walls_row = |ed: &Editor| {
+        ed.state
+            .rule_rows()
+            .into_iter()
+            .find(|r| r.name == plan::RULE)
+            .unwrap()
+    };
+    assert!(!walls_row(&ed).enabled);
     // Off survives a new world (a reopened scene), for this session.
     let saved = scene::save_string(&ed.state.world).unwrap();
     let world = scene::load(saved.as_bytes(), ed.state.game().registry()).unwrap();

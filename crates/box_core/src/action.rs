@@ -496,6 +496,43 @@ pub struct Actions {
     mouse_captured: bool,
     /// Actions bound to a mouse button, as of the last evaluation.
     mouse_actions: HashSet<String>,
+    /// Input injected into actions ([`inject`](Self::inject)).
+    injected: HashMap<String, InjectedInput>,
+    /// Actions that read injected input at the last evaluation.
+    injected_now: HashSet<String>,
+}
+
+/// Input injected into one action for a number of input frames, on top of
+/// its bindings: how agents (`send_input`) and tests drive a game without
+/// knowing its keys. A button is held; an axis reads `value` (x for a 1D
+/// axis; for a 2D axis +Y is forward).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct InjectedInput {
+    /// Held for buttons; axes are held while `value` is not zero.
+    pub held: bool,
+    pub value: Vec2,
+    /// Input frames (evaluations) left; at least 1.
+    pub frames: u32,
+}
+
+impl InjectedInput {
+    /// A button held for `frames` frames (1: a tap).
+    pub fn press(frames: u32) -> Self {
+        Self {
+            held: true,
+            value: Vec2::X,
+            frames: frames.max(1),
+        }
+    }
+
+    /// An axis at `value` for `frames` frames.
+    pub fn axis(value: Vec2, frames: u32) -> Self {
+        Self {
+            held: value != Vec2::ZERO,
+            value,
+            frames: frames.max(1),
+        }
+    }
 }
 
 /// What a masked action reads as.
@@ -516,7 +553,9 @@ impl Actions {
             .captured
             .as_ref()
             .is_some_and(|allow| !allow.contains(name))
-            || (self.mouse_captured && self.mouse_actions.contains(name));
+            || (self.mouse_captured
+                && self.mouse_actions.contains(name)
+                && !self.injected_now.contains(name));
         let s = self.states.get(name);
         if masked && s.is_some() {
             return Some(&IDLE);
@@ -629,17 +668,55 @@ impl Actions {
         }
     }
 
+    /// Inject input into action `name` for its next `input.frames` input
+    /// frames, replacing what was injected into it before. The action must
+    /// exist in the `ActionMap` when it is evaluated, or the injection is
+    /// dropped. Injected input reaches the game like bound input, edges
+    /// included: a UI [`capture`](Self::capture) masks it, the mouse-capture
+    /// mask (clicks that belong to the editor) does not.
+    pub fn inject(&mut self, name: &str, input: InjectedInput) {
+        self.injected.insert(name.to_string(), input);
+    }
+
+    /// Drop injected input: every action reads only its bindings again
+    /// from the next evaluation.
+    pub fn clear_injected(&mut self) {
+        self.injected.clear();
+    }
+
+    /// Input frames of injected input left per action.
+    pub fn injected(&self) -> impl Iterator<Item = (&str, &InjectedInput)> {
+        self.injected.iter().map(|(n, i)| (n.as_str(), i))
+    }
+
     /// Sample every action from `input`, computing edges against the previous
     /// evaluation. [`ActionsPlugin`] calls this once per input frame.
     pub fn evaluate(&mut self, map: &ActionMap, input: &Input) {
         self.states.retain(|name, _| map.actions.contains_key(name));
+        self.injected
+            .retain(|name, _| map.actions.contains_key(name));
+        self.injected_now.clear();
         self.mouse_actions
             .retain(|name| map.actions.contains_key(name));
         for (name, kind) in &map.actions {
             if kind.uses_mouse() && !self.mouse_actions.contains(name) {
                 self.mouse_actions.insert(name.clone());
             }
-            let (held, tapped, value) = kind.sample(input);
+            let (mut held, tapped, mut value) = kind.sample(input);
+            if let Some(inj) = self.injected.get_mut(name) {
+                self.injected_now.insert(name.clone());
+                held |= inj.held;
+                if inj.value != Vec2::ZERO {
+                    value = match kind {
+                        ActionKind::Button { .. } => Vec2::X,
+                        _ => inj.value.clamp_length_max(1.0),
+                    };
+                }
+                inj.frames -= 1;
+                if inj.frames == 0 {
+                    self.injected.remove(name);
+                }
+            }
             if !self.states.contains_key(name) {
                 self.states.insert(name.clone(), ActionState::default());
             }
@@ -765,6 +842,35 @@ mod tests {
     }
 
     const PAD: GamepadId = GamepadId(3);
+
+    #[test]
+    fn injected_input_presses_holds_and_releases() {
+        let (m, mut a, i) = (map(), Actions::default(), Input::default());
+        a.inject("jump", InjectedInput::press(2));
+        a.inject("move", InjectedInput::axis(Vec2::new(0.0, 2.0), 3));
+        a.inject("nope", InjectedInput::press(1));
+        a.evaluate(&m, &i);
+        assert!(a.pressed("jump") && a.held("jump"));
+        assert_eq!(a.axis2("move"), Vec2::Y, "clamped to length 1");
+        assert_eq!(a.injected().count(), 2, "unknown names are dropped");
+        a.evaluate(&m, &i);
+        assert!(!a.pressed("jump") && a.held("jump"));
+        a.evaluate(&m, &i);
+        assert!(a.released("jump") && !a.held("jump"));
+        assert_eq!(a.axis2("move"), Vec2::Y);
+        a.evaluate(&m, &i);
+        assert_eq!(a.axis2("move"), Vec2::ZERO);
+        assert_eq!(a.injected().count(), 0);
+        // The mouse mask leaves injected input alone; a UI capture does not.
+        a.set_mouse_captured(true);
+        a.inject("jump", InjectedInput::press(1));
+        a.evaluate(&m, &i);
+        assert!(a.pressed("jump"));
+        a.capture(["ui_accept"]);
+        a.inject("jump", InjectedInput::press(1));
+        a.evaluate(&m, &i);
+        assert!(!a.held("jump"));
+    }
 
     #[test]
     fn wasd_composite_is_normalized() {

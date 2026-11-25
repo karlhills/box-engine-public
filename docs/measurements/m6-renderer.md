@@ -14,7 +14,9 @@
 | grade | 1.60 ms | 0.08 ms |
 | all | 2.58 ms | 1.02 ms |
 
-AO pass interval minimums: prepass 0.032 ms, downsample 0.025, SSAO 0.10, blur 0.08. The upsample is inside the main pass. With 7 bloom mips, bloom cost +1.1 ms wall (13 passes, mostly per-pass overhead); 5 mips cost +0.66 ms.
+AO pass interval minimums: prepass 0.032 ms, downsample 0.025, SSAO 0.10, blur 0.08. The upsample is inside the main pass.
+
+2026-11-21, same machine: SSAO samples 12 → 24 (the 12-sample spiral left low-frequency blotches in broad occluded areas, `golden_ao_closeup_has_no_blotches`). SSAO pass minimum 0.10 → 0.18 ms; AO GPU frame minimum 0.54 ms, render wall minimum 1.93 ms. With 7 bloom mips, bloom cost +1.1 ms wall (13 passes, mostly per-pass overhead); 5 mips cost +0.66 ms.
 
 ## S5 (thin poles and wall corners)
 

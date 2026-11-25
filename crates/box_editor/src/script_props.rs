@@ -88,6 +88,30 @@ pub(crate) fn properties_ui(
         note(ui, pick, t.text_weak);
         return;
     }
+    // The file, to edit here or in a code editor.
+    let file = source
+        .id
+        .and_then(|id| state.asset_server().and_then(|s| s.path_of(id)))
+        .or_else(|| source.path.clone());
+    if let Some(file) = file {
+        widgets::field_row(ui, "Code", 0.0, None, |ui| {
+            if ui
+                .button("Edit")
+                .on_hover_text(format!("Open {file} in the Script tab"))
+                .clicked()
+                && let Err(e) = state.open_script(&file, None)
+            {
+                tracing::warn!("{e}");
+            }
+            if ui
+                .button("Open in Code Editor")
+                .on_hover_text("VS Code when installed, else your default app")
+                .clicked()
+            {
+                state.open_in_code_editor(&file, None);
+            }
+        });
+    }
     let asset = match script_asset(state, &source) {
         Ok(a) => a,
         Err(msg) => {
@@ -286,13 +310,23 @@ fn edit_value(
             }
             changed
         }
-        (PropType::Entity, ScriptValue::Entity(uid)) => entity_combo(ui, state, uid, t),
+        (PropType::Entity, ScriptValue::Entity(uid)) => entity_combo(ui, state, uid, false, t),
         _ => false,
     }
 }
 
-/// A saved entity picked by name (or none).
-fn entity_combo(ui: &mut Ui, state: &EditorState, uid: &mut Option<Uid>, t: &Tokens) -> bool {
+/// A saved entity picked by name (or none): script `entity` properties and
+/// `Option<Uid>` component fields (an `Interactable`'s target, a sweep's
+/// spline). Prefab contents and other generated entities are not offered:
+/// their uids are rebuilt with them. `mixed` shows the multi-selection
+/// marker.
+pub(crate) fn entity_combo(
+    ui: &mut Ui,
+    state: &EditorState,
+    uid: &mut Option<Uid>,
+    mixed: bool,
+    t: &Tokens,
+) -> bool {
     let world = &state.world;
     let name_of = |u: Uid| {
         world
@@ -300,7 +334,11 @@ fn entity_combo(ui: &mut Ui, state: &EditorState, uid: &mut Option<Uid>, t: &Tok
             .and_then(|e| world.get::<Name>(e).map(|n| n.0.clone()))
             .unwrap_or_else(|| format!("missing {u}"))
     };
-    let shown = uid.map_or_else(|| "None".to_owned(), name_of);
+    let shown = if mixed {
+        crate::widgets::MIXED.to_owned()
+    } else {
+        uid.map_or_else(|| "None".to_owned(), name_of)
+    };
     let mut changed = false;
     egui::ComboBox::from_id_salt(("script_entity", ui.next_auto_id()))
         .selected_text(egui::RichText::new(shown).color(t.text))
@@ -308,9 +346,10 @@ fn entity_combo(ui: &mut Ui, state: &EditorState, uid: &mut Option<Uid>, t: &Tok
         .show_ui(ui, |ui| {
             changed |= ui.selectable_value(uid, None, "None").changed();
             let mut named: Vec<(String, Uid)> = world
-                .query::<(&Uid, &Name)>()
+                .query::<(box_core::world::Entity, &Uid, &Name)>()
                 .iter()
-                .map(|(u, n)| (n.0.clone(), *u))
+                .filter(|(e, _, _)| !box_core::prefab::is_generated(world, *e))
+                .map(|(_, u, n)| (n.0.clone(), *u))
                 .collect();
             named.sort();
             for (name, u) in named.into_iter().take(500) {

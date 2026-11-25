@@ -33,6 +33,7 @@ impl Behavior<Pane> for Dock<'_> {
             Pane::Inspector => panes::inspector_ui(ui, self.state),
             Pane::Console => panes::console_ui(ui, self.state),
             Pane::Assets => panes::assets_ui(ui, self.state),
+            Pane::Script => crate::script_editor::script_ui(ui, self.state),
         }
         UiResponse::None
     }

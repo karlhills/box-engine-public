@@ -449,4 +449,8 @@ Not yet verified: the Windows parity pass (an exported Windows game, the clean-m
 
 ## After M9 (not scheduled)
 
-A full construction game; Linux; clustered lighting; atmosphere model; heightfield terrain and sculpting; arbitrary-footprint roofs; prefab overrides and variants; navigation; out-of-process play; WebAssembly scripting; a node-graph layer for procedural generators; visual scripting; a script debugger; localization beyond string tables.
+Proposed: **world building** (terrain, ground-aware placement, paths and water, vegetation generators and procedural scatter, buildings and prefab reuse, agent tooling), planned in [WORLD_BUILDING.md](WORLD_BUILDING.md) from an agent-built test game.
+
+Proposed: **first game without code**: behaviour components, presets, game rules, built-in HUD and menus, eject to script ([BEHAVIOURS.md](BEHAVIOURS.md), D19), with navigation for enemies in B2 ([NAVIGATION.md](NAVIGATION.md), D21); then an **Assistant panel** in the editor that builds and explains games through `box mcp` ([AI_PANEL.md](AI_PANEL.md), D20).
+
+A full construction game; Linux; clustered lighting; atmosphere model; arbitrary-footprint roofs; prefab overrides and variants; out-of-process play; WebAssembly scripting; a node-graph layer for procedural generators; visual scripting; a script debugger; localization beyond string tables.

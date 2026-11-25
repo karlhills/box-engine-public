@@ -109,6 +109,76 @@ fn run_frames_headless_prints_a_summary() {
     assert!(base.join("game/shot.png").is_file());
 }
 
+/// `box run --audio-report`: a headless run mixes in memory and writes
+/// each source's level; the summary is in the result.
+#[test]
+fn run_writes_an_audio_report() {
+    if std::env::var_os("BOX_SKIP_GPU_TESTS").is_some() {
+        eprintln!("BOX_SKIP_GPU_TESTS set; skipping box run");
+        return;
+    }
+    let base = temp_dir("audio_report");
+    let (ok, _) = box_json(&base, &["new", "game"]);
+    assert!(ok);
+    let game = base.join("game");
+    let tone: Vec<f32> = (0..8000)
+        .map(|i| (i as f32 * 400.0 * std::f32::consts::TAU / 8000.0).sin() * 0.5)
+        .collect();
+    std::fs::create_dir_all(game.join("assets/audio")).unwrap();
+    std::fs::write(
+        game.join("assets/audio/pond.wav"),
+        box_engine::box_audio::wav::encode_pcm16(&tone, 8000, 1),
+    )
+    .unwrap();
+    std::fs::write(
+        base.join("pond.commands.json"),
+        r#"[{ "op": "spawn", "name": "Pond", "components": {
+            "Transform": { "translation": [0.0, 0.0, 0.0] },
+            "AudioSource": { "clip": "audio/pond.wav", "fade_in": 0.0 }
+        } }]"#,
+    )
+    .unwrap();
+    let (ok, json) = box_json(
+        &base,
+        &[
+            "scene",
+            "apply",
+            "game/assets/scenes/main.scene.json",
+            "pond.commands.json",
+        ],
+    );
+    assert!(ok, "{json:#}");
+    let (ok, json) = box_json(
+        &base,
+        &[
+            "run",
+            "game",
+            "--frames",
+            "60",
+            "--size",
+            "160x90",
+            "--audio-report",
+            "audio.json",
+        ],
+    );
+    if json["error"]["code"] == "no_gpu" {
+        eprintln!("no GPU adapter; skipping box run");
+        return;
+    }
+    assert!(ok, "{json:#}");
+    let audio = &json["audio"];
+    assert_eq!(audio["output"], "capture", "{json:#}");
+    assert_eq!(audio["measured"], true);
+    assert_eq!(audio["sources"][0]["name"], "Pond");
+    // A 0.5 sine: -9 dBFS RMS (ambience bus at 1, master at 1).
+    let rms_db = audio["sources"][0]["rms_db"].as_f64().unwrap();
+    assert!((rms_db + 9.0).abs() < 1.0, "{audio:#}");
+    let report: Json =
+        serde_json::from_str(&std::fs::read_to_string(base.join("audio.json")).unwrap()).unwrap();
+    assert_eq!(report["frames"], 60);
+    assert!(report["mix"]["peak"].as_f64().unwrap() > 0.4);
+}
+
 #[test]
 fn run_errors_are_json() {
     let base = temp_dir("errors");
@@ -171,7 +241,9 @@ fn new_native_creates_a_standalone_crate() {
         "{cargo}"
     );
     assert!(
-        cargo.contains("\ndefault = [\"physics\", \"dynamics\", \"audio\", \"script\"]\n"),
+        cargo.contains(
+            "\ndefault = [\"physics\", \"dynamics\", \"audio\", \"script\", \"navigation\"]\n"
+        ),
         "every engine module by default: {cargo}"
     );
     assert!(!cargo.contains("bevy_reflect ="), "{cargo}");
@@ -411,7 +483,7 @@ fn lean_native_project_builds_and_runs() {
     let root = base.join("lean");
     let manifest = root.join("Cargo.toml");
     let cargo = std::fs::read_to_string(&manifest).unwrap();
-    let full = "\ndefault = [\"physics\", \"dynamics\", \"audio\", \"script\"]\n";
+    let full = "\ndefault = [\"physics\", \"dynamics\", \"audio\", \"script\", \"navigation\"]\n";
     assert!(cargo.contains(full), "{cargo}");
     std::fs::write(
         &manifest,

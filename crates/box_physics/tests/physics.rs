@@ -537,3 +537,31 @@ fn ray_shorthand_uses_the_default_filter_and_sees_colliders_after_post_update() 
     assert!(physics(&app).ray(Vec3::ZERO, Vec3::NEG_Z, 4.0).is_none());
     assert!(physics(&app).ray(Vec3::ZERO, Vec3::ZERO, 100.0).is_none());
 }
+
+#[test]
+fn non_collidable_subtrees_take_no_part_until_switched_on() {
+    let mut app = app();
+    let root = app.world.spawn((Transform::IDENTITY, Collidable(false)));
+    let cube = cube_at(&mut app, 0.0, 0.0, -5.0);
+    app.world.set_parent(cube, Some(root)).unwrap();
+    app.update();
+    let ray = Ray::new(Vec3::ZERO, Vec3::NEG_Z);
+    assert_eq!(physics(&app).len(), 0, "a child of a non-collidable root");
+    assert!(physics(&app).raycast(&ray, 100.0, &ALL).is_none());
+
+    app.world.component_mut::<Collidable>(root).unwrap().0 = true;
+    app.update();
+    assert_eq!(
+        physics(&app).raycast(&ray, 100.0, &ALL).unwrap().entity,
+        cube
+    );
+
+    let _ = app.world.insert_one(cube, Collidable(false));
+    app.update();
+    assert_eq!(
+        physics(&app).len(),
+        0,
+        "switched off on the collider itself"
+    );
+    assert!(physics(&app).raycast(&ray, 100.0, &ALL).is_none());
+}

@@ -157,4 +157,38 @@ The failure also showed that `cargo test` stops at the first failing test binary
 | `cargo run -p box_player_app -- examples/cinder_keep` (headless capture) | Runs; characters invisible before item 5, correct after |
 | `WGPU_BACKEND=vulkan` | Renders correctly; used to split backend bugs from engine bugs |
 
-Not yet done by hand (IMPLEMENTATION_PLAN step 16): window, resize, input, shader hot reload in a window, editor Play, gamepad, cursor lock, audio device, and R26 (the editor's non-sRGB surface with an sRGB view on DX12 in a real window).
+### Manual run (IMPLEMENTATION_PLAN step 16), driven by an agent through desktop control
+
+Showcase in a window (`cargo run --example showcase`, debug build, DX12, 240 Hz display):
+
+| Check | Result |
+|---|---|
+| Window opens, renders lit, shadowed primitives under sky and fog | Pass; ~4.2 ms (240 fps, Fifo at the display rate) |
+| Orbit (left drag), zoom (wheel) | Pass |
+| Keys 1/2 (day/evening), C (cascades), O (AO view), G (grid), T (tone mapper) | Pass |
+| Maximise to the full ultrawide screen and restore | Pass; aspect correct |
+| Minimise and restore | Pass; no crash, rendering resumes |
+| Shader hot reload in a window (`tonemap.wgsl` edit) | Pass; change visible within 2 s |
+| Broken shader | Pass; `shader reload failed; keeping previous pipelines` with file:line, image unchanged, recovers when fixed |
+| Esc quits | Pass |
+| Validation errors / panics in the log | None |
+
+Colours on screen could not be judged from desktop screenshots: the desktop capture washes out all SDR content on this machine (probably an HDR desktop). The headless PNG opened in Paint looked exactly as washed out as the live DX12 window and a live `WGPU_BACKEND=vulkan` window. So the window's colours match the reference *relative to each other*, which is evidence for R26 but not a by-eye check.
+
+Editor in a window (`box-editor examples/collector_luau --no-restore`):
+
+| Check | Result |
+|---|---|
+| Window opens; surface `Bgra8Unorm` with sRGB view (R26 path) | Pass; egui panels and viewport render, 240 fps |
+| Hierarchy selection, viewport marquee, inspector, gizmo | Pass |
+| Play: skinned character, HUD, scripts | Pass |
+| Game input in Play (click viewport, WASD, Space) | Pass; walked, jumped onto the platform, collected a gem (Score 10) |
+| Esc returns input; Stop restores the edit scene | Pass; collected gem back |
+| Maximise | Pass |
+| Close; warnings/errors/validation in the log | Clean exit; none |
+
+`input_demo` in a window: W moves and Space jumps the cube; click locks the cursor (pointer pinned while mouse moves turn the camera); Esc releases it (pointer moves freely); a second Esc quits. Log clean.
+
+`audio_demo` on the real device: the device opens in 35 ms. Output was measured with the Windows audio session peak meter for the process (not by ear): wind loop 0.01–0.03 peak, varying as the emitter circles; each Space adds a chime spike; M (mute) and P (pause) drop it to 0.000; resuming restores it. Log clean.
+
+Still to do by hand: look at the showcase and the editor on the monitor itself (R26 by eye; desktop screenshots cannot judge colour here), listen to the audio, and the gamepad (no controller was connected).

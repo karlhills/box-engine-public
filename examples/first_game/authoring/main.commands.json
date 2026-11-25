@@ -1,0 +1,454 @@
+[
+ {
+  "op": "spawn",
+  "name": "Sun",
+  "components": {
+   "Transform": {
+    "translation": [
+     0,
+     12,
+     0
+    ],
+    "rotation": [
+     -0.418082,
+     0.270273,
+     0.131821,
+     0.857195
+    ]
+   },
+   "DirectionalLight": {
+    "color": [
+     1.0,
+     0.87962,
+     0.71569,
+     1.0
+    ],
+    "intensity": 3.2,
+    "shadows": true,
+    "shadow_distance": 60.0
+   }
+  }
+ },
+ {
+  "op": "spawn",
+  "name": "Ground",
+  "components": {
+   "Transform": {
+    "translation": [
+     0,
+     -0.25,
+     0
+    ]
+   },
+   "Primitive": {
+    "shape": {
+     "Cuboid": {
+      "size": [
+       60,
+       0.5,
+       60
+      ]
+     }
+    }
+   },
+   "StandardMaterial": {
+    "base_color": [
+     0.15896,
+     0.32314,
+     0.06848,
+     1.0
+    ],
+    "roughness": 0.95
+   },
+   "Collider": {
+    "shape": "Primitive"
+   }
+  }
+ },
+ {
+  "op": "spawn",
+  "name": "Ledge",
+  "components": {
+   "Transform": {
+    "translation": [
+     16,
+     1,
+     -16
+    ]
+   },
+   "Primitive": {
+    "shape": {
+     "Cuboid": {
+      "size": [
+       8,
+       2,
+       8
+      ]
+     }
+    }
+   },
+   "StandardMaterial": {
+    "base_color": [
+     0.42,
+     0.4,
+     0.37,
+     1.0
+    ],
+    "roughness": 0.85
+   },
+   "Collider": {
+    "shape": "Primitive"
+   }
+  }
+ },
+ {
+  "op": "spawn",
+  "name": "Ramp",
+  "components": {
+   "Transform": {
+    "translation": [
+     16,
+     0.95,
+     -8.9
+    ],
+    "rotation": {
+     "euler_deg": [
+      17,
+      0,
+      0
+     ]
+    }
+   },
+   "Primitive": {
+    "shape": {
+     "Cuboid": {
+      "size": [
+       3,
+       0.3,
+       6.6
+      ]
+     }
+    }
+   },
+   "StandardMaterial": {
+    "base_color": [
+     0.42,
+     0.4,
+     0.37,
+     1.0
+    ],
+    "roughness": 0.85
+   },
+   "Collider": {
+    "shape": "Primitive"
+   }
+  }
+ },
+ {
+  "op": "spawn",
+  "name": "Wall",
+  "components": {
+   "Transform": {
+    "translation": [
+     -12,
+     1,
+     0
+    ]
+   },
+   "Primitive": {
+    "shape": {
+     "Cuboid": {
+      "size": [
+       0.6,
+       2,
+       12
+      ]
+     }
+    }
+   },
+   "StandardMaterial": {
+    "base_color": [
+     0.42,
+     0.4,
+     0.37,
+     1.0
+    ],
+    "roughness": 0.85
+   },
+   "Collider": {
+    "shape": "Primitive"
+   }
+  }
+ },
+ {
+  "op": "add_preset",
+  "preset": "player",
+  "at": [
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   4,
+   0,
+   -4
+  ],
+  "name": "Coin 1"
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   -4,
+   0,
+   -4
+  ],
+  "name": "Coin 2"
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   8,
+   0,
+   2
+  ],
+  "name": "Coin 3"
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   -8,
+   0,
+   6
+  ],
+  "name": "Coin 4"
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   0,
+   0,
+   -12
+  ],
+  "name": "Coin 5"
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   6,
+   0,
+   12
+  ],
+  "name": "Coin 6"
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   -16,
+   0,
+   -6
+  ],
+  "name": "Coin 7"
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   -18,
+   0,
+   10
+  ],
+  "name": "Coin 8"
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   14,
+   2,
+   -17
+  ],
+  "name": "Coin 9"
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   18,
+   2,
+   -15
+  ],
+  "name": "Coin 10"
+ },
+ {
+  "op": "add_preset",
+  "preset": "moving_platform",
+  "at": [
+   -6,
+   0,
+   -20
+  ],
+  "name": "Platform West"
+ },
+ {
+  "op": "add_preset",
+  "preset": "moving_platform",
+  "at": [
+   8,
+   0,
+   22
+  ],
+  "name": "Platform South"
+ },
+ {
+  "op": "set",
+  "entity": "Platform South",
+  "path": "Mover.points",
+  "value": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    -10,
+    0,
+    0
+   ]
+  ]
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "name": "Coin 11",
+  "parent": "Platform West"
+ },
+ {
+  "op": "add_preset",
+  "preset": "pickup",
+  "at": [
+   0,
+   0,
+   0
+  ],
+  "name": "Coin 12",
+  "parent": "Platform South"
+ },
+ {
+  "op": "add_preset",
+  "preset": "hazard",
+  "at": [
+   6,
+   0,
+   -6
+  ],
+  "name": "Spikes 1"
+ },
+ {
+  "op": "add_preset",
+  "preset": "hazard",
+  "at": [
+   -6,
+   0,
+   4
+  ],
+  "name": "Spikes 2"
+ },
+ {
+  "op": "add_preset",
+  "preset": "hazard",
+  "at": [
+   16,
+   0,
+   -4
+  ],
+  "name": "Spikes 3"
+ },
+ {
+  "op": "add_preset",
+  "preset": "checkpoint",
+  "at": [
+   0,
+   0,
+   10
+  ],
+  "name": "Checkpoint"
+ },
+ {
+  "op": "add_preset",
+  "preset": "enemy",
+  "at": [
+   -20,
+   0,
+   0
+  ],
+  "name": "Guard"
+ },
+ {
+  "op": "set",
+  "entity": "Guard",
+  "path": "Chaser.patrol",
+  "value": [
+   [
+    0,
+    0,
+    -8
+   ],
+   [
+    0,
+    0,
+    8
+   ]
+  ]
+ },
+ {
+  "op": "add_preset",
+  "preset": "goal",
+  "at": [
+   0,
+   0,
+   26
+  ],
+  "name": "Goal"
+ },
+ {
+  "op": "set",
+  "entity": "Goal",
+  "path": "Interactable.requires",
+  "value": [
+   {
+    "GroupDone": {
+     "group": "pickups"
+    }
+   }
+  ]
+ },
+ {
+  "op": "set_resource",
+  "path": "GameRules",
+  "value": {
+   "time_limit": 180.0,
+   "lives": 3,
+   "win_title": "All coins, home free!"
+  }
+ },
+ {
+  "op": "set_resource",
+  "path": "HudSettings",
+  "value": {}
+ }
+]

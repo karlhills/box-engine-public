@@ -1,0 +1,46 @@
+{
+  "name": "enemy",
+  "title": "Enemy",
+  "category": "Gameplay",
+  "description": "A creature that chases the player when it sees them (around walls, along the navmesh) and costs them 1 health on contact, then searches and goes home. Give it `patrol` points to walk a beat.",
+  "entities": [
+    {
+      "name": "Enemy",
+      "components": {
+        "Transform": { "translation": [0.0, 0.8, 0.0] },
+        "Chaser": {},
+        "NavAgent": {},
+        "KinematicCharacter": { "radius": 0.4, "height": 1.6 },
+        "Collider": { "shape": { "Capsule": { "radius": 0.4, "half_height": 0.4 } } },
+        "Health": { "max": 1.0, "current": 1.0 },
+        "Interpolated": {}
+      }
+    },
+    {
+      "name": "Body",
+      "parent": "Enemy",
+      "components": {
+        "Primitive": { "shape": { "Capsule": { "radius": 0.4, "half_height": 0.4 } } },
+        "StandardMaterial": { "base_color": [0.72, 0.16, 0.14, 1.0], "roughness": 0.6 }
+      }
+    },
+    {
+      "name": "Eye Left",
+      "parent": "Enemy",
+      "components": {
+        "Transform": { "translation": [-0.14, 0.35, -0.34] },
+        "Primitive": { "shape": { "Sphere": { "radius": 0.08 } }, "cast_shadows": false },
+        "StandardMaterial": { "base_color": [1.0, 0.95, 0.6, 1.0], "emissive": [1.5, 1.2, 0.3, 1.0] }
+      }
+    },
+    {
+      "name": "Eye Right",
+      "parent": "Enemy",
+      "components": {
+        "Transform": { "translation": [0.14, 0.35, -0.34] },
+        "Primitive": { "shape": { "Sphere": { "radius": 0.08 } }, "cast_shadows": false },
+        "StandardMaterial": { "base_color": [1.0, 0.95, 0.6, 1.0], "emissive": [1.5, 1.2, 0.3, 1.0] }
+      }
+    }
+  ]
+}

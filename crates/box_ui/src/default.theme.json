@@ -82,6 +82,17 @@
     },
     "title": { "text_size": 64, "text_color": "$text", "text_align": "center" },
     "subtitle": { "text_size": 26, "text_color": "$text_dim", "text_align": "center" },
-    "hud": { "background": "#0000008c", "radius": 14, "padding": [12, 18], "gap": 10 }
+    "hud": { "background": "#0000008c", "radius": 14, "padding": [12, 18], "gap": 10 },
+    "prompt": { "background": "#000000a8", "radius": 10, "padding": [6, 12, 6, 6], "gap": 10, "align": "center" },
+    "prompt_key": {
+      "background": "$accent",
+      "text_color": "#1b1408",
+      "text_size": 20,
+      "text_align": "center",
+      "radius": 6,
+      "padding": [2, 9],
+      "min_width": 30
+    },
+    "prompt_text": { "text_color": "$text", "text_size": 22 }
   }
 }

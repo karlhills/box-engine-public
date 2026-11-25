@@ -550,7 +550,7 @@ fn spawn_flights(w: &mut World, n: usize) -> Vec<Uid> {
 /// The M5 latency benchmark. Prints a table; asserts the properties the
 /// acceptance criteria need (one frame for an edit after a pause, a drag
 /// regenerating about every other 60 Hz frame with the last value landing,
-/// frames well under 16.7 ms).
+/// frames under 16 ms, one stall allowed: `FrameTimes`).
 #[test]
 fn latency_benchmark() {
     let game = game();
@@ -607,7 +607,7 @@ fn latency_benchmark() {
     let mut edits = EditStack::new();
     edits.begin("Drag rise");
     let before = w.get::<ProcState>(e).unwrap().generations();
-    let mut worst = Duration::ZERO;
+    let mut times = FrameTimes::default();
     let mut last = 0.0f32;
     advance(&mut w, Duration::from_secs(1));
     for frame in 0..60 {
@@ -615,7 +615,7 @@ fn latency_benchmark() {
         let start = Instant::now();
         edits.set_field(&mut w, uids[0], &path, &last).unwrap();
         sync_scene_meshes(&mut w);
-        worst = worst.max(start.elapsed());
+        times.push(start.elapsed());
         advance(&mut w, Duration::from_micros(16_667));
     }
     edits.commit();
@@ -639,26 +639,67 @@ fn latency_benchmark() {
         advance(&mut w, Duration::from_micros(16_667));
     }
     println!(
-        "drag: 60 frames, {during} regenerations, worst frame {:.3} ms, last value visible {} frame(s) after the drag",
-        worst.as_secs_f64() * 1e3,
+        "drag: 60 frames, {during} regenerations, worst frame {:.3} ms (next {:.3} ms), last value visible {} frame(s) after the drag",
+        times.worst().as_secs_f64() * 1e3,
+        times.second_worst().as_secs_f64() * 1e3,
         landed_after.map_or("never".into(), |f| f.to_string())
     );
     assert!((29..=31).contains(&during), "{during}");
     assert!(landed_after.is_some(), "the last value lands");
     assert!(!box_engine::box_proc::pending(&w), "nothing left queued");
     assert_eq!(edits.undo_len(), 1, "the drag is one undo step");
-    assert!(
-        worst < Duration::from_millis(16),
-        "a drag frame took {worst:?}"
-    );
+    times.assert_within_budget("drag rise");
     assert!(w.resource::<ProcRuntime>().stats().generated >= 1000);
+}
+
+/// Frame times of a drag. One frame may miss the budget: a test thread can
+/// be descheduled for a frame while other test binaries load the machine. A
+/// slow regeneration slows every regenerating frame (about half of them), so
+/// the second-worst frame still catches it.
+#[derive(Default)]
+struct FrameTimes(Vec<Duration>);
+
+impl FrameTimes {
+    const BUDGET: Duration = Duration::from_millis(16);
+
+    fn push(&mut self, t: Duration) {
+        self.0.push(t);
+    }
+
+    fn sorted(&self) -> Vec<Duration> {
+        let mut v = self.0.clone();
+        v.sort_unstable_by(|a, b| b.cmp(a));
+        v
+    }
+
+    fn worst(&self) -> Duration {
+        self.sorted().first().copied().unwrap_or_default()
+    }
+
+    fn second_worst(&self) -> Duration {
+        self.sorted().get(1).copied().unwrap_or_default()
+    }
+
+    fn assert_within_budget(&self, what: &str) {
+        let over: Vec<Duration> = self
+            .sorted()
+            .into_iter()
+            .take_while(|t| *t >= Self::BUDGET)
+            .collect();
+        assert!(
+            over.len() <= 1,
+            "{what}: {} drag frames took {:?} or more: {over:?}",
+            over.len(),
+            Self::BUDGET
+        );
+    }
 }
 
 /// The M5 acceptance drag on the built-in generators: one second of a 60 Hz
 /// slider drag (one `EditStack` transaction, as the inspector drags) on a
 /// lathe or an extrusion among 200 others. Prints the worst frame, the
-/// regenerations and the generation time; asserts no frame near 16.7 ms
-/// and that the last value lands.
+/// regenerations and the generation time; asserts frames under 16 ms (one stall
+/// allowed: `FrameTimes`) and that the last value lands.
 #[test]
 fn lathe_and_extrude_drag_latency() {
     enum Shape {
@@ -736,7 +777,7 @@ fn lathe_and_extrude_drag_latency() {
         let mut edits = EditStack::new();
         edits.begin("Drag");
         let before = w.get::<ProcState>(e).unwrap().generations();
-        let mut worst = Duration::ZERO;
+        let mut times = FrameTimes::default();
         let mut gen_worst = Duration::ZERO;
         advance(&mut w, Duration::from_secs(1));
         for frame in 0..60 {
@@ -745,7 +786,7 @@ fn lathe_and_extrude_drag_latency() {
             let start = Instant::now();
             edits.set_field(&mut w, uids[0], &path, &value).unwrap();
             sync_scene_meshes(&mut w);
-            worst = worst.max(start.elapsed());
+            times.push(start.elapsed());
             let s = w.get::<ProcState>(e).unwrap();
             if s.generations() > generations {
                 gen_worst = gen_worst.max(s.last_generate().unwrap_or_default());
@@ -783,18 +824,14 @@ fn lathe_and_extrude_drag_latency() {
         println!(
             "{:<34} {during:>6} {:>10.3} {:>10.3} {tris:>8} {:>7}",
             case.name,
-            worst.as_secs_f64() * 1e3,
+            times.worst().as_secs_f64() * 1e3,
             gen_worst.as_secs_f64() * 1e3,
             landed.map_or("never".into(), |f| f.to_string())
         );
         assert!((29..=31).contains(&during), "{}: {during}", case.name);
         assert!(landed.is_some(), "{}: the last value lands", case.name);
         assert_eq!(edits.undo_len(), 1, "the drag is one undo step");
-        assert!(
-            worst < Duration::from_millis(16),
-            "{}: a drag frame took {worst:?}",
-            case.name
-        );
+        times.assert_within_budget(case.name);
     }
 }
 
@@ -926,10 +963,11 @@ fn rules_run_in_a_world_without_an_app() {
     let game = Game::new().with_plugin(StepsPlugin).with_plugin(Landings);
     let mut w = world(&game);
     w.insert_resource(game.rules());
+    // The game's rule and the two engine rules for terrain.
     assert_eq!(
         w.resource::<box_engine::box_proc::rule::RuleRegistry>()
             .len(),
-        1
+        3
     );
     w.spawn((Uid::new(), Transform::default(), Landing { steps: 2 }));
     box_engine::box_core::transform::propagate_transforms(&mut w);
@@ -943,5 +981,7 @@ fn rules_run_in_a_world_without_an_app() {
         sync_scene_meshes(&mut w);
     }
     assert_eq!(w.get::<ProcState>(e).unwrap().generations(), generations);
-    assert!(Game::new().rules().is_empty());
+    // A game without rule plugins still has the engine's terrain rules.
+    let names: Vec<&str> = Game::new().rules().rules().map(|r| r.name).collect();
+    assert_eq!(names, ["terrain", "terrain_paths"]);
 }

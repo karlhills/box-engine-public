@@ -26,6 +26,7 @@ pub enum Command {
     Deselect,
     Hide,
     UnhideAll,
+    SnapToGround,
     Undo,
     Redo,
     Save,
@@ -143,6 +144,12 @@ pub const SHORTCUTS: &[Shortcut] = &[
         label: "Show every hidden entity",
         group: "Selection",
         keys: &[key(ALT, Key::H)],
+    },
+    Shortcut {
+        command: Command::SnapToGround,
+        label: "Snap the selection to the terrain under it",
+        group: "Selection",
+        keys: &[key(NONE, Key::End)],
     },
     Shortcut {
         command: Command::Undo,

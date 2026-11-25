@@ -16,13 +16,16 @@ The box-engine editor (`box-editor`) is where you build scenes: place objects, t
 - [Undo and redo](#undo-and-redo)
 - [Saving scenes](#saving-scenes)
 - [Play mode](#play-mode)
+- [Sound: the Mixer and audio ranges](#sound-the-mixer-and-audio-ranges)
 - [Assets](#assets)
+- [Editing scripts](#editing-scripts)
 - [Procedural tools](#procedural-tools)
 - [Project Settings](#project-settings)
 - [The command palette](#the-command-palette)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [The Console, toasts and errors](#the-console-toasts-and-errors)
 - [Rebuild and Restart (native projects)](#rebuild-and-restart-native-projects)
+- [The Assistant](#the-assistant)
 - [Allow Agent Control](#allow-agent-control)
 - [Editor files](#editor-files)
 
@@ -159,6 +162,7 @@ Click **+ Add** in the toolbar (also Edit ▸ Add, or right-click empty space in
 |---|---|
 | Meshes | Cube, Sphere, Cylinder, Capsule, Plane |
 | Procedural | One submenu per generator category: **Shapes** (Extrude, Lathe, Spline) and any added by your game or plugins (for example **Architecture**) |
+| Gameplay | Ready-made objects that work without code: Player (with a follow camera), Pickup, Hazard, Moving Platform, Checkpoint, Goal ([Behaviours](behaviours.md)) |
 | Empty | Empty (a transform only, for grouping) |
 | Lights | Directional Light, Point Light, Spot Light, Ambient Volume |
 | Other | Camera, Particle Emitter |
@@ -173,7 +177,7 @@ Cmd+D duplicates the selection; Delete or Backspace deletes it.
 
 ## The hierarchy
 
-- The pinned **Scene** row at the top selects nothing and shows the scene's settings in the inspector: the Environment (sky, fog, exposure, tone mapping, post-processing, wind). View ▸ Scene Settings does the same.
+- The pinned **Scene** row at the top selects nothing and shows the scene's settings in the inspector: the Environment (sky, fog, exposure, tone mapping, post-processing, wind), and the game's rules and HUD when the scene has them. **Add Scene Setting** at the bottom adds Game Rules or Hud Settings ([Behaviours](behaviours.md)). View ▸ Scene Settings does the same.
 - **Rename**: double-click the name, press F2, or right-click ▸ Rename.
 - **Reparent**: drag a row onto the middle of another row. Drag onto a row's top or bottom edge to reorder instead. The object keeps its position in the world. Dragging near the list's top or bottom edge scrolls it.
 - **Search**: the field at the top filters the rows.
@@ -257,6 +261,33 @@ Press **Play** (Cmd+P) to run the game inside the editor, from the scene as it i
 
 **When the game fails.** If Play cannot start, or game code panics during Play, Play stops with an error toast and a Console record naming the phase, the location and the message. The edit scene and its recovery copy are untouched. Script errors are caught and logged with `file:line`; they cannot crash the editor.
 
+## Sound: the Mixer and audio ranges
+
+**View ▸ Mixer** shows the game's sound while it plays. Use it to tune a mix: play the same stretch again and again, and change levels while you listen.
+
+- **Bus faders**: Master, Effects, Ambience and Music are the project's Audio Settings. Moving a fader changes the running game at once and writes `assets/settings/AudioSettings.json`, so the change stays after Stop. Each bus shows the combined level of its sounds.
+- **Sources**: during Play, every sound that is playing, loudest first. Each row shows its bus, its distance from the listener, how much the distance turns it down (Atten.), where it is heard from (Pan, L or R), and a meter of how loud it is at the listener after distance, panning, bus and master volume. A one-shot (`PlaySound`) is named by its clip.
+- **Volume**: an `AudioSource`'s row has a volume slider. It is an ordinary Play edit, so the inspector shows it too. Press **Keep** to apply the value to the scene at Stop.
+- **Solo and mute**: **M** mutes a row and **S** solos it. While anything is soloed, only soloed sounds are heard. A bus row mutes or solos the whole bus. **Solo selected** and **Mute selected** apply to the selected entities and every sound below them in the hierarchy, such as an Orchard group with a source on each tree. A muted sound keeps playing silently, and its meter still shows its level. Solo and mute never change the scene, and they end at Stop.
+
+Editing `AudioSettings.json` in another program, or a source's Volume in the inspector, also changes the running game at once.
+
+**View ▸ Audio Ranges** (also in the viewport's view menu) draws two rings around each positional sound: inside the inner ring it plays at full volume, beyond the outer ring it is silent. During Play, each playing sound also gets a line to the listener (the `AudioListener` entity, else the game camera), coloured by its level: green, yellow above -12 dB, red above -3 dB. The line is dark grey when the sound is silent, out of range, muted or soloed out. The rings show over the game's own view too.
+
+**View ▸ Navigation** draws the navmesh: where enemies and other characters the game moves can walk. Bright lines outline each walkable area (they keep a character's radius from walls and edges); faint lines are the edges between its pieces. It is built from the scene's colliders and follows your edits a moment after you stop moving something. Moving things (platforms with a `Mover`, characters, rigid bodies) and triggers are not part of it. `NavSettings` in Scene Settings sets the agent size; `box nav` and `box render --nav` show the same from the command line.
+
+Selected behaviours draw their gizmos: an `Interactable`'s reach (green ring and cross at the interaction point), a `Mover`'s path (yellow), a `Spawner`'s area (violet), and a `Chaser`'s sight (orange ring), give-up distance (faint orange) and patrol (yellow).
+
+Levels are measured on the sound output. When no sound device can be opened, the output is silent, and the Mixer shows no levels.
+
+**For agents.** The same information and controls are live MCP tools: `audio_levels` (every voice's level, distance, attenuation and pan as JSON; `target` filters to an entity and the sources below it, a bus or a clip), `audio_solo` and `audio_mute` (`{"target": "Orchard"}`, `{"target": "bus:music"}`, `{"clear": true}`). To check a mix without a window, `box run` measures it over a headless run:
+
+```bash
+box run my-game --frames 600 --audio-report audio.json
+```
+
+The report lists each source's RMS and peak level in dBFS, how long it was heard, and how long it was muted, together with the mixed output and the buses. Headless runs mix the sound in memory, so nothing is heard. `box-player --audio-report` does the same.
+
 ## Assets
 
 The Assets pane shows the project's `assets/` folder: a folder tree on the left, the files of the selected folder on the right, a breadcrumb, **Search assets** (across all folders) and **New** (Folder, Material, Scene).
@@ -274,7 +305,7 @@ The Assets pane shows the project's `assets/` folder: a folder tree on the left,
 
 **Using assets in the scene:**
 
-- Drag a glTF model or a `.scene.json` into the viewport: it becomes a prefab instance placed on the surface under the pointer. Drag one of its meshes to get just that mesh.
+- Drag a glTF model or a `.scene.json` into the viewport: it becomes a prefab instance standing on the surface under the pointer (a terrain, a floor, another object; the ground plane where there is nothing): the lowest point of its meshes touches the surface, whether or not the model's origin is at its base. Drag one of its meshes to get just that mesh. To put something back on the terrain later, select it and press End (Edit ▸ Snap to Ground).
 - Drag a material onto an object in the viewport or the hierarchy to assign it.
 - Drag any asset onto a matching field in the inspector.
 
@@ -285,6 +316,20 @@ The Assets pane shows the project's `assets/` folder: a folder tree on the left,
 - A shader material shows the parameters its `.wgsl` file declares, and the shader's compile error if it has one.
 
 **Hot reload.** Change an asset file outside the editor (save a texture in your paint program, edit a script) and the editor re-imports it within a moment, in the edit scene and during Play.
+
+## Editing scripts
+
+Luau scripts open in the **Script** tab, next to the Viewport:
+
+- Double-click a `.luau` file in the Assets pane (or right-click ▸ Edit Script).
+- Press **Edit** on a Script component in the inspector.
+- Double-click a script error in the Console, or press **Edit Script** on its toast: the file opens at that line.
+
+Each open file is a tab at the top of the pane; a dot after the name means unsaved edits. **Cmd+S** saves the file while you are typing in it (elsewhere it saves the scene). Saving reloads every script that uses the file at once, during Play too. **Cmd+F** finds text; Enter jumps to the next match.
+
+Lines named by script errors and warnings in the log are red in the margin; hover the number to read the message. If a file changes on disk (another program, the Assistant), it reloads; if you have unsaved edits, a bar offers **Reload** or **Keep Mine**. Unsaved scripts are part of the "Save changes?" prompt when you quit or open another project.
+
+**Open in Code Editor** (in the Script tab, the inspector and the Assets right-click menu) opens the file in VS Code, at the cursor's line, when it is installed, otherwise in your default app. For completion and type checking there, see [Set up your code editor](getting-started.md#set-up-your-code-editor).
 
 ## Procedural tools
 
@@ -309,7 +354,7 @@ Game ▸ Project Settings lists the project's settings resources: values shared 
 
 ## The command palette
 
-Press **Cmd+K** (or F1, or Help ▸ Command Palette…) and type. The palette searches every menu action, plus Add ▸ (objects and generators), Add Component (for the selection), Open Scene ▸ (the project's scenes), the project's assets (choosing one selects it in the Assets pane), Open Recent ▸ projects and the undo History.
+Press **Cmd+K** (or F1, or Help ▸ Command Palette…) and type. The palette searches every menu action, plus Add ▸ (objects, generators and gameplay presets), Add Component (for the selection), Open Scene ▸ (the project's scenes), the project's assets (choosing one selects it in the Assets pane), Open Recent ▸ projects and the undo History.
 
 - Matching is forgiving: each word can match part of a label or letters in order.
 - Recently used actions come first.
@@ -368,6 +413,18 @@ Nothing fails silently in the editor.
 A native project (made with `box new my-game --native`) has its own Rust code and its own editor binary, started with `cargo editor` in the project folder. In that editor, **Game ▸ Rebuild and Restart** (Cmd+Shift+B) builds the game's code in the background (the toolbar shows "Building…", the output goes to the Console). Compiler errors appear as `file:line` toasts and the editor keeps running. When the build succeeds, the editor restarts into the new binary with the same scene, camera, selection and unsaved changes.
 
 In the plain `box-editor` the item is disabled, and its tooltip says why. See [Native plugins](native-plugins.md).
+
+## The Assistant
+
+**View ▸ Assistant** (or Cmd+K, "assistant") opens a window where you describe what to build or change, such as "add eight coins and a goal that wins once they are all collected". An AI agent then does it in the open project while you watch, and the window lists what it did in plain words ("Placed pickup ×8", "Checked the project") and what it says.
+
+- It uses **Claude Code**, installed and signed in on this computer (`claude` in a terminal). The editor stores no key and sends nothing until you press Send. The agent can only use the project's `box` tools: no shell, and files only under `assets/`.
+- **One request is one undo step**, labelled "Assistant: …" (Cmd+Z undoes it). Your own edits while it works stay separate steps. **Undo Turn** under a request also puts back the files it wrote; it is available while that request's changes are the latest.
+- **Stop** ends a request at once; what it already changed stays, as one step.
+- Each message tells the agent the open scene, the selection and where the camera looks, so "put a platform here" and "make this bigger" work.
+- The agent is told to build with [presets and behaviours](behaviours.md) first, so what it makes can be changed in the inspector.
+
+If Claude Code is not installed or not signed in, the window says so.
 
 ## Allow Agent Control
 

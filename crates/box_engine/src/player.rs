@@ -74,6 +74,18 @@ pub struct PlayerOptions {
     pub upgrade: bool,
     /// `--dry-run` (with `--upgrade`): print what would change, write nothing.
     pub dry_run: bool,
+    /// `--audio-report <json>`: write each sound source's peak and RMS at
+    /// the listener over the run to this file on exit
+    /// ([`crate::audio_mixer::AudioReport`]). Headless and capture runs
+    /// mix in memory (nothing is heard) so the levels are measured; a
+    /// windowed run measures what the device plays.
+    pub audio_report: Option<PathBuf>,
+    /// `--playtest <file>`: replay a playtest headless ([`crate::playtest`])
+    /// instead of playing; prints the report (with `--report`, also as
+    /// JSON) and fails when a check fails.
+    pub playtest: Option<PathBuf>,
+    /// `--capture-every <n>` (with `--playtest`): save a PNG every n frames.
+    pub capture_every: Option<u32>,
 }
 
 impl Default for PlayerOptions {
@@ -86,6 +98,9 @@ impl Default for PlayerOptions {
             write_registry: false,
             upgrade: false,
             dry_run: false,
+            audio_report: None,
+            playtest: None,
+            capture_every: None,
         }
     }
 }
@@ -96,8 +111,11 @@ const VALUE_FLAGS: [&str; 4] = ["--capture", "--frames", "--report", "--size"];
 /// Runner flags without a value.
 const SWITCH_FLAGS: [&str; 3] = ["--headless", "--control", "--splash"];
 /// The player's own flags.
-const PLAYER_FLAGS: [&str; 6] = [
+const PLAYER_FLAGS: [&str; 9] = [
     "--scene",
+    "--audio-report",
+    "--playtest",
+    "--capture-every",
     "--version",
     "--no-watch",
     "--write-registry",
@@ -122,6 +140,8 @@ Options:
   --frames <n>          Exit after n frames (default 3 with --capture)
   --size <W>x<H>        Window size in logical pixels, or capture size
   --report <json>       Write frame timings and render statistics on exit
+  --audio-report <json> Write each sound source's peak and RMS level at the
+                        listener on exit (headless runs mix in memory)
   --headless            No window: run --frames frames offscreen
   --control             Serve the live control socket for `box mcp`
                         (with --headless and no --frames: until `stop`)
@@ -130,6 +150,11 @@ Options:
                         off); also headless, so --capture can record it
   --write-registry      Write the game's types to <project>/.box/registry.json
                         (what `box` and `box mcp` read) and exit
+  --playtest <file>     Replay a playtest (playtests/<name>.playtest.json, or a
+                        file) headless with the fixed 1/60 s step and print
+                        the report (--report <json>: also as JSON); fails
+                        when a check fails
+  --capture-every <n>   With --playtest: save a PNG every n frames
   --upgrade             Migrate the project's files from an older engine or
                         older game types (backed up to .box/backups/ first)
                         and exit; with --dry-run, only print the changes
@@ -191,6 +216,9 @@ impl PlayerOptions {
         while let Some(arg) = args.next() {
             if arg == "--scene" {
                 options.scene = Some(args.next().context("--scene needs a value")?);
+            } else if arg == "--audio-report" {
+                options.audio_report =
+                    Some(args.next().context("--audio-report needs a value")?.into());
             } else if arg == "--no-watch" {
                 options.watch = false;
             } else if arg == "--write-registry" {
@@ -199,6 +227,14 @@ impl PlayerOptions {
                 options.upgrade = true;
             } else if arg == "--dry-run" {
                 options.dry_run = true;
+            } else if arg == "--playtest" {
+                options.playtest = Some(args.next().context("--playtest needs a file")?.into());
+            } else if arg == "--capture-every" {
+                let n = args.next().context("--capture-every needs a number")?;
+                options.capture_every =
+                    Some(n.parse().ok().filter(|n| *n > 0).with_context(|| {
+                        format!("--capture-every: `{n}` is not a number above 0")
+                    })?);
             } else if VALUE_FLAGS.contains(&arg.as_str()) {
                 let value = args
                     .next()
@@ -228,6 +264,9 @@ impl PlayerOptions {
         }
         if options.dry_run && !options.upgrade {
             bail!("--dry-run only applies to --upgrade");
+        }
+        if options.capture_every.is_some() && options.playtest.is_none() {
+            bail!("--capture-every only applies to --playtest");
         }
         options.run = options.run.with_arg_list(runner_args)?;
         Ok(options)
@@ -610,6 +649,37 @@ fn asset_server(project: &Project, options: &PlayerOptions) -> Result<Option<Ass
     Ok(Some(server))
 }
 
+/// Resource of a player's app: how to load it again, for the control
+/// socket's restarts (`record_start`, `playtest`).
+#[derive(Clone)]
+pub struct PlayerRestart {
+    pub game: Game,
+    pub options: PlayerOptions,
+}
+
+/// Load the game of `restart` again (optionally in another `scene`) as a
+/// fresh app that has not run a frame, with its assets loaded, `seed` as
+/// the scripts' seed and the [`PlayerRestart`] resource.
+pub fn restart_app(restart: &PlayerRestart, scene: Option<&str>, seed: Option<u32>) -> Result<App> {
+    let mut options = restart.options.clone();
+    if let Some(scene) = scene {
+        options.scene = Some(scene.to_string());
+    }
+    #[cfg_attr(not(feature = "script"), allow(unused_mut))]
+    let (mut app, _) = build_app(&restart.game, &options)?;
+    #[cfg(feature = "script")]
+    if let Some(seed) = seed {
+        app.world.insert_resource(box_script::ScriptSeed(seed));
+    }
+    #[cfg(not(feature = "script"))]
+    let _ = seed;
+    if app.world.contains_resource::<AssetServer>() {
+        crate::asset_glue::settle_assets(&mut app.world, std::time::Duration::from_secs(60));
+    }
+    app.world.insert_resource(restart.clone());
+    Ok(app)
+}
+
 /// [`build_app`], then run it with the runner (in a window, or headless with
 /// `--capture` / `--headless`). Command-line flags are not re-read: parse
 /// them into `options` with [`PlayerOptions::from_args`].
@@ -628,7 +698,19 @@ pub fn run_game(options: PlayerOptions, game: Game) -> Result<RunSummary> {
         upgrade_project(&game, &options)?;
         return Ok(RunSummary::default());
     }
-    let (app, project) = build_app(&game, &options)?;
+    if let Some(file) = &options.playtest {
+        return run_playtest(&game, &options, file);
+    }
+    let (mut app, project) = build_app(&game, &options)?;
+    if options.run.control {
+        app.world.insert_resource(PlayerRestart {
+            game: game.clone(),
+            options: options.clone(),
+        });
+    }
+    if let Some(path) = &options.audio_report {
+        add_audio_report(&mut app, path, &options.run)?;
+    }
     let mut run = options.run;
     run.splash = crate::splash::should_show(
         project.is_packed(),
@@ -657,6 +739,65 @@ pub fn run_game(options: PlayerOptions, game: Game) -> Result<RunSummary> {
         run.title = project.name().to_string();
     }
     run_with(app, run)
+}
+
+/// `--audio-report`: records the report; headless and capture runs mix in
+/// memory so there are levels to measure.
+#[cfg(feature = "audio")]
+fn add_audio_report(app: &mut crate::App, path: &Path, run: &RunOptions) -> Result<()> {
+    if run.headless || run.capture.is_some() {
+        app.world.insert_resource(box_audio::AudioOutput::Capture {
+            sample_rate: 48_000,
+        });
+    }
+    crate::audio_mixer::add_audio_report(app, path.to_path_buf());
+    Ok(())
+}
+
+#[cfg(not(feature = "audio"))]
+fn add_audio_report(_app: &mut crate::App, _path: &Path, _run: &RunOptions) -> Result<()> {
+    bail!("--audio-report needs the audio module (box_engine feature `audio`)")
+}
+
+/// `--playtest <file>`: replay it headless, print the report, write it as
+/// JSON to `--report`, fail when it did not pass.
+fn run_playtest(game: &Game, options: &PlayerOptions, file: &Path) -> Result<RunSummary> {
+    let project = open_project(options)?;
+    let path = if file.is_file() {
+        file.to_path_buf()
+    } else {
+        crate::playtest::path_in_project(project.root(), &file.to_string_lossy())
+    };
+    let playtest = crate::playtest::Playtest::read(&path)?;
+    let name = crate::playtest::name_of(&path);
+    let replay = crate::playtest::ReplayOptions {
+        capture_every: options.capture_every,
+        capture_dir: None,
+        size: (options.run.width, options.run.height),
+    };
+    let report = crate::playtest::replay(game, options, &playtest, &name, &replay)?;
+    println!("{}", report.text());
+    if let Some(out) = &options.run.report {
+        let json = crate::playtest::report_json(&report, Some(&project.relative(&path)));
+        std::fs::write(out, serde_json::to_string_pretty(&json)?)
+            .with_context(|| format!("could not write {}", out.display()))?;
+    }
+    if !report.passed {
+        bail!(
+            "playtest `{name}` failed: {} of {} check(s) failed{}",
+            report.failed,
+            report.checks.len(),
+            if report.finished {
+                ""
+            } else {
+                ", not every step ran"
+            }
+        );
+    }
+    Ok(RunSummary {
+        frames: report.frames,
+        ..RunSummary::default()
+    })
 }
 
 /// [`run_game`] with the arguments the other way round.
@@ -693,6 +834,10 @@ mod tests {
         assert_eq!(o.run.frames, Some(5));
         assert!(o.run.headless);
         assert!(PlayerOptions::from_args(args(&["a", "b"])).is_err());
+        let o = PlayerOptions::from_args(args(&["g", "--audio-report", "a.json"])).unwrap();
+        assert_eq!(o.audio_report.as_deref(), Some(Path::new("a.json")));
+        assert_eq!(o.project.as_deref(), Some(Path::new("g")));
+        assert!(PlayerOptions::from_args(args(&["--audio-report"])).is_err());
         assert!(PlayerOptions::from_args(args(&["--scene"])).is_err());
         assert!(PlayerOptions::from_args(args(&["--frames", "x"])).is_err());
         let typo = PlayerOptions::from_args(args(&["--framez", "3"]))

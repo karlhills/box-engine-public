@@ -40,3 +40,7 @@ Baseline without uploads (the `showcase` scene, 29,550 triangles, 162 draws incl
 - Windowed runs: the display was not available during this session (macOS reported the window as occluded). Frame pacing with a real swapchain is still unverified.
 - GPU time on its own (needs timestamp queries; deferred).
 - Windows/DX12.
+
+## 2026-11-17: 104-byte vertices (custom data sets)
+
+The vertex grew from 72 to 104 bytes with the two custom vec4 sets (`MeshData::custom`), so every upload is 44% larger in its vertex part. One run after the change, Apple M3 Ultra (Metal), release, default mesh count, 600 headless frames: 31.4 MB uploaded per frame, update p50 1.5 ms, render (CPU and submit) p50 12.7 ms, p95 13.7 ms, 251 reallocations. No run of the 72-byte format on this machine was recorded, so there is no before number; the tables above are from other hardware and a 48-byte vertex and are not comparable.

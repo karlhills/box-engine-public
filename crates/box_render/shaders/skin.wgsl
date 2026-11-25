@@ -22,9 +22,11 @@ struct SkinnedVertexInput {
     @location(3) color: vec4<f32>,
     @location(4) tangent: vec4<f32>,
     @location(5) uv1: vec2<f32>,
+    @location(6) custom0: vec4<f32>,
+    @location(7) custom1: vec4<f32>,
     // Second vertex buffer (src/skinning.rs `GpuSkinVertex`).
-    @location(6) joints: vec4<u32>,
-    @location(7) weights: vec4<f32>,
+    @location(8) joints: vec4<u32>,
+    @location(9) weights: vec4<f32>,
     @builtin(instance_index) instance: u32,
 };
 
@@ -52,6 +54,8 @@ fn skin_vertex(in: SkinnedVertexInput, instance: u32) -> VertexInput {
     out.uv = in.uv;
     out.color = in.color;
     out.uv1 = in.uv1;
+    out.custom0 = in.custom0;
+    out.custom1 = in.custom1;
     out.instance = instance;
     return out;
 }

@@ -31,6 +31,8 @@ pub enum InputId {
     },
     /// The world transform (`GlobalTransform`) of the entity `uid`.
     WorldTransform { uid: Uid },
+    /// The world's [`Ground`](crate::ground::Ground) (its terrains).
+    Ground,
 }
 
 impl InputId {
@@ -57,6 +59,7 @@ impl fmt::Display for InputId {
                 asset, type_name, ..
             } => write!(f, "{type_name} asset {asset}"),
             Self::WorldTransform { uid } => write!(f, "the world transform of entity {uid}"),
+            Self::Ground => write!(f, "the ground (a Terrain)"),
         }
     }
 }
@@ -178,6 +181,18 @@ impl Inputs {
         })
     }
 
+    /// Read the world's ground ([`GenContext::ground`](crate::GenContext::ground)):
+    /// heights of its terrains. Any change of terrain heights regenerates
+    /// the generator.
+    pub fn ground(&mut self) -> &mut Self {
+        self.push(InputDecl {
+            id: InputId::Ground,
+            resolve: resolve_ground,
+            key: key_ground,
+            probe: probe_ground,
+        })
+    }
+
     /// The declared inputs, in declaration order.
     pub fn ids(&self) -> impl Iterator<Item = &InputId> {
         self.decls.iter().map(|d| &d.id)
@@ -219,14 +234,14 @@ impl<C: Component> Deref for AnyRef<'_, C> {
 fn component_uid(id: &InputId) -> Option<Uid> {
     match id {
         InputId::Component { uid, .. } | InputId::WorldTransform { uid } => Some(*uid),
-        InputId::Asset { .. } => None,
+        InputId::Asset { .. } | InputId::Ground => None,
     }
 }
 
 fn asset_ref(id: &InputId) -> Option<&AssetRef> {
     match id {
         InputId::Asset { asset, .. } => Some(asset),
-        InputId::Component { .. } | InputId::WorldTransform { .. } => None,
+        InputId::Component { .. } | InputId::WorldTransform { .. } | InputId::Ground => None,
     }
 }
 
@@ -357,5 +372,37 @@ fn probe_asset<A: Send + Sync + 'static>(world: &World, id: &InputId) -> Box<dyn
         state: asset_state(world, handle),
         handle,
         asset,
+    })
+}
+
+fn resolve_ground<'w>(world: &'w World, _: &InputId) -> Option<InputValue<'w>> {
+    let g = world.get_resource::<crate::ground::Ground>()?;
+    Some(InputValue::Borrowed(g))
+}
+
+fn key_ground(world: &World, _: &InputId) -> u64 {
+    world
+        .get_resource::<crate::ground::Ground>()
+        .map_or(MISSING, |g| g.content_hash())
+}
+
+struct GroundProbe {
+    hash: u64,
+}
+
+impl Probe for GroundProbe {
+    fn changed(&mut self, world: &World) -> bool {
+        let hash = key_ground(world, &InputId::Ground);
+        if hash == self.hash {
+            return false;
+        }
+        self.hash = hash;
+        true
+    }
+}
+
+fn probe_ground(world: &World, id: &InputId) -> Box<dyn Probe> {
+    Box::new(GroundProbe {
+        hash: key_ground(world, id),
     })
 }

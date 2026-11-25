@@ -8,6 +8,11 @@ Every registered resource (one value per world). Read one with `world.resource("
 |---|---|
 | [`AudioSettings`](#audiosettings) | Project settings resource (`assets/settings/AudioSettings.json`, Game ▸ Project Settings in the editor): the master and bus volumes. |
 | [`Environment`](#environment) | Sky, ambient light, fog, exposure and post-processing (ambient occlusion, bloom, colour grading), atmosphere (haze, mist, quieting), vignette and wind. |
+| [`GameRules`](#gamerules) | What winning and losing mean in this scene. |
+| [`GameState`](#gamestate) | The state of the current game: phase, time, lives, checkpoint. |
+| [`GameVars`](#gamevars) | Named numbers for puzzle and progress state (`embers`, `gate_open`); unset names read 0. |
+| [`HudSettings`](#hudsettings) | The built-in HUD: a panel in the top-left corner with game vars, group progress, lives and the time left. |
+| [`NavSettings`](#navsettings) | How characters that are not the player find their way: the size of the agent the walkable area is computed for and how finely it is sampled. |
 | [`PhysicsSettings`](#physicssettings) | Project-wide simulation settings: a settings resource (`assets/settings/PhysicsSettings.json`, Game ▸ Project Settings). |
 
 ## `AudioSettings`
@@ -53,6 +58,81 @@ Scripts: `world.resource("Environment")`, `world.set_resource("Environment", { .
 - **`distance_quieting`** `{ enabled: boolean, start: number, ["end"]: number, desaturate: number, contrast: number, tone: Color }`: Desaturation and contrast loss with distance, so the background stays quiet behind the foreground.
 - **`vignette`** `{ intensity: number, smoothness: number, rounded: boolean }` (default `{"intensity":0.0,"smoothness":0.5,"rounded":false}`): Darkened image corners.
 - **`wind`** `{ direction: vector, strength: number, gust_length: number, gust_speed: number }`: The global wind that materials with `wind` sway in.
+
+## `GameRules`
+
+What winning and losing mean in this scene. A scene resource (edit it in
+Scene Settings, or with `set_resource`); a scene without it has no
+built-in win, lose, pause or end screens.
+
+Scripts: `world.resource("GameRules")`, `world.set_resource("GameRules", { ... })`.
+
+- **`win`** `{ { AtLeast: { var: string?, value: number? } } | { Below: { var: string?, value: number? } } | { Equals: { var: string?, value: number? } } | { GroupDone: { group: string? } } | { TimeAbove: { seconds: number? } } }` (default `[]`): The game is won as soon as all of these hold (a `Win` action wins too). Empty: only a `Win` action wins.
+- **`lose`** `{ { AtLeast: { var: string?, value: number? } } | { Below: { var: string?, value: number? } } | { Equals: { var: string?, value: number? } } | { GroupDone: { group: string? } } | { TimeAbove: { seconds: number? } } }` (default `[]`): The game is lost as soon as any of these holds (a `Lose` action, the time limit and running out of lives lose too).
+- **`time_limit`** `number` (default `0.0`, range 0–36000, unit s): Seconds to win in; 0: no limit. The HUD counts down.
+- **`lives`** `number` (default `0`, range 0–99): Respawns the player has (falling off, hazards); the game is lost when they run out. 0: unlimited.
+- **`menus`** `boolean` (default `true`): Built-in pause menu (the `pause` action: Escape, P, gamepad Start) and win and lose screens. Off for games with their own menus.
+- **`next_scene`** `string` (default `""`): The scene the win screen's Next button opens (a name such as `level2`). Empty: no Next button.
+- **`win_title`** `string` (default `"You win!"`): Title of the win screen.
+- **`lose_title`** `string` (default `"Game over"`): Title of the lose screen.
+
+## `GameState`
+
+The state of the current game: phase, time, lives, checkpoint. A runtime
+resource of playing worlds (never in scene files; save games keep it
+through the `"game"` hook). Live tools read it with `world_query`.
+
+Scripts: `world.resource("GameState")`, `world.set_resource("GameState", { ... })`.
+
+- **`phase`** `"Playing" | "Paused" | "Won" | "Lost"` (default `"Playing"`): Playing, paused, won or lost.
+- **`elapsed`** `number` (default `0.0`): Game seconds since the scene started (stops while paused).
+- **`lives_left`** `number` (default `0`): Lives left when `GameRules.lives` is set.
+- **`checkpoint`** `vector?` (default `null`): Where the player respawns; `None`: where it started.
+- **`respawns`** `number` (default `0`): How many times the player respawned.
+
+## `GameVars`
+
+Named numbers for puzzle and progress state (`embers`, `gate_open`);
+unset names read 0. A resource of playing worlds: it is kept across scene
+switches, saved in save games (hook `"vars"`), not stored in scene files.
+Scripts use the `vars` global; live tools read it with `world_query`
+(`include_resources`).
+
+Scripts: `world.resource("GameVars")`, `world.set_resource("GameVars", { ... })`.
+
+- **`values`** `{ [string]: number }` (default `{}`): The values by name.
+
+## `HudSettings`
+
+The built-in HUD: a panel in the top-left corner with game vars, group
+progress, lives and the time left. A scene resource; without it there is
+no built-in HUD. Styled by the theme's `hud` style.
+
+Scripts: `world.resource("HudSettings")`, `world.set_resource("HudSettings", { ... })`.
+
+- **`enabled`** `boolean` (default `true`): Off: no HUD.
+- **`vars`** `{ { var: string, label: string } }` (default `[]`): The vars to show, in order. Empty: every var that has a value.
+- **`groups`** `boolean` (default `true`): Show each interactable group's progress (`Pickups 3 / 12`).
+- **`lives`** `boolean` (default `true`): Show lives left (when `GameRules.lives` is set).
+- **`timer`** `boolean` (default `true`): Show the time left (when `GameRules.time_limit` is set).
+- **`health`** `boolean` (default `true`): Show the player's health (when it has a `Health`).
+
+## `NavSettings`
+
+How characters that are not the player find their way: the size of the
+agent the walkable area is computed for and how finely it is sampled. A
+scene resource (Scene Settings); without it the defaults apply, which
+match the default `KinematicCharacter`.
+
+Scripts: `world.resource("NavSettings")`, `world.set_resource("NavSettings", { ... })`.
+
+- **`enabled`** `boolean` (default `true`): Off: no navmesh; enemies walk straight at their target.
+- **`agent_radius`** `number` (default `0.4000000059604645`, range 0.05–5, unit m): Agents keep this far from walls.
+- **`agent_height`** `number` (default `1.7999999523162842`, range 0.1–10, unit m): Ceilings lower than this block.
+- **`max_slope`** `number` (default `0.9272952079772949`, range 0–1.5, unit rad): Steepest walkable slope.
+- **`step_height`** `number` (default `0.30000001192092896`, range 0–2, unit m): Highest step agents climb (stairs, kerbs).
+- **`cell_size`** `number` (default `0.15000000596046448`, range 0.05–1, unit m): Sampling size: smaller follows walls more closely and bakes slower.
+- **`tile_size`** `number` (default `32.0`, range 4–256, unit m): Edge of a tile; a change rebuilds the tiles it touches.
 
 ## `PhysicsSettings`
 

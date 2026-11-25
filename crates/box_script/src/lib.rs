@@ -55,16 +55,16 @@ mod runtime;
 pub mod types;
 
 pub use api::{
-    ScriptApi, ScriptApis, ScriptSignals, deprecated, deprecated_alias, entity_methods, subscribe,
-    unsubscribe, with_world, with_world_mut,
+    ScriptApi, ScriptApis, ScriptCall, ScriptCalls, ScriptSignals, deprecated, deprecated_alias,
+    entity_methods, subscribe, unsubscribe, with_world, with_world_mut,
 };
 pub use asset::{ScriptAsset, ScriptImporter};
 pub use component::{PropType, PropertyDecl, Script, ScriptProperty, ScriptValue};
 pub use mlua;
 pub use rules::{ScriptIntent, ScriptRules, add_script_rules};
 pub use runtime::{
-    DEFAULT_WATCHDOG, ScriptQueue, ScriptRuntime, ScriptStats, describe_error, load_script_state,
-    save_script_state, script_fixed_update, script_update,
+    DEFAULT_WATCHDOG, ScriptQueue, ScriptRuntime, ScriptSeed, ScriptStats, describe_error,
+    load_script_state, save_script_state, script_fixed_update, script_update,
 };
 
 use box_assets::AssetServer;

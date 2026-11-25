@@ -181,13 +181,16 @@ fn image_png(result: &Json) -> Vec<u8> {
     box_engine::control::base64_decode(image["data"].as_str().unwrap()).unwrap()
 }
 
-const TOOL_NAMES: [&str; 17] = [
+const TOOL_NAMES: [&str; 31] = [
     "check",
     "registry",
     "scene_list",
     "scene_show",
     "scene_apply",
     "render",
+    "walk_route",
+    "nav_path",
+    "playtest",
     "import",
     "status",
     "world_query",
@@ -197,8 +200,19 @@ const TOOL_NAMES: [&str; 17] = [
     "stop",
     "pause",
     "step_frames",
+    "send_input",
+    "teleport",
+    "record_start",
+    "record_stop",
+    "read_asset",
+    "write_asset",
+    "editor_context",
+    "undo_turn",
     "read_log",
     "frame_stats",
+    "audio_levels",
+    "audio_solo",
+    "audio_mute",
 ];
 
 /// The acceptance conversation over the legacy handshake (2025-11-25), the
@@ -296,6 +310,101 @@ fn mcp_conversation_with_project_tools() {
         json!([1.5, 0.5, 0.5])
     );
     assert_eq!(mcp.ok("check", json!({}))["structuredContent"]["ok"], true);
+
+    // Without a collider under it, a route says what to fix; the starter
+    // scene's ground has one, so it is walkable once put back.
+    mcp.ok(
+        "scene_apply",
+        json!({ "commands": [{ "op": "remove_component", "entity": "Ground", "component": "Collider" }] }),
+    );
+    let no_ground = mcp.call(
+        "walk_route",
+        json!({ "waypoints": [[0.0, 0.0, 3.0], [3.0, 0.0, 3.0]] }),
+    );
+    assert_eq!(no_ground["isError"], true);
+    assert!(
+        no_ground["structuredContent"]["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("give the ground a Collider"),
+        "{no_ground:#}"
+    );
+    mcp.ok(
+        "scene_apply",
+        json!({ "commands": [{ "op": "add_component", "entity": "Ground", "component": "Collider" }] }),
+    );
+    let walk = mcp.ok(
+        "walk_route",
+        json!({ "waypoints": [[0.0, 0.0, 3.0], [3.0, 0.0, 3.0], [3.0, 0.0, -3.0]] }),
+    );
+    let walk = &walk["structuredContent"];
+    assert_eq!(walk["reached_all"], true, "{walk:#}");
+    // The navmesh agrees: agents can go the same way.
+    let nav = mcp.ok(
+        "nav_path",
+        json!({ "from": [0.0, 0.0, 3.0], "to": [3.0, 0.0, -3.0] }),
+    );
+    assert_eq!(nav["structuredContent"]["status"], "complete", "{nav:#}");
+    assert_eq!(walk["legs"].as_array().unwrap().len(), 2);
+
+    // Playtests: none saved yet; an inline one replays headless and reports
+    // each check (a failed check is a successful call).
+    assert_eq!(mcp.fails("playtest", json!({}))["code"], "no_playtests");
+    let run = mcp.ok(
+        "playtest",
+        json!({ "playtest": { "steps": [
+            { "wait": 5 },
+            { "check": "entity_exists", "entity": "Cube" },
+            { "check": "entity_gone", "entity": "Ground" }
+        ] } }),
+    );
+    let run = &run["structuredContent"];
+    assert_eq!(run["passed"], false, "{run:#}");
+    assert_eq!(run["frames"], 5);
+    assert_eq!(run["checks"][0]["passed"], true);
+    assert_eq!(run["checks"][1]["passed"], false);
+    assert_eq!(run["checks"][1]["frame"], 5);
+    assert_eq!(mcp.fails("record_start", json!({}))["code"], "not_running");
+    assert_eq!(
+        mcp.fails("editor_context", json!({}))["code"],
+        "not_running"
+    );
+    // registry by name also finds presets and field types.
+    let p = mcp.ok("registry", json!({ "name": "Pickup" }));
+    assert_eq!(p["structuredContent"]["preset"]["name"], "pickup");
+    let c = mcp.ok("registry", json!({ "name": "Condition" }));
+    assert!(
+        c["structuredContent"]["json_form"]
+            .as_str()
+            .unwrap()
+            .contains("GroupDone"),
+        "{c:#}"
+    );
+    assert_eq!(
+        mcp.fails("registry", json!({ "name": "Dragon" }))["code"],
+        "unknown_type"
+    );
+
+    // Text files under assets/: written (journalled for the editor's undo)
+    // and read back; nothing outside assets/ or binary.
+    let w = mcp.ok(
+        "write_asset",
+        json!({ "path": "scripts/hello.luau", "text": "print('hi')\n" }),
+    );
+    assert_eq!(w["structuredContent"]["created"], true);
+    let r = mcp.ok("read_asset", json!({ "path": "assets/scripts/hello.luau" }));
+    assert_eq!(r["structuredContent"]["text"], "print('hi')\n");
+    assert!(project.join(".box/assistant/journal.jsonl").is_file());
+    for bad in ["../box.project.json", "models/x.glb"] {
+        assert_eq!(
+            mcp.fails("write_asset", json!({ "path": bad, "text": "x" }))["code"],
+            "invalid_path"
+        );
+    }
+    assert_eq!(
+        mcp.fails("read_asset", json!({ "path": "scripts/missing.luau" }))["code"],
+        "not_found"
+    );
 
     // Bad arguments are tool errors; unknown tools and methods are protocol errors.
     assert_eq!(

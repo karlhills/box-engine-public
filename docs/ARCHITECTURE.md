@@ -286,7 +286,8 @@ Results of `render`, `run`, `import` and `scene apply` carry `problems: [{severi
 | `box registry` | List component and resource types with fields, ranges and docs | M2 |
 | `box scene list/show <scene>` | Inspect entities and components | M2 |
 | `box scene apply <scene> <commands.json\|-> [--dry-run]` | Apply editor commands (spawn, set, set_resource, add/remove_component, reparent, despawn, rename, duplicate) as one all-or-nothing transaction, with the same validation as the editor; writes atomically | M2 |
-| `box render <scene> --out <png> [--camera] [--size] [--frames]` | Headless render of a scene file; uses the named or first active camera, or frames the scene bounds | M2 |
+| `box render <scene> --out <png> [--camera \| --eye --look-at [--fov] \| --overview \| --views <file>] [--size] [--frames]` | Headless render of a scene file; uses the named or first active camera, a temporary camera at a pose, an overview of the scene's content, or several poses in one run; else frames the scene bounds | M2, poses: world building W1 |
+| `box walk <scene> --route <file>` | Walk a probe character (the scene's player size) through waypoints against the scene's colliders; per leg: reached or stuck, biggest step up, falls, steepest slope | world building W1 |
 | `box run [project\|scene] [--frames] [--capture] [--report] [--size]` | Play with the engine's types through the player library; headless with `--frames`/`--capture`; `--json` summary (frames, timings, validation errors). Native projects (a `Cargo.toml` at the root) run their player bin (read from `Cargo.toml`, `--features` only for bins with `required-features`) with `cargo run` in the project directory; output streamed (stderr with `--json`), exit code propagated; `--no-cargo` prints the command | M3 |
 | `box mcp [--project]` | MCP server over stdio (see below) | M3 |
 | `box import <file> [--project] [--to <folder>]` | Copy into `assets/` (a `.gltf` with its buffers and images; default folder by type), write the `.meta`, import once; prints id, importer, state and sub-assets; refuses to overwrite | M4 |
@@ -295,8 +296,9 @@ Results of `render`, `run`, `import` and `scene apply` carry `problems: [{severi
 **MCP server (M3).** `box mcp` speaks the Model Context Protocol over stdio, so agents that support MCP get typed tools instead of shell commands. It exposes the CLI operations as tools and adds live tools when an editor or player is running and has opted in to a local control socket:
 
 - Project tools: `check`, `registry`, `scene_list`, `scene_show`, `scene_apply`, `render` (PNG image content).
-- Live tools (M3): `status`, `world_query` (entities and component values), `apply_commands`, `screenshot` (viewport PNG), `play` / `stop` / `pause`, `step_frames`, `read_log`, `frame_stats`. Always listed; they return `not_running` when no editor or player has opted in.
+- Live tools (M3): `status`, `world_query` (entities and component values), `apply_commands`, `screenshot` (viewport PNG), `play` / `stop` / `pause`, `step_frames`, `read_log`, `frame_stats`; audio mixing: `audio_levels`, `audio_solo`, `audio_mute` (`box_engine::audio_mixer`). Always listed; they return `not_running` when no editor or player has opted in.
 - Asset import (M4): MCP tool `import` (`file`, `to`, `project`).
+- Agent loop (W1): `walk_route`; live `send_input`, `teleport`; playtests (`box_engine::playtest`): live `record_start`/`record_stop`, and `playtest` (headless through `box playtest`, or `live: true` through the control methods `playtest`/`playtest_status`). Hosts implement `ControlHost::restart_play` (a fresh Play session, or the player's app loaded again from `PlayerRestart`) so recordings and live replays start from the scene load.
 - Later: procedural generator parameters (M5), script reload and errors (M7).
 
 Safety: the control socket is local only, disabled unless the user enables it in the editor or passes a flag, and every change goes through the command layer, so agent edits are undoable like user edits.

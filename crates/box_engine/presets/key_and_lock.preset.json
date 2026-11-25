@@ -1,0 +1,54 @@
+{
+  "name": "key_and_lock",
+  "title": "Key and Lock",
+  "category": "Gameplay",
+  "description": "A locked door and its key: walking into the key picks it up (adds 1 to `keys`); pressing E at the door uses a key and opens it. Without a key the door says it needs one.",
+  "entities": [
+    {
+      "name": "Locked Door",
+      "components": {
+        "Transform": { "translation": [0.0, 1.25, 0.0] },
+        "Primitive": { "shape": { "Cuboid": { "size": [2.0, 2.5, 0.3] } } },
+        "StandardMaterial": { "base_color": [0.55, 0.32, 0.16, 1.0], "roughness": 0.7 },
+        "Collider": { "shape": "Primitive" },
+        "Interactable": {
+          "trigger": "Press",
+          "radius": 2.2,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Unlock",
+          "blocked_prompt": "Needs a key",
+          "once": true,
+          "requires": [{ "AtLeast": { "var": "keys", "value": 1.0 } }],
+          "actions": [
+            { "AddVar": { "var": "keys", "amount": -1.0 } },
+            { "Burst": { "style": "Dust", "count": 30 } },
+            { "Hide": { "target": "This", "collide": true } }
+          ]
+        }
+      }
+    },
+    { "name": "Lock", "parent": "Locked Door", "components": { "Transform": { "translation": [0.6, 0.0, 0.18] }, "Primitive": { "shape": { "Cuboid": { "size": [0.25, 0.35, 0.1] } }, "cast_shadows": false }, "StandardMaterial": { "base_color": [1.0, 0.75, 0.2, 1.0], "metallic": 0.9, "roughness": 0.3 } } },
+    {
+      "name": "Key",
+      "components": {
+        "Transform": { "translation": [-3.0, 0.8, 2.0] },
+        "Primitive": { "shape": { "Cuboid": { "size": [0.5, 0.12, 0.12] } } },
+        "StandardMaterial": { "base_color": [1.0, 0.75, 0.2, 1.0], "metallic": 0.9, "roughness": 0.3, "emissive": [0.3, 0.2, 0.0, 1.0] },
+        "Spinner": { "speed": 2.0 },
+        "Bobber": {},
+        "Interactable": {
+          "trigger": "Touch",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "once": true,
+          "actions": [
+            { "AddVar": { "var": "keys", "amount": 1.0 } },
+            { "Burst": { "style": "Sparkle", "count": 24 } },
+            { "Hide": { "target": "This", "collide": true } }
+          ]
+        }
+      }
+    },
+    { "name": "Key Ring", "parent": "Key", "components": { "Transform": { "translation": [-0.32, 0.0, 0.0], "rotation": [0.7071068, 0.0, 0.0, 0.7071068] }, "Primitive": { "shape": { "Cylinder": { "radius": 0.14, "height": 0.08, "segments": 16 } } }, "StandardMaterial": { "base_color": [1.0, 0.75, 0.2, 1.0], "metallic": 0.9, "roughness": 0.3 } } }
+  ]
+}

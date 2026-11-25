@@ -1,0 +1,3208 @@
+{
+  "version": 1,
+  "resources": {
+    "Environment": {
+      "sky_zenith": [0.02, 0.24, 0.9, 1.0],
+      "sky_horizon": [0.36, 0.62, 1.0, 1.0],
+      "ground": [0.18, 0.16, 0.13, 1.0],
+      "ambient_intensity": 0.55,
+      "sun_disc_size": 0.010471975,
+      "fog_density": 0.004,
+      "fog_height_falloff": 0.08,
+      "fog_base_height": 0.0,
+      "exposure": 0.8,
+      "tonemapper": "AgX",
+      "ambient_occlusion": {
+        "enabled": true,
+        "intensity": 1.5,
+        "radius": 1.0,
+        "bias": 0.02,
+        "power": 1.2,
+        "direct_lighting": 0.0
+      },
+      "bloom": {
+        "enabled": true,
+        "intensity": 0.025,
+        "scatter": 0.7,
+        "threshold": 0.0,
+        "knee": 0.5
+      },
+      "color_grading": {
+        "temperature": 0.0,
+        "tint": 0.0,
+        "contrast": 1.0,
+        "saturation": 1.0,
+        "shadows": [1.0, 1.0, 1.0],
+        "midtones": [1.0, 1.0, 1.0],
+        "highlights": [1.0, 1.0, 1.0],
+        "shadows_end": 0.3,
+        "highlights_start": 0.55,
+        "lift": [0.0, 0.0, 0.0],
+        "gamma": [1.0, 1.0, 1.0],
+        "gain": [1.0, 1.0, 1.0]
+      },
+      "sky": {
+        "gradient": "Simple",
+        "sun_glow": 1.0,
+        "sun_disc": 1.0,
+        "horizon_glow": 0.0,
+        "stars": 0.0
+      },
+      "aerial_haze": {
+        "enabled": false,
+        "color": [0.37, 0.51, 0.71, 1.0],
+        "density": 0.0005,
+        "start_distance": 60.0,
+        "max_opacity": 0.97,
+        "sun_scatter": 0.12,
+        "sky_height": 0.12
+      },
+      "height_mist": {
+        "enabled": false,
+        "color": [0.53, 0.6, 0.74, 1.0],
+        "top": -20.0,
+        "bottom": -60.0,
+        "max_opacity": 1.0,
+        "near_fade": 120.0
+      },
+      "distance_quieting": {
+        "enabled": false,
+        "start": 90.0,
+        "end": 1800.0,
+        "desaturate": 0.5,
+        "contrast": 0.38,
+        "tone": [0.3, 0.42, 0.58, 1.0]
+      },
+      "vignette": {
+        "intensity": 0.0,
+        "smoothness": 0.5,
+        "rounded": false
+      },
+      "wind": {
+        "direction": [1.0, 0.0],
+        "strength": 1.0,
+        "gust_length": 17.0,
+        "gust_speed": 3.0
+      }
+    },
+    "GameRules": {
+      "win": [],
+      "lose": [],
+      "time_limit": 180.0,
+      "lives": 3,
+      "menus": true,
+      "next_scene": "",
+      "win_title": "All coins, home free!",
+      "lose_title": "Game over"
+    },
+    "HudSettings": {
+      "enabled": true,
+      "vars": [],
+      "groups": true,
+      "lives": true,
+      "timer": true,
+      "health": true
+    }
+  },
+  "entities": [
+    {
+      "uid": "01a2134f-991f-730c-be83-11bb90262c42",
+      "name": "Sun",
+      "parent": null,
+      "components": {
+        "DirectionalLight": {
+          "color": [1.0, 0.87962, 0.71569, 1.0],
+          "intensity": 3.2,
+          "shadows": true,
+          "shadow_distance": 60.0
+        },
+        "Transform": {
+          "translation": [0.0, 12.0, 0.0],
+          "rotation": [-0.418082, 0.270273, 0.131821, 0.857195],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-991f-730c-be83-11bce2c16358",
+      "name": "Ground",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [60.0, 0.5, 60.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.15896, 0.32314, 0.06848, 1.0],
+          "roughness": 0.95,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.0, -0.25, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-991f-730c-be83-11bd5a1f9a52",
+      "name": "Ledge",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [8.0, 2.0, 8.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.42, 0.4, 0.37, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [16.0, 1.0, -16.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-991f-730c-be83-11bec2069510",
+      "name": "Ramp",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [3.0, 0.3, 6.6]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.42, 0.4, 0.37, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [16.0, 0.95, -8.9],
+          "rotation": [0.1478094, 0.0, 0.0, 0.9890159],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-991f-730c-be83-11bfdcdf0114",
+      "name": "Wall",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.6, 2.0, 12.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.42, 0.4, 0.37, 1.0],
+          "roughness": 0.85,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-12.0, 1.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-991f-730c-be83-11c0f85d831d",
+      "name": "Player",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.5
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Health": {
+          "enabled": true,
+          "max": 3.0,
+          "current": 3.0,
+          "invulnerable": 0.8,
+          "on_damage": [],
+          "on_zero": []
+        },
+        "Interpolated": {
+          "teleport_distance": 10.0
+        },
+        "KinematicCharacter": {
+          "radius": 0.4,
+          "height": 1.8,
+          "gravity": 20.0,
+          "max_fall_speed": 40.0,
+          "jump_speed": 7.5,
+          "max_slope": 0.9272952,
+          "ground_snap": 0.1,
+          "skin": 0.02,
+          "step_height": 0.3,
+          "mass": 80.0
+        },
+        "PlayerController": {
+          "enabled": true,
+          "speed": 6.0,
+          "run_speed": 10.0,
+          "jump": true,
+          "turn_rate": 12.0,
+          "fall_limit": -20.0,
+          "camera": "01a2134f-991f-730c-be83-11c3a804e417",
+          "body": null
+        },
+        "Transform": {
+          "translation": [0.0, 0.9, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-991f-730c-be83-11c14a54f112",
+      "name": "Body",
+      "parent": "01a2134f-991f-730c-be83-11c0f85d831d",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.5,
+              "segments": 24,
+              "rings": 8
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.14, 0.38, 0.86, 1.0],
+          "roughness": 0.55,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-991f-730c-be83-11c28b9d191a",
+      "name": "Visor",
+      "parent": "01a2134f-991f-730c-be83-11c0f85d831d",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.5, 0.16, 0.2]
+            }
+          },
+          "cast_shadows": false
+        },
+        "StandardMaterial": {
+          "base_color": [0.95, 0.92, 0.85, 1.0],
+          "roughness": 0.3,
+          "metallic": 0.0,
+          "emissive": [0.3, 0.3, 0.28, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.0, 0.45, -0.32],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-991f-730c-be83-11c3a804e417",
+      "name": "Player Camera",
+      "parent": null,
+      "components": {
+        "Camera": {
+          "fov_y": 0.87266463,
+          "near": 0.1,
+          "active": true
+        },
+        "FollowCamera": {
+          "enabled": true,
+          "target": "01a2134f-991f-730c-be83-11c0f85d831d",
+          "mode": "Orbit",
+          "distance": 7.0,
+          "height": 1.2,
+          "pitch": 0.35,
+          "smoothing": 10.0,
+          "look_speed": 2.5,
+          "mouse_sensitivity": 0.004,
+          "capture_mouse": true
+        },
+        "Transform": {
+          "translation": [0.0, 3.5, 7.5],
+          "rotation": [-0.1741, 0.0, 0.0, 0.9847],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e046f6733f8",
+      "name": "Coin 1",
+      "parent": null,
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [4.0, 0.8, -4.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e056b0f06b0",
+      "name": "Coin 2",
+      "parent": null,
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-4.0, 0.8, -4.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e06512ddb83",
+      "name": "Coin 3",
+      "parent": null,
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [8.0, 0.8, 2.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e076f8ea530",
+      "name": "Coin 4",
+      "parent": null,
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-8.0, 0.8, 6.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e082b98f2e9",
+      "name": "Coin 5",
+      "parent": null,
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.0, 0.8, -12.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e09752d9ebb",
+      "name": "Coin 6",
+      "parent": null,
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [6.0, 0.8, 12.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e0af611566a",
+      "name": "Coin 7",
+      "parent": null,
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-16.0, 0.8, -6.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e0b31a15edc",
+      "name": "Coin 8",
+      "parent": null,
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-18.0, 0.8, 10.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e0ca961228e",
+      "name": "Coin 9",
+      "parent": null,
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [14.0, 2.8, -17.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e0d98a7cf6d",
+      "name": "Coin 10",
+      "parent": null,
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [18.0, 2.8, -15.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e0eccb525a0",
+      "name": "Platform West",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Mover": {
+          "enabled": true,
+          "points": [
+            [0.0, 0.0, 0.0],
+            [6.0, 0.0, 0.0]
+          ],
+          "speed": 2.0,
+          "mode": "PingPong",
+          "wait": 0.8
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [3.0, 0.5, 3.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.36, 0.52, 0.62, 1.0],
+          "roughness": 0.7,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-6.0, 0.5, -20.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e10f846e8ce",
+      "name": "Coin 11",
+      "parent": "01a2134f-9920-727d-bd47-4e0eccb525a0",
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.0, 0.8, 0.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e0f18c1c992",
+      "name": "Platform South",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Mover": {
+          "enabled": true,
+          "points": [
+            [0.0, 0.0, 0.0],
+            [-10.0, 0.0, 0.0]
+          ],
+          "speed": 2.0,
+          "mode": "PingPong",
+          "wait": 0.8
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [3.0, 0.5, 3.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.36, 0.52, 0.62, 1.0],
+          "roughness": 0.7,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [8.0, 0.5, 22.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e1170fce69f",
+      "name": "Coin 12",
+      "parent": "01a2134f-9920-727d-bd47-4e0f18c1c992",
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.32,
+              "height": 0.08,
+              "segments": 24
+            }
+          },
+          "cast_shadows": true
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.5
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.66, 0.08, 1.0],
+          "roughness": 0.25,
+          "metallic": 0.9,
+          "emissive": [0.35, 0.2, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.0, 0.8, 0.0],
+          "rotation": [0.7071068, 0.0, 0.0, 0.7071068],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e120142d475",
+      "name": "Spikes 1",
+      "parent": null,
+      "components": {
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 1.2,
+          "offset": [0.0, 0.9, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "Burst": {
+                "style": "Dust",
+                "count": 16
+              }
+            },
+            "Respawn"
+          ],
+          "once": false,
+          "cooldown": 0.5,
+          "uses": 0,
+          "group": ""
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [2.0, 0.1, 2.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.35, 0.05, 0.04, 1.0],
+          "roughness": 0.6,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [6.0, 0.05, -6.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e1350b600d1",
+      "name": "Spike 1",
+      "parent": "01a2134f-9920-727d-bd47-4e120142d475",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-0.5, 0.3, -0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e145976bde3",
+      "name": "Spike 2",
+      "parent": "01a2134f-9920-727d-bd47-4e120142d475",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.5, 0.3, -0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e156c8d1311",
+      "name": "Spike 3",
+      "parent": "01a2134f-9920-727d-bd47-4e120142d475",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-0.5, 0.3, 0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e160627e7a2",
+      "name": "Spike 4",
+      "parent": "01a2134f-9920-727d-bd47-4e120142d475",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.5, 0.3, 0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e172207a507",
+      "name": "Spikes 2",
+      "parent": null,
+      "components": {
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 1.2,
+          "offset": [0.0, 0.9, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "Burst": {
+                "style": "Dust",
+                "count": 16
+              }
+            },
+            "Respawn"
+          ],
+          "once": false,
+          "cooldown": 0.5,
+          "uses": 0,
+          "group": ""
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [2.0, 0.1, 2.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.35, 0.05, 0.04, 1.0],
+          "roughness": 0.6,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-6.0, 0.05, 4.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e18737d93ca",
+      "name": "Spike 1",
+      "parent": "01a2134f-9920-727d-bd47-4e172207a507",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-0.5, 0.3, -0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e19748a6f76",
+      "name": "Spike 2",
+      "parent": "01a2134f-9920-727d-bd47-4e172207a507",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.5, 0.3, -0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e1a3d229af0",
+      "name": "Spike 3",
+      "parent": "01a2134f-9920-727d-bd47-4e172207a507",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-0.5, 0.3, 0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e1b74a63659",
+      "name": "Spike 4",
+      "parent": "01a2134f-9920-727d-bd47-4e172207a507",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.5, 0.3, 0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e1ca2802209",
+      "name": "Spikes 3",
+      "parent": null,
+      "components": {
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 1.2,
+          "offset": [0.0, 0.9, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "Burst": {
+                "style": "Dust",
+                "count": 16
+              }
+            },
+            "Respawn"
+          ],
+          "once": false,
+          "cooldown": 0.5,
+          "uses": 0,
+          "group": ""
+        },
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [2.0, 0.1, 2.0]
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.35, 0.05, 0.04, 1.0],
+          "roughness": 0.6,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [16.0, 0.05, -4.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e1d76848eb9",
+      "name": "Spike 1",
+      "parent": "01a2134f-9920-727d-bd47-4e1ca2802209",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-0.5, 0.3, -0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e1e7c9ceed6",
+      "name": "Spike 2",
+      "parent": "01a2134f-9920-727d-bd47-4e1ca2802209",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.5, 0.3, -0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e1f51a2f0db",
+      "name": "Spike 3",
+      "parent": "01a2134f-9920-727d-bd47-4e1ca2802209",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-0.5, 0.3, 0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9920-727d-bd47-4e20f04da304",
+      "name": "Spike 4",
+      "parent": "01a2134f-9920-727d-bd47-4e1ca2802209",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.12,
+              "height": 0.5,
+              "segments": 6
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.75, 0.74, 0.72, 1.0],
+          "roughness": 0.35,
+          "metallic": 0.8,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.5, 0.3, 0.5],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9921-7161-ba3c-bc0a59a047df",
+      "name": "Checkpoint",
+      "parent": null,
+      "components": {
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 1.5,
+          "offset": [0.0, -0.2, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            "SetCheckpoint",
+            {
+              "Burst": {
+                "style": "Flame",
+                "count": 30
+              }
+            },
+            {
+              "Show": {
+                "target": {
+                  "Child": "Lit Flag"
+                },
+                "collide": false
+              }
+            },
+            {
+              "Hide": {
+                "target": {
+                  "Child": "Flag"
+                },
+                "collide": false
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": ""
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.06,
+              "height": 2.2,
+              "segments": 8
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.8, 0.78, 0.74, 1.0],
+          "roughness": 0.5,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.0, 1.1, 10.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9921-7161-ba3c-bc0bf02f1d07",
+      "name": "Flag",
+      "parent": "01a2134f-9921-7161-ba3c-bc0a59a047df",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.65, 0.42, 0.04]
+            }
+          },
+          "cast_shadows": false
+        },
+        "StandardMaterial": {
+          "base_color": [0.45, 0.45, 0.48, 1.0],
+          "roughness": 0.8,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": true,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.35, 0.8, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9921-7161-ba3c-bc0c9c3c6062",
+      "name": "Lit Flag",
+      "parent": "01a2134f-9921-7161-ba3c-bc0a59a047df",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Cuboid": {
+              "size": [0.65, 0.42, 0.04]
+            }
+          },
+          "cast_shadows": false
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.45, 0.08, 1.0],
+          "roughness": 0.6,
+          "metallic": 0.0,
+          "emissive": [0.6, 0.2, 0.02, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": true,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.35, 0.8, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        },
+        "Visible": false
+      }
+    },
+    {
+      "uid": "01a2134f-9921-7161-ba3c-bc0d679a8af4",
+      "name": "Guard",
+      "parent": null,
+      "components": {
+        "Chaser": {
+          "enabled": true,
+          "speed": 2.0,
+          "chase_speed": 4.0,
+          "sight": 8.0,
+          "give_up": 14.0,
+          "line_of_sight": true,
+          "patrol": [
+            [0.0, 0.0, -8.0],
+            [0.0, 0.0, 8.0]
+          ],
+          "wait": 1.0,
+          "damage": 1.0,
+          "attack_cooldown": 1.0,
+          "reach": 0.3
+        },
+        "Collider": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.4
+            }
+          },
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Health": {
+          "enabled": true,
+          "max": 1.0,
+          "current": 1.0,
+          "invulnerable": 0.8,
+          "on_damage": [],
+          "on_zero": []
+        },
+        "Interpolated": {
+          "teleport_distance": 10.0
+        },
+        "KinematicCharacter": {
+          "radius": 0.4,
+          "height": 1.6,
+          "gravity": 20.0,
+          "max_fall_speed": 40.0,
+          "jump_speed": 7.5,
+          "max_slope": 0.9272952,
+          "ground_snap": 0.1,
+          "skin": 0.02,
+          "step_height": 0.3,
+          "mass": 80.0
+        },
+        "NavAgent": {
+          "enabled": true,
+          "speed": 3.5,
+          "turn_rate": 10.0,
+          "arrive_distance": 0.5,
+          "destination": null
+        },
+        "Transform": {
+          "translation": [-20.0, 0.8, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9921-7161-ba3c-bc0ec62875dd",
+      "name": "Body",
+      "parent": "01a2134f-9921-7161-ba3c-bc0d679a8af4",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Capsule": {
+              "radius": 0.4,
+              "half_height": 0.4,
+              "segments": 24,
+              "rings": 8
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.72, 0.16, 0.14, 1.0],
+          "roughness": 0.6,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9921-7161-ba3c-bc0f281c9b2f",
+      "name": "Eye Left",
+      "parent": "01a2134f-9921-7161-ba3c-bc0d679a8af4",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.08,
+              "sectors": 32,
+              "stacks": 16
+            }
+          },
+          "cast_shadows": false
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.95, 0.6, 1.0],
+          "roughness": 0.5,
+          "metallic": 0.0,
+          "emissive": [1.5, 1.2, 0.3, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [-0.14, 0.35, -0.34],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9921-7161-ba3c-bc100bdee862",
+      "name": "Eye Right",
+      "parent": "01a2134f-9921-7161-ba3c-bc0d679a8af4",
+      "components": {
+        "Primitive": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.08,
+              "sectors": 32,
+              "stacks": 16
+            }
+          },
+          "cast_shadows": false
+        },
+        "StandardMaterial": {
+          "base_color": [1.0, 0.95, 0.6, 1.0],
+          "roughness": 0.5,
+          "metallic": 0.0,
+          "emissive": [1.5, 1.2, 0.3, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.14, 0.35, -0.34],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9921-7161-ba3c-bc11c3a79179",
+      "name": "Goal",
+      "parent": null,
+      "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 1.3,
+          "offset": [0.0, 0.9, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [
+            {
+              "GroupDone": {
+                "group": "pickups"
+              }
+            }
+          ],
+          "actions": [
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 60
+              }
+            },
+            "Win"
+          ],
+          "once": false,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": ""
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 1.2,
+              "height": 0.1,
+              "segments": 32
+            }
+          },
+          "cast_shadows": true
+        },
+        "StandardMaterial": {
+          "base_color": [0.2, 0.9, 0.45, 1.0],
+          "roughness": 0.4,
+          "metallic": 0.0,
+          "emissive": [0.1, 0.6, 0.25, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.0, 0.05, 26.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "01a2134f-9921-7161-ba3c-bc123afc9348",
+      "name": "Beacon",
+      "parent": "01a2134f-9921-7161-ba3c-bc11c3a79179",
+      "components": {
+        "Bobber": {
+          "enabled": true,
+          "height": 0.2,
+          "period": 3.0
+        },
+        "Primitive": {
+          "shape": {
+            "Sphere": {
+              "radius": 0.25,
+              "sectors": 32,
+              "stacks": 16
+            }
+          },
+          "cast_shadows": false
+        },
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.0
+        },
+        "StandardMaterial": {
+          "base_color": [0.3, 1.0, 0.55, 1.0],
+          "roughness": 0.5,
+          "metallic": 0.0,
+          "emissive": [0.6, 2.0, 1.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.0, 1.6, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    }
+  ]
+}

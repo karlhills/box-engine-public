@@ -401,10 +401,16 @@ fn dropping_into_the_viewport_is_one_undoable_entity() {
     assert_eq!(p.scene.id, Some(tower));
     assert_eq!(p.scene.label.as_deref(), Some("Scene"));
     assert_eq!(p.scene.path.as_deref(), Some("models/tower.glb"));
-    assert_eq!(
-        editor.state.world.get::<Transform>(e).unwrap().translation,
-        at
-    );
+    // At the drop point, standing on it by its lowest point (the tower's
+    // origin is above its base).
+    let placed = editor.state.world.get::<Transform>(e).unwrap().translation;
+    assert_eq!((placed.x, placed.z), (at.x, at.z));
+    box_core::transform::propagate_transforms(&mut editor.state.world);
+    let bottom = box_editor::entity_bounds(&editor.state.world, e)
+        .unwrap()
+        .min
+        .y;
+    assert!((bottom - at.y).abs() < 1e-4, "{bottom}");
     assert_eq!(editor.state.display_name(e), "tower");
     editor.state.undo();
     assert_eq!(

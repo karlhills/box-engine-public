@@ -477,6 +477,29 @@ fn scene_apply_reports_clamped_values() {
     assert!(!stderr.contains("WARN"), "once, in the result: {stderr}");
 }
 
+#[test]
+fn scene_apply_reports_defaulted_variant_fields() {
+    let base = temp_dir("defaulted");
+    let (ok, _, _) = run_json(&base, &["new", "game"]);
+    assert!(ok);
+    let root = base.join("game");
+    std::fs::write(
+        root.join("cmds.json"),
+        json!({ "op": "spawn", "name": "Edge", "components": {
+            "Sweep": { "profile": { "Custom": { "closed": false } } } } })
+        .to_string(),
+    )
+    .unwrap();
+    let (ok, json, _) = run_json(&root, &["scene", "apply", SCENE, "cmds.json"]);
+    assert!(ok, "{json:#}");
+    assert_eq!(codes(&json["problems"]), ["field_defaulted"], "{json:#}");
+    let message = json["problems"][0]["message"].as_str().unwrap();
+    assert!(
+        message.contains("`Sweep.profile.Custom.points`"),
+        "{message}"
+    );
+}
+
 /// A glTF's external ORM image gets a linear `.meta` when the import creates
 /// it, so later runs do not warn.
 #[test]
@@ -501,4 +524,52 @@ fn gltf_import_makes_new_orm_metas_linear() {
     let (ok, report, _) = run_json(&root, &["check"]);
     assert!(ok, "{report:#}");
     assert_eq!(report["problems"], json!([]), "{report:#}");
+}
+
+#[test]
+fn scene_apply_snaps_to_a_terrain_made_in_the_same_list() {
+    let base = temp_dir("snap");
+    let (ok, _, _) = run_json(&base, &["new", "game"]);
+    assert!(ok);
+    let root = base.join("game");
+    std::fs::write(
+        root.join("cmds.json"),
+        json!([
+            { "op": "spawn", "name": "Land", "components": { "Terrain": {
+                "size": [20.0, 20.0],
+                "stamps": [{ "Hill": { "center": [0.0, 0.0], "radius": 30.0, "height": 2.0 } }] } } },
+            { "op": "snap_to_ground", "entity": "Cube", "offset": 0.5 }
+        ])
+        .to_string(),
+    )
+    .unwrap();
+    let (ok, json, _) = run_json(&root, &["scene", "apply", SCENE, "cmds.json"]);
+    assert!(ok, "{json:#}");
+    let (ok, scene, _) = run_json(&root, &["scene", "show", "."]);
+    assert!(ok, "{scene:#}");
+    let cube = scene["entities"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["name"] == "Cube")
+        .expect("Cube");
+    let y = cube["components"]["Transform"]["translation"][1]
+        .as_f64()
+        .unwrap();
+    assert!(y > 1.5, "on the hill, half a metre up: {y}");
+
+    // Off the terrain: an error naming the command, nothing written.
+    std::fs::write(
+        root.join("far.json"),
+        json!([
+            { "op": "set", "entity": "Cube", "path": "Transform.translation", "value": [50.0, 9.0, 0.0] },
+            { "op": "snap_to_ground", "entity": "Cube" }
+        ])
+        .to_string(),
+    )
+    .unwrap();
+    let (ok, json, _) = run_json(&root, &["scene", "apply", SCENE, "far.json"]);
+    assert!(!ok);
+    let message = json["error"]["message"].as_str().unwrap_or_default();
+    assert!(message.contains("no ground under it"), "{json:#}");
 }

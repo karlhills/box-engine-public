@@ -24,6 +24,8 @@ struct MaterialVaryings {
     @location(3) uv: vec2<f32>,
     @location(4) tangent: vec4<f32>,
     @location(5) uv1: vec2<f32>,
+    @location(6) custom0: vec4<f32>,
+    @location(7) custom1: vec4<f32>,
 };
 
 // `instance` is the entry point's `in.instance` (see object.wgsl).
@@ -39,6 +41,8 @@ fn material_varyings(in: VertexInput, instance: u32, view_proj: mat4x4<f32>) -> 
     out.uv = in.uv;
     out.tangent = world_tangent(in.tangent);
     out.uv1 = in.uv1;
+    out.custom0 = in.custom0;
+    out.custom1 = in.custom1;
     return out;
 }
 
@@ -57,6 +61,8 @@ fn material_surface_input(in: MaterialVaryings, front_facing: bool) -> SurfaceIn
     si.tangent = in.tangent;
     si.uv = in.uv;
     si.uv1 = in.uv1;
+    si.custom0 = in.custom0;
+    si.custom1 = in.custom1;
     si.color = in.color;
     si.view_dir = normalize(globals.camera_pos.xyz - in.world_pos);
     si.front_facing = front_facing;

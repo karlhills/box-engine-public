@@ -11,19 +11,30 @@ Every registered component type. Scripts reach any of them by name, with no bind
 | [`AnimationStateMachine`](#animationstatemachine) | Runs an `AnimationGraph` on this entity's `AnimationPlayer` (added with defaults when missing): entering a state sets the player's clip, speed and looping, crossfading by the transition's duration. |
 | [`AudioListener`](#audiolistener) | Where sounds are heard from: positional sounds are panned and attenuated relative to the first entity with this component (its global position and rotation; -Z is forward, +X is right). |
 | [`AudioSource`](#audiosource) | A sound attached to an entity: an ambience loop, a music track, or a sound that plays once when the entity appears. |
+| [`Bobber`](#bobber) | Floats the entity up and down around where it started. |
 | [`Camera`](#camera) | A perspective camera. |
+| [`Chaser`](#chaser) | A simple enemy: waits (or walks its `patrol` points) until it sees the player within `sight`, then chases them along the navmesh at `chase_speed`, around walls and up stairs. |
+| [`Collidable`](#collidable) | Whether this entity's colliders and those of its descendants take part in physics (default `true`). |
 | [`Collider`](#collider) | A collision shape on an entity, placed by its `GlobalTransform`. |
 | [`DirectionalLight`](#directionallight) | The primary directional light (the sun). |
 | [`Extrude`](#extrude) | A flat outline pushed up along the entity's Y axis into a solid (a slab, a plaque, a star, a frame), standing on the origin. |
+| [`FollowCamera`](#followcamera) | A camera that follows a target from behind and above. |
+| [`FollowGround`](#followground) | Keeps an entity on the ground: its origin's height is the ground under it plus `offset`, recomputed when the ground, the entity's position on X and Z, or its parent moves. |
+| [`Health`](#health) | Hit points. |
+| [`Interactable`](#interactable) | Something the player can use: press `action` within `radius` (or walk into it, with `trigger: Touch`); if every condition in `requires` holds, the `actions` run in order. |
+| [`Interactor`](#interactor) | Marks the player: the entity whose distance to interactables counts. |
 | [`Interpolated`](#interpolated) | Draw this entity between its last two fixed-step transforms. |
 | [`Joint`](#joint) | Connects this entity's `RigidBody` to another body, or to the world. |
 | [`KinematicCharacter`](#kinematiccharacter) | A capsule character moved by `CharacterPlugin` every fixed step: set the horizontal part of `velocity` (and call `jump`) from input in `FixedUpdate` before `move_characters`; the system adds gravity, moves with `Physics::move_and_slide` and updates `grounded`. |
 | [`Lathe`](#lathe) | A surface of revolution: a profile of (radius, height) points turned around the entity's Y axis. |
 | [`MaterialRef`](#materialref) | Draws this entity's `Primitive` with a material asset (a `.material.json` file, standard or shader, or a glTF material) instead of its inline material, following edits to the file (hot reload). |
 | [`MeshAsset`](#meshasset) | Draws the mesh asset `mesh` with `materials`, one per material group of the mesh (`MeshData::groups`, by slot). |
+| [`Mover`](#mover) | Moves the entity through a list of points, measured from where it starts, and carries characters standing on it (moving platforms). |
 | [`Name`](#name) | Display name, shown in the hierarchy. |
+| [`NavAgent`](#navagent) | Walks the entity's `KinematicCharacter` to `destination` along the navmesh, around walls and up ramps and stairs, turning the entity to face where it goes. |
 | [`Overrides`](#overrides) | Saved on the owner of derived parts: per-part field values and hidden parts that replace what the rules decided. |
 | [`ParticleEmitter`](#particleemitter) | Emits camera-facing particles from the entity's position, simulated on the CPU and drawn instanced in the transparent pass. |
+| [`PlayerController`](#playercontroller) | The player: moves its `KinematicCharacter` with the `move` action (WASD, arrows, left stick) relative to the camera's view, jumps with `jump` (Space, gamepad South), runs while `run` is held (Shift, gamepad West), turns its body toward where it moves and feeds the body's animation state machine (`speed`, `grounded`, `jump`). |
 | [`PointLight`](#pointlight) | A point light at the entity's position, emitting equally in all directions. |
 | [`PrefabInstance`](#prefabinstance) | Instances a scene asset (a `.scene.json`/`.prefab.json` file, or a glTF's `#Scene`) beneath this entity. |
 | [`Primitive`](#primitive) | A built-in shape with parameters. |
@@ -34,10 +45,16 @@ Every registered component type. Scripts reach any of them by name, with no bind
 | [`ScriptIntent`](#scriptintent) | Saved intent of a script rule: the rule file, owner-local points and property values. |
 | [`ShaderMaterial`](#shadermaterial) | A material drawn by a custom WGSL shader with editable parameters. |
 | [`SkinBinding`](#skinbinding) | Binds this entity's mesh (its `MeshAsset`) to a skeleton: the skin asset and the joint entities, by uid, in the skin's joint order. |
+| [`Spawner`](#spawner) | Makes copies of its template every `interval` seconds while fewer than `max_alive` are around, at random spots within `radius` of itself. |
+| [`Spinner`](#spinner) | Turns the entity around an axis, forever (coins, fans, windmills). |
 | [`Spline`](#spline) | A 3D spline: control points, interpolation mode, open or closed. |
 | [`SpotLight`](#spotlight) | A spot light at the entity's position, shining down the entity's −Z (`GlobalTransform::forward()`) in a cone. |
 | [`StandardMaterial`](#standardmaterial) | The built-in lit material: metallic/roughness PBR parameters and optional textures. |
 | [`Sweep`](#sweep) | A profile swept along a spline: tubes, rails, kerbs, walls, paths. |
+| [`Terrain`](#terrain) | Heightfield ground shaped by `TerrainStamp`s and drawn in chunks (see the module docs). |
+| [`TerrainChunk`](#terrainchunk) | One chunk of a `Terrain`: generated by the `terrain` rule as a part of the terrain's entity, never saved. |
+| [`TerrainPath`](#terrainpath) | A dirt path following the XZ course of the `Spline` on this entity. |
+| [`TerrainPathChunk`](#terrainpathchunk) | Runtime mesh parameters of one path chunk, owned by the terrain. |
 | [`Transform`](#transform) | Local transform relative to the parent (or the world, for roots). |
 | [`Transient`](#transient) | Component: a runtime-only entity (pooled projectiles, spawned enemies, effects). |
 | [`Uid`](#uid) | Persistent entity identity, stable across save, load, Play and undo. |
@@ -142,6 +159,17 @@ Scripts: `e:get("AudioSource")`, `e:set("AudioSource", { ... })`, `e:add("AudioS
 - **`min_distance`** `number` (default `1.0`, range 0–1000, unit m): Positional sounds are at full volume within this distance.
 - **`max_distance`** `number` (default `30.0`, range 0–1000, unit m): Positional sounds are silent beyond this distance.
 
+## `Bobber`
+
+Floats the entity up and down around where it started. Copies placed in
+different spots bob out of step.
+
+Scripts: `e:get("Bobber")`, `e:set("Bobber", { ... })`, `e:add("Bobber")`, `world.query("Bobber")`.
+
+- **`enabled`** `boolean` (default `true`): Off: it stays where it is.
+- **`height`** `number` (default `0.15000000596046448`, range 0–10, unit m): How far above and below its start it goes.
+- **`period`** `number` (default `3.0`, range 0.1–60, unit s): Time for one full up-and-down.
+
 ## `Camera`
 
 A perspective camera. Uses the entity's `GlobalTransform` (looks down −Z).
@@ -153,6 +181,45 @@ Scripts: `e:get("Camera")`, `e:set("Camera", { ... })`, `e:add("Camera")`, `worl
 - **`fov_y`** `number` (default `0.8726646304130554`, range 0.02–3, unit rad): Vertical field of view in radians.
 - **`near`** `number` (default `0.10000000149011612`, range 0.001–100, unit m): Distance to the near clipping plane. There is no far plane.
 - **`active`** `boolean` (default `true`): Whether this camera can render the scene. The renderer uses the first active camera it finds.
+
+## `Chaser`
+
+A simple enemy: waits (or walks its `patrol` points) until it sees the
+player within `sight`, then chases them along the navmesh at
+`chase_speed`, around walls and up stairs. Touching the player costs
+them `damage` (their `Health`, or a respawn without one) at most once
+per `attack_cooldown`. When it loses sight of the player it searches
+where it saw them last; beyond `give_up` it walks back home. Uses a
+`NavAgent` and a `KinematicCharacter` (added in Play when missing).
+
+Scripts: `e:get("Chaser")`, `e:set("Chaser", { ... })`, `e:add("Chaser")`, `world.query("Chaser")`.
+
+- **`enabled`** `boolean` (default `true`): Off: it stops where it is.
+- **`speed`** `number` (default `2.0`, range 0–50, unit m/s): Speed while patrolling, searching and going home.
+- **`chase_speed`** `number` (default `4.0`, range 0–50, unit m/s): Speed while chasing.
+- **`sight`** `number` (default `8.0`, range 0–200, unit m): How far it sees the player.
+- **`give_up`** `number` (default `14.0`, range 0–500, unit m): It gives up chasing beyond this distance.
+- **`line_of_sight`** `boolean` (default `true`): It must see the player (no wall in between) to start chasing.
+- **`patrol`** `{ vector }` (default `[]`, unit m): Points it walks between while it has not seen the player, as offsets from where it starts. Empty: it waits at home.
+- **`wait`** `number` (default `1.0`, range 0–60, unit s): Seconds it waits at each patrol point and where it searched.
+- **`damage`** `number` (default `1.0`, range 0–100): Health the player loses on contact.
+- **`attack_cooldown`** `number` (default `1.0`, range 0–60, unit s): Seconds between two hits.
+- **`reach`** `number` (default `0.30000001192092896`, range 0–5, unit m): How close counts as touching (between the two capsules' edges).
+
+## `Collidable`
+
+Whether this entity's colliders and those of its descendants take part
+in physics (default `true`). `Collidable(false)` switches the whole
+subtree off: queries, triggers, characters and rigid bodies ignore its
+colliders until it is set back to `true` (a hidden bridge, a door that
+opened). A parent's `false` wins over its children's `true`. Saved in
+scenes. The physics counterpart of `Visible`, which only hides drawing.
+
+Scripts: `e:get("Collidable")`, `e:set("Collidable", { ... })`, `e:add("Collidable")`, `world.query("Collidable")`.
+
+```luau
+type Collidable = boolean
+```
 
 ## `Collider`
 
@@ -203,6 +270,93 @@ Scripts: `e:get("Extrude")`, `e:set("Extrude", { ... })`, `e:add("Extrude")`, `w
 - **`bevel_segments`** `number` (default `3`, range 1–16): Bevel steps: 1 is a flat chamfer, more is a rounded edge.
 - **`caps`** `boolean` (default `true`): Close the top and bottom.
 - **`smooth_angle`** `number` (default `0.6000000238418579`, range 0–3.15, unit rad): Outline corners that turn by at most this angle shade smooth; sharper corners stay hard.
+
+## `FollowCamera`
+
+A camera that follows a target from behind and above. Put it on the
+entity with the `Camera`. In Play it becomes the active camera (other
+cameras are switched off), so the scene's starting camera need not be
+removed.
+
+Scripts: `e:get("FollowCamera")`, `e:set("FollowCamera", { ... })`, `e:add("FollowCamera")`, `world.query("FollowCamera")`.
+
+- **`enabled`** `boolean` (default `true`): Off: the camera stays where it is.
+- **`target`** `string?` (default `null`): What to follow. None: the player (`PlayerController`).
+- **`mode`** `"Orbit" | "Fixed"` (default `"Orbit"`): Orbit with the mouse and stick, or a fixed angle.
+- **`distance`** `number` (default `7.0`, range 0.5–200, unit m): Distance from the point it looks at.
+- **`height`** `number` (default `1.2000000476837158`, range -10–50, unit m): Height of that point above the target's origin.
+- **`pitch`** `number` (default `0.3499999940395355`, range -0.5–1.55, unit rad): Angle down toward the target (the starting angle in `Orbit`).
+- **`smoothing`** `number` (default `10.0`, range 0.5–50, unit 1/s): How quickly it catches up (higher: stiffer).
+- **`look_speed`** `number` (default `2.5`, range 0–10, unit rad/s): Turn rate at full stick.
+- **`mouse_sensitivity`** `number` (default `0.004000000189989805`, range 0–0.05, unit rad): Turn per unit of mouse movement while the mouse is captured.
+- **`capture_mouse`** `boolean` (default `true`): Clicking the game captures the mouse for looking (Escape releases it). Off: only the stick turns the camera.
+
+## `FollowGround`
+
+Keeps an entity on the ground: its origin's height is the ground under
+it plus `offset`, recomputed when the ground, the entity's position on
+X and Z, or its parent moves. Move it freely on X and Z; its own height
+is owned by the ground. Not for parts made by a rule (a rule samples
+the ground itself).
+
+Scripts: `e:get("FollowGround")`, `e:set("FollowGround", { ... })`, `e:add("FollowGround")`, `world.query("FollowGround")`.
+
+- **`offset`** `number` (default `0.0`, unit m): Height of the origin above the ground (negative sinks it in).
+
+## `Health`
+
+Hit points. Hits (the `Damage` action) lower `current`, then nothing can
+hurt it for `invulnerable` seconds; `Heal` raises it up to `max`. When it
+reaches 0, `on_zero` runs. Left empty, `on_zero` sends the player back to
+the last checkpoint (costing a life when the rules count lives, and
+refilling its health), and removes anything else (hides it, or despawns a
+spawned copy). Saved: `current` is its state.
+
+Scripts: `e:get("Health")`, `e:set("Health", { ... })`, `e:add("Health")`, `world.query("Health")`.
+
+- **`enabled`** `boolean` (default `true`): Off: it cannot be hurt or healed.
+- **`max`** `number` (default `3.0`, range 1–10000): Full health.
+- **`current`** `number` (default `3.0`, range 0–10000): Health now (saved in save games).
+- **`invulnerable`** `number` (default `0.800000011920929`, range 0–30, unit s): After a hit, how long nothing can hurt it.
+- **`on_damage`** `{ { Show: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Hide: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Toggle: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { StartParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { StopParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { SetLight: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, intensity: number? } } | { AddVar: { var: string?, amount: number? } } | { SetVar: { var: string?, value: number? } } | { SetEnabled: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, enabled: boolean? } } | { PlaySound: { clip: string?, volume: number? } } | { Signal: { name: string? } } | { CallScript: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, ["function"]: string? } } | { SetField: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, path: string?, value: string? } } | "Win" | "Lose" | "Respawn" | "SetCheckpoint" | { SwitchScene: { scene: string? } } | { Burst: { style: ("Sparkle" | "Dust" | "Flame")?, count: number? } } | { Damage: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Heal: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Despawn: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } }` (default `[]`): What a hit does besides lowering health (a sound, a burst), in order. `Interactor` targets whoever hit it.
+- **`on_zero`** `{ { Show: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Hide: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Toggle: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { StartParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { StopParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { SetLight: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, intensity: number? } } | { AddVar: { var: string?, amount: number? } } | { SetVar: { var: string?, value: number? } } | { SetEnabled: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, enabled: boolean? } } | { PlaySound: { clip: string?, volume: number? } } | { Signal: { name: string? } } | { CallScript: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, ["function"]: string? } } | { SetField: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, path: string?, value: string? } } | "Win" | "Lose" | "Respawn" | "SetCheckpoint" | { SwitchScene: { scene: string? } } | { Burst: { style: ("Sparkle" | "Dust" | "Flame")?, count: number? } } | { Damage: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Heal: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Despawn: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } }` (default `[]`): What reaching zero does, in order. Empty: the player respawns, anything else disappears.
+
+## `Interactable`
+
+Something the player can use: press `action` within `radius` (or walk
+into it, with `trigger: Touch`); if every condition in `requires` holds,
+the `actions` run in order. Put it on the entity the player uses, usually
+a `PrefabInstance` root, so each placed copy has its own settings (its
+own `Entity` targets). Saved; `uses` is its state.
+
+Scripts: `e:get("Interactable")`, `e:set("Interactable", { ... })`, `e:add("Interactable")`, `world.query("Interactable")`.
+
+- **`enabled`** `boolean` (default `true`): Off: ignored (no prompt, cannot be used). Actions can switch it.
+- **`trigger`** `"Press" | "Touch"` (default `"Press"`): Press the action nearby, or fire on walking within `radius`.
+- **`action`** `string` (default `"interact"`): Input action that uses it (`Press` only). `interact` (E, gamepad North) exists in every project; other names come from the project's `assets/settings/input.actions.json`.
+- **`radius`** `number` (default `2.0`, range 0–100, unit m): How close the player must be to the interaction point.
+- **`offset`** `vector` (default `[0.0,1.0,0.0]`, unit m): The interaction point and prompt position: the entity's origin plus this offset, in world axes.
+- **`prompt`** `string` (default `"Use"`): Prompt text shown next to the action's key, such as "Light the brazier".
+- **`prompt_key`** `string` (default `""`): String-table key for the prompt; wins over `prompt` when set.
+- **`blocked_prompt`** `string` (default `""`): Shown instead while `requires` fails, such as "Needs an ember". Empty: no prompt while blocked.
+- **`blocked_prompt_key`** `string` (default `""`): String-table key for the blocked prompt; wins when set.
+- **`requires`** `{ { AtLeast: { var: string?, value: number? } } | { Below: { var: string?, value: number? } } | { Equals: { var: string?, value: number? } } | { GroupDone: { group: string? } } | { TimeAbove: { seconds: number? } } }` (default `[]`): Conditions that must all hold to use it.
+- **`actions`** `{ { Show: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Hide: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { Toggle: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, collide: boolean? } } | { StartParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { StopParticles: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } | { SetLight: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, intensity: number? } } | { AddVar: { var: string?, amount: number? } } | { SetVar: { var: string?, value: number? } } | { SetEnabled: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, enabled: boolean? } } | { PlaySound: { clip: string?, volume: number? } } | { Signal: { name: string? } } | { CallScript: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, ["function"]: string? } } | { SetField: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, path: string?, value: string? } } | "Win" | "Lose" | "Respawn" | "SetCheckpoint" | { SwitchScene: { scene: string? } } | { Burst: { style: ("Sparkle" | "Dust" | "Flame")?, count: number? } } | { Damage: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Heal: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")?, amount: number? } } | { Despawn: { target: ("This" | { Child: string } | { Entity: string? } | "Interactor")? } } }` (default `[]`): What using it does, in order.
+- **`once`** `boolean` (default `false`): Usable once: stays used afterwards (pickups, one-shot puzzles).
+- **`cooldown`** `number` (default `0.25`, range 0–60, unit s): Minimum time between two uses.
+- **`uses`** `number` (default `0`): How many times it was used (state; saved in save games). Effects on prefab contents are applied again on load when it is above 0.
+- **`group`** `string` (default `""`): Group name for "use them all" goals: the `GroupDone` condition holds once every interactable of the group was used, and the HUD shows the progress (`Pickups 3 / 12`). Empty: in no group.
+
+## `Interactor`
+
+Marks the player: the entity whose distance to interactables counts.
+Without one, the first `KinematicCharacter` is the interactor.
+
+Scripts: `e:get("Interactor")`, `e:set("Interactor", { ... })`, `e:add("Interactor")`, `world.query("Interactor")`.
+
+```luau
+type Interactor = {}
+```
 
 ## `Interpolated`
 
@@ -313,6 +467,20 @@ Scripts: `e:get("MeshAsset")`, `e:set("MeshAsset", { ... })`, `e:add("MeshAsset"
 - **`materials`** `{ string? }` (default `[]`): Material assets by material group slot (glTF sub-assets such as `models/tower.glb#Material/Stone`, or `.material.json` files). Empty: the imported mesh's own materials.
 - **`cast_shadows`** `boolean` (default `true`): Whether the mesh casts shadows.
 
+## `Mover`
+
+Moves the entity through a list of points, measured from where it starts,
+and carries characters standing on it (moving platforms). Runs at the
+fixed rate before characters move.
+
+Scripts: `e:get("Mover")`, `e:set("Mover", { ... })`, `e:add("Mover")`, `world.query("Mover")`.
+
+- **`enabled`** `boolean` (default `true`): Off: it stops where it is (an action can switch it on).
+- **`points`** `{ vector }` (default `[[0.0,0.0,0.0],[4.0,0.0,0.0]]`): The points it moves through, relative to its start position, in its parent's axes. The first is usually (0, 0, 0).
+- **`speed`** `number` (default `2.0`, range 0–100, unit m/s): Travel speed.
+- **`mode`** `"PingPong" | "Loop" | "Once"` (default `"PingPong"`): What it does at the end.
+- **`wait`** `number` (default `0.5`, range 0–60, unit s): Pause at each end.
+
 ## `Name`
 
 Display name, shown in the hierarchy. Scene files write it as the entity's
@@ -323,6 +491,22 @@ Scripts: `e:get("Name")`, `e:set("Name", { ... })`, `e:add("Name")`, `world.quer
 ```luau
 type Name = string
 ```
+
+## `NavAgent`
+
+Walks the entity's `KinematicCharacter` to `destination` along the
+navmesh, around walls and up ramps and stairs, turning the entity to face
+where it goes. Set `destination` from a script (`e:move_to(point)`), an
+action (`SetField`) or another behaviour (a `Chaser`); clear it to stop.
+A `KinematicCharacter` is added in Play when missing.
+
+Scripts: `e:get("NavAgent")`, `e:set("NavAgent", { ... })`, `e:add("NavAgent")`, `world.query("NavAgent")`.
+
+- **`enabled`** `boolean` (default `true`): Off: stands still.
+- **`speed`** `number` (default `3.5`, range 0–50, unit m/s): Walking speed.
+- **`turn_rate`** `number` (default `10.0`, range 0–50, unit rad/s): How fast it turns to face where it walks.
+- **`arrive_distance`** `number` (default `0.5`, range 0.05–10, unit m): Closer than this to the destination counts as arrived.
+- **`destination`** `vector?` (default `null`): Where to go (feet height is found on the navmesh). None: stand still. Not saved in scenes.
 
 ## `Overrides`
 
@@ -381,6 +565,30 @@ Scripts: `e:get("ParticleEmitter")`, `e:set("ParticleEmitter", { ... })`, `e:add
 - **`space`** `"World" | "Local"` (default `"World"`): Where emitted particles live: `World` (they stay put when the emitter moves) or `Local` (they move with it).
 - **`seed`** `number` (default `1`): Random seed: equal seeds and frame times give equal particles.
 - **`despawn_when_finished`** `boolean` (default `false`): Despawn the entity when it has finished (not looping, emission over, no particles left).
+
+## `PlayerController`
+
+The player: moves its `KinematicCharacter` with the `move` action
+(WASD, arrows, left stick) relative to the camera's view, jumps with
+`jump` (Space, gamepad South), runs while `run` is held (Shift, gamepad
+West), turns its body toward where it moves and feeds the body's
+animation state machine (`speed`, `grounded`, `jump`). Below
+`fall_limit` it respawns at the last checkpoint. It is the player for
+interactables and the follow camera.
+
+A `KinematicCharacter`, a capsule `Collider` and `Interpolated` are added
+in Play when missing.
+
+Scripts: `e:get("PlayerController")`, `e:set("PlayerController", { ... })`, `e:add("PlayerController")`, `world.query("PlayerController")`.
+
+- **`enabled`** `boolean` (default `true`): Off: the player stands still (cut scenes, dialogue).
+- **`speed`** `number` (default `6.0`, range 0–50, unit m/s): Walking speed at full input.
+- **`run_speed`** `number` (default `10.0`, range 0–50, unit m/s): Speed while `run` is held.
+- **`jump`** `boolean` (default `true`): The player can jump (height: the character's `jump_speed`).
+- **`turn_rate`** `number` (default `12.0`, range 0–50, unit rad/s): How fast the body turns toward where it moves.
+- **`fall_limit`** `number` (default `-20.0`, range -1000–0, unit m): Falling below this height respawns the player.
+- **`camera`** `string?` (default `null`): The camera movement is relative to. None: the active camera.
+- **`body`** `string?` (default `null`): The model that turns and animates (a child, usually with an `AnimationStateMachine`). None: the first child with a state machine, else the player itself.
 
 ## `PointLight`
 
@@ -560,6 +768,34 @@ Scripts: `e:get("SkinBinding")`, `e:set("SkinBinding", { ... })`, `e:add("SkinBi
 - **`skin`** `string?` (default `null`): The skin, usually a glTF sub-asset such as `models/hero.glb#Skin/0`.
 - **`joints`** `{ string }` (default `[]`): Joint entities in skin joint order.
 
+## `Spawner`
+
+Makes copies of its template every `interval` seconds while fewer than
+`max_alive` are around, at random spots within `radius` of itself. The
+template is the entity in `template`, else the spawner's first child; it
+is hidden while playing, so keep it where the spawner is. Copies are not
+saved: a save game or Restart starts the spawner again.
+
+Scripts: `e:get("Spawner")`, `e:set("Spawner", { ... })`, `e:add("Spawner")`, `world.query("Spawner")`.
+
+- **`enabled`** `boolean` (default `true`): Off: no new copies (the ones already made stay).
+- **`template`** `string?` (default `null`): The entity to copy. Empty: the spawner's first child.
+- **`interval`** `number` (default `3.0`, range 0.05–600, unit s): Time between two copies; the first comes after one interval.
+- **`max_alive`** `number` (default `5`, range 1–1000): At most this many copies at once.
+- **`total`** `number` (default `0`, range 0–100000): Stop after this many copies in all. 0: never stop.
+- **`radius`** `number` (default `0.0`, range 0–500, unit m): Copies appear at random spots within this distance (on the ground plane around the spawner). 0: exactly at the template.
+- **`lifetime`** `number` (default `0.0`, range 0–3600, unit s): Each copy disappears after this long. 0: copies stay until something removes them (a `Despawn` action, `Health` at zero).
+
+## `Spinner`
+
+Turns the entity around an axis, forever (coins, fans, windmills).
+
+Scripts: `e:get("Spinner")`, `e:set("Spinner", { ... })`, `e:add("Spinner")`, `world.query("Spinner")`.
+
+- **`enabled`** `boolean` (default `true`): Off: it stops where it is.
+- **`axis`** `vector` (default `[0.0,1.0,0.0]`): The axis it turns around, in its parent's axes (Y: like a coin).
+- **`speed`** `number` (default `2.0`, range -50–50, unit rad/s): Turn rate; negative turns the other way.
+
 ## `Spline`
 
 A 3D spline: control points, interpolation mode, open or closed. Plain
@@ -637,6 +873,65 @@ Scripts: `e:get("Sweep")`, `e:set("Sweep", { ... })`, `e:add("Sweep")`, `world.q
 - **`tolerance`** `number` (default `0.009999999776482582`, range 0.0005–1, unit m): How far the sampled path may stray from the curve: smaller is smoother and heavier.
 - **`orientation`** `"Up" | "RotationMinimizing"` (default `"RotationMinimizing"`): Upright profile (walls, roads) or no twist (tubes).
 - **`caps`** `boolean` (default `true`): Close the ends of an open spline (closed profiles only).
+- **`follow_ground`** `boolean` (default `false`): Lay the path on the ground (a `Terrain`): each point's height is the ground under it plus `ground_offset`, sampled at least once per terrain cell, and the sweep follows when the terrain changes. Parts of the path off every terrain keep the spline's height.
+- **`ground_offset`** `number` (default `0.0`, unit m): Height of the path above the ground with `follow_ground`.
+
+## `Terrain`
+
+Heightfield ground shaped by `TerrainStamp`s and drawn in chunks (see
+the module docs). The terrain covers `size` metres on X and Z, centred
+on its entity.
+
+Scripts: `e:get("Terrain")`, `e:set("Terrain", { ... })`, `e:add("Terrain")`, `world.query("Terrain")`.
+
+- **`size`** `vector` (default `[64.0,64.0]`, range 1–8192, unit m): Extent on X and Z.
+- **`cell_size`** `number` (default `1.0`, range 0.1–16, unit m): Distance between height samples: smaller is smoother and heavier.
+- **`base_height`** `number` (default `0.0`, unit m): Height of the ground before any stamp.
+- **`stamps`** `{ { Hill: { center: vector?, radius: number?, height: number? } } | { Ridge: { points: { vector }?, width: number?, height: number? } } | { Basin: { center: vector?, radius: number?, depth: number? } } | { Flatten: { center: vector?, radius: number?, height: number?, bank: number? } } | { FlattenPath: { points: { vector }?, width: number?, bank: number? } } | { Noise: { seed: number?, scale: number?, amplitude: number?, octaves: number? } } }` (default `[]`): Shaping operations, applied in order.
+- **`layers`** `{ grass: Color, dirt: Color, rock: Color, rock_slope: number, variation: number }`: Layer colours and where each shows.
+- **`skirt`** `number` (default `2.0`, range 0–100, unit m): Depth of the wall hanging down from the terrain's edges, so the world does not end in a paper-thin edge (0: none).
+- **`collide`** `boolean` (default `true`): Give the chunks mesh colliders (characters walk on it, rays hit it).
+- **`show_walkability`** `boolean` (default `false`): Tint ground a character cannot walk: steeper than `walk_slope` red, within 5° of it orange.
+- **`walk_slope`** `number` (default `53.0`, range 0–90, unit °): Steepest walkable slope for `show_walkability`, degrees (match the character's `max_slope`).
+
+## `TerrainChunk`
+
+One chunk of a `Terrain`: generated by the `terrain` rule as a part
+of the terrain's entity, never saved. It holds the stamps that reach
+it, so editing a stamp regenerates only the chunks under it.
+
+Scripts: `e:get("TerrainChunk")`, `e:set("TerrainChunk", { ... })`, `e:add("TerrainChunk")`, `world.query("TerrainChunk")`. Not offered in the editor's Add menu.
+
+- **`origin`** `vector` (default `[0.0,0.0]`): Terrain-space corner (x, z) of the chunk's first cell.
+- **`cells_x`** `number` (default `32`): Cells along X.
+- **`cells_z`** `number` (default `32`): Cells along Z.
+- **`cell_size`** `number` (default `1.0`): Distance between height samples.
+- **`base_height`** `number` (default `0.0`): The terrain's base height.
+- **`stamps`** `{ { Hill: { center: vector?, radius: number?, height: number? } } | { Ridge: { points: { vector }?, width: number?, height: number? } } | { Basin: { center: vector?, radius: number?, depth: number? } } | { Flatten: { center: vector?, radius: number?, height: number?, bank: number? } } | { FlattenPath: { points: { vector }?, width: number?, bank: number? } } | { Noise: { seed: number?, scale: number?, amplitude: number?, octaves: number? } } }` (default `[]`): The terrain's stamps that change this chunk, in order.
+- **`layers`** `{ grass: Color, dirt: Color, rock: Color, rock_slope: number, variation: number }`: The terrain's layer colours.
+- **`skirt`** `number` (default `0.0`): Skirt depth.
+- **`skirt_edges`** `number` (default `0`): Which edges get a skirt: bits -X, +X, -Z, +Z.
+- **`show_walkability`** `boolean` (default `false`): The terrain's walkability tint.
+- **`walk_slope`** `number` (default `53.0`): The terrain's walkable slope, degrees.
+
+## `TerrainPath`
+
+A dirt path following the XZ course of the `Spline` on this entity.
+Paths on the same terrain merge wherever their footprints touch.
+
+Scripts: `e:get("TerrainPath")`, `e:set("TerrainPath", { ... })`, `e:add("TerrainPath")`, `world.query("TerrainPath")`.
+
+- **`width`** `number` (default `2.0`, range 0.1–100, unit m): Full width in world metres.
+- **`terrain`** `string?` (default `null`): Terrain to follow. Leave empty when the scene has exactly one terrain.
+
+## `TerrainPathChunk`
+
+Runtime mesh parameters of one path chunk, owned by the terrain.
+
+Scripts: `e:get("TerrainPathChunk")`, `e:set("TerrainPathChunk", { ... })`, `e:add("TerrainPathChunk")`, `world.query("TerrainPathChunk")`. Not offered in the editor's Add menu.
+
+- **`chunk`** `{ origin: vector, cells_x: number, cells_z: number, cell_size: number, base_height: number, stamps: { { Hill: { center: vector?, radius: number?, height: number? } } | { Ridge: { points: { vector }?, width: number?, height: number? } } | { Basin: { center: vector?, radius: number?, depth: number? } } | { Flatten: { center: vector?, radius: number?, height: number?, bank: number? } } | { FlattenPath: { points: { vector }?, width: number?, bank: number? } } | { Noise: { seed: number?, scale: number?, amplitude: number?, octaves: number? } } }, layers: { grass: Color, dirt: Color, rock: Color, rock_slope: number, variation: number }, skirt: number, skirt_edges: number, show_walkability: boolean, walk_slope: number }`: Terrain cell grid and stamps used to drape the path.
+- **`triangles`** `{ { vector } }` (default `[]`): Joined path footprint triangles in terrain-local XZ coordinates.
 
 ## `Transform`
 

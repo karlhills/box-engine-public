@@ -181,14 +181,16 @@ path = "src/lib.rs"
 # The engine modules the game builds with (box_engine's features). To compile
 # less, keep only the ones the game uses, for example
 # `default = ["physics", "audio"]` without rigid bodies (`dynamics`, rapier)
-# and Luau scripts (`script`). A scene that uses a left-out module's types
+# and Luau scripts (`script`), or without enemy navigation (`navigation`).
+# A scene that uses a left-out module's types
 # still loads, with a warning naming the feature. The editor binary always
 # has every module.
-default = ["physics", "dynamics", "audio", "script"]
+default = ["physics", "dynamics", "audio", "script", "navigation"]
 physics = ["box_engine/physics"]
 dynamics = ["box_engine/dynamics"]
 audio = ["box_engine/audio"]
 script = ["box_engine/script"]
+navigation = ["box_engine/navigation"]
 # The editor binary. Off by default so the player builds without the editor
 # (egui and its dependencies).
 editor = ["dep:box_editor"]

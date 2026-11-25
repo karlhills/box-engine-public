@@ -22,6 +22,7 @@ pub mod extrude;
 pub mod generator;
 pub mod glb;
 pub mod golden;
+pub mod ground;
 pub mod hash;
 pub mod humanoid;
 pub mod inputs;
@@ -39,12 +40,15 @@ pub mod spline;
 pub mod split;
 pub mod sweep;
 pub mod sweep_gen;
+pub mod terrain;
+pub mod terrain_path;
 
 pub use builtin::{Extrude, Hole, Lathe, LatheShape, Outline, register_builtin_generators};
 pub use generator::{
     ColliderHint, GenContext, GenOutput, Generator, GeneratorInfo, GeneratorRegistry,
     GeneratorType, HintBox, ReflectGenerator,
 };
+pub use ground::{FollowGround, Ground, GroundSample, GroundView};
 pub use hash::mesh_hash;
 pub use inputs::{InputId, Inputs};
 pub use overrides::{FieldOverride, Overrides, PartOverride};
@@ -57,3 +61,5 @@ pub use runtime::{
 pub use scatter::{Scatter, ScatterMask, ScatterSpecies, SpeciesSource};
 pub use spline::{ControlPoint, Spline, SplineMode};
 pub use sweep_gen::{Sweep, SweepOrientation, SweepProfile};
+pub use terrain::{Terrain, TerrainChunk, TerrainLayers, TerrainStamp};
+pub use terrain_path::TerrainPath;

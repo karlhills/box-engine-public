@@ -194,6 +194,12 @@ impl Headless {
         &self.renderer
     }
 
+    /// The egui context the frames run in (to set UI state before a
+    /// capture, such as [`set_list_open`](crate::panes::inspector::set_list_open)).
+    pub fn ctx(&self) -> &egui::Context {
+        &self.ctx
+    }
+
     /// The last frame's pixels. Fails if wgpu reported validation errors.
     pub fn image(&self) -> Result<image::RgbaImage> {
         let errors = self.renderer.validation_errors();

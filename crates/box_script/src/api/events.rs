@@ -44,6 +44,69 @@ impl ScriptSignals {
     }
 }
 
+/// Resource: calls Rust code asks for on entities' scripts:
+/// `function(self, args...)` on the script attached to `entity`, in the
+/// scripts' next Update stage (after event handlers). Arguments are JSON
+/// like [`ScriptSignals`] payloads (entities as `{"$entity": uid}`).
+/// Box_engine's interactions use it for `on_interact` and `CallScript`.
+#[derive(Debug, Default)]
+pub struct ScriptCalls {
+    pub(crate) pending: Vec<ScriptCall>,
+}
+
+/// One queued [`ScriptCalls`] call.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScriptCall {
+    pub entity: box_core::world::Entity,
+    pub function: String,
+    pub args: Vec<serde_json::Value>,
+    /// Warn when the entity has no running script or the script has no such
+    /// function (false for optional callbacks such as `on_interact`).
+    pub required: bool,
+}
+
+impl ScriptCalls {
+    /// Queues `function(self, args...)` on `entity`'s script; warns if the
+    /// entity has no script or the script lacks the function.
+    pub fn call(
+        &mut self,
+        entity: box_core::world::Entity,
+        function: impl Into<String>,
+        args: Vec<serde_json::Value>,
+    ) {
+        self.pending.push(ScriptCall {
+            entity,
+            function: function.into(),
+            args,
+            required: true,
+        });
+    }
+
+    /// Queues an optional callback: nothing happens, silently, when the
+    /// entity's script does not define it.
+    pub fn notify(
+        &mut self,
+        entity: box_core::world::Entity,
+        function: impl Into<String>,
+        args: Vec<serde_json::Value>,
+    ) {
+        self.pending.push(ScriptCall {
+            entity,
+            function: function.into(),
+            args,
+            required: false,
+        });
+    }
+
+    pub fn len(&self) -> usize {
+        self.pending.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.pending.is_empty()
+    }
+}
+
 /// `events.on(name, handler)` from Rust: subscribes `handler` to the
 /// registered event or signal `name`, owned by the script instance whose
 /// callback is running (removed with it). Returns the id for

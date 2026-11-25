@@ -92,6 +92,15 @@
       "name": "Ground",
       "parent": null,
       "components": {
+        "Collider": {
+          "shape": "Primitive",
+          "offset": [0.0, 0.0, 0.0],
+          "is_trigger": false,
+          "layers": 1,
+          "mask": 4294967295,
+          "friction": 0.5,
+          "restitution": 0.0
+        },
         "Primitive": {
           "shape": {
             "Plane": {

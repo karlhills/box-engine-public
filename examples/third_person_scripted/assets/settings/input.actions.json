@@ -1,0 +1,21 @@
+{
+  "actions": {
+    "move": {
+      "kind": "axis2",
+      "bindings": [
+        { "buttons": { "up": { "key": "W" }, "down": { "key": "S" }, "left": { "key": "A" }, "right": { "key": "D" } } },
+        { "buttons": { "up": { "key": "Up" }, "down": { "key": "Down" }, "left": { "key": "Left" }, "right": { "key": "Right" } } },
+        { "buttons": { "up": { "gamepad": "DPadUp" }, "down": { "gamepad": "DPadDown" }, "left": { "gamepad": "DPadLeft" }, "right": { "gamepad": "DPadRight" } } },
+        { "stick": "Left" }
+      ]
+    },
+    "jump": {
+      "kind": "button",
+      "bindings": [{ "key": "Space" }, { "gamepad": "South" }]
+    },
+    "look": {
+      "kind": "axis2",
+      "bindings": [{ "stick": "Right" }]
+    }
+  }
+}

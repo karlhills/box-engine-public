@@ -31,7 +31,10 @@
 //! owns, updated in place (`Assets::set`: same handle, new version, so the
 //! renderer re-uploads it). An output equal to the current mesh (an edit of
 //! a parameter that does not shape it) is not written, so nothing is
-//! uploaded. Warnings are stored on [`ProcState`] and logged once each
+//! uploaded. A mesh with UVs and no tangents gets tangents from UV set 0
+//! (`MeshData::generate_tangents`) before it is stored, so normal maps work
+//! on every generated mesh; the generator's own output, and its golden
+//! hash, are unchanged. Warnings are stored on [`ProcState`] and logged once each
 //! time they change. Removing the generator (or despawning the entity)
 //! frees the mesh.
 //!
@@ -48,6 +51,7 @@ use box_core::app::{App, Plugin};
 use box_core::assets::{Assets, Handle};
 use box_core::identity::Name;
 use box_core::mesh::MeshData;
+use box_core::mesh_asset::GeneratedMesh;
 use box_core::primitive::Primitive;
 use box_core::reflect::Registry;
 use box_core::world::{Entity, World};
@@ -222,7 +226,13 @@ pub(crate) fn stamp<T: Generator>(world: &mut World, stamps: &mut Stamps) {
         let _ = world.insert_one(e, Cached { params, seed });
         match other {
             None => {
-                let _ = world.insert_one(e, ProcState::new(T::short_type_path(), me));
+                let _ = world.insert(
+                    e,
+                    (
+                        ProcState::new(T::short_type_path(), me),
+                        GeneratedMesh::default(),
+                    ),
+                );
                 stamps.dirty.push(e);
                 stamps.fresh = true;
             }
@@ -477,6 +487,7 @@ impl ProcRuntime {
             return;
         };
         self.unwatch(e, &state.inputs);
+        let _ = world.remove_one::<GeneratedMesh>(e);
         if let Some(h) = state.mesh {
             world.resource_or_default::<Assets<MeshData>>().remove(h);
         }
@@ -575,8 +586,16 @@ impl ProcRuntime {
         };
         warnings.extend(out.warnings);
         let slots = t.info().material_slots.len().max(1);
-        let mesh = out.mesh.and_then(|m| match m.validate() {
-            Ok(()) => Some(m),
+        let mesh = out.mesh.and_then(|mut m| match m.validate() {
+            Ok(()) => {
+                // Normal maps need tangents: meshes whose generator left
+                // them out get them from UV set 0 here (not part of the
+                // generator's output or its golden hash).
+                if m.tangents.is_empty() && !m.uvs.is_empty() {
+                    m.generate_tangents();
+                }
+                Some(m)
+            }
             Err(err) => {
                 warnings.push(format!(
                     "generated an invalid mesh ({err}); drawing nothing"
@@ -640,6 +659,13 @@ impl ProcRuntime {
                 tracing::warn!("{who}: {}: {w}", t.info().name);
             }
         }
+        let generated = GeneratedMesh {
+            mesh: handle,
+            heights: match &out.collider {
+                ColliderHint::Heights(grid) if grid.is_valid() => Some(grid.clone()),
+                _ => None,
+            },
+        };
         if let Some(mut s) = world.get_mut::<ProcState>(e) {
             s.key = Some(key);
             s.mesh = handle;
@@ -649,6 +675,9 @@ impl ProcRuntime {
             s.last_generate = Some(elapsed);
             s.generations += 1;
             s.inputs = ids;
+        }
+        if world.get::<GeneratedMesh>(e).as_deref() != Some(&generated) {
+            let _ = world.insert_one(e, generated);
         }
         self.stats.generated += 1;
         true
@@ -680,6 +709,7 @@ fn cache_key(world: &World, t: &ReflectGenerator, params: u64, seed: u64, inputs
                 h.write_str("world transform");
                 h.write(&uid.0.as_u128().to_le_bytes());
             }
+            InputId::Ground => h.write_str("ground"),
         }
         h.write_u64((d.key)(world, &d.id));
     }

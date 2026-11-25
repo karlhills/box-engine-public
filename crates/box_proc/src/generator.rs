@@ -185,6 +185,10 @@ pub enum ColliderHint {
     /// Oriented boxes in the entity's local space, e.g. one per wall
     /// segment or stair step.
     Boxes(Vec<HintBox>),
+    /// The mesh's surface as a height grid (terrain chunks). Physics uses
+    /// it for `Mesh` colliders instead of the triangles
+    /// (`box_core::mesh_asset::GeneratedMesh::heights`).
+    Heights(std::sync::Arc<box_core::mesh_asset::HeightGrid>),
 }
 
 /// One box of [`ColliderHint::Boxes`].
@@ -248,6 +252,17 @@ impl<'a> GenContext<'a> {
             .as_ref()?
             .downcast_ref::<box_core::transform::GlobalTransform>()
             .map(|g| g.0)
+    }
+
+    /// The world's ground, if the generator declared it with
+    /// [`Inputs::ground`] and the world has one.
+    pub fn ground(&self) -> Option<&crate::ground::Ground> {
+        self.inputs
+            .iter()
+            .find(|i| i.id == crate::inputs::InputId::Ground)?
+            .value
+            .as_ref()?
+            .downcast_ref()
     }
 
     /// A fresh random generator seeded with [`seed`](Self::seed); the only

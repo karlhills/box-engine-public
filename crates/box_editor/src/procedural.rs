@@ -54,7 +54,7 @@ impl EditorState {
         let mut out: Vec<GeneratorEntry> = registry
             .generators()
             .into_iter()
-            .filter(|g| g.name() != "Primitive")
+            .filter(|g| g.name() != "Primitive" && !g.component().is_hidden())
             .map(|g| match preset(g.name()) {
                 Some(p) if registry.component(p.companion).is_some() => GeneratorEntry {
                     name: g.name(),

@@ -26,7 +26,7 @@ use box_core::pmath;
 use std::collections::HashMap;
 
 use box_core::mesh::{MaterialGroup, MeshData};
-use glam::{Affine3A, Vec2, Vec3};
+use glam::{Affine3A, Vec2, Vec3, Vec4};
 
 use crate::poly::{self, Polygon};
 
@@ -43,6 +43,9 @@ pub struct Vertex {
     pub uv: [Vec2; MeshData::MAX_UV_SETS],
     /// Linear RGBA. Emitted only when the builder has colours enabled.
     pub color: [f32; 4],
+    /// Custom data sets (`MeshData::custom`); only the first `custom_sets`
+    /// of the builder are emitted.
+    pub custom: [Vec4; MeshData::MAX_CUSTOM_SETS],
 }
 
 impl Default for Vertex {
@@ -52,6 +55,7 @@ impl Default for Vertex {
             normal: Vec3::ZERO,
             uv: [Vec2::ZERO; MeshData::MAX_UV_SETS],
             color: [1.0; 4],
+            custom: [Vec4::ZERO; MeshData::MAX_CUSTOM_SETS],
         }
     }
 }
@@ -190,6 +194,7 @@ struct Group {
 pub struct MeshBuilder {
     groups: Vec<Group>,
     uv_sets: usize,
+    custom_sets: usize,
     colors: bool,
     tangents: bool,
     weld: Option<f32>,
@@ -239,6 +244,11 @@ fn clean_vertex(mut v: Vertex) -> Vertex {
             *c = 1.0;
         }
     }
+    for c in &mut v.custom {
+        if !c.is_finite() {
+            *c = Vec4::ZERO;
+        }
+    }
     v
 }
 
@@ -248,6 +258,7 @@ impl MeshBuilder {
         Self {
             groups: Vec::new(),
             uv_sets: 1,
+            custom_sets: 0,
             colors: false,
             tangents: false,
             weld: None,
@@ -262,6 +273,13 @@ impl MeshBuilder {
     /// Emit `n` UV sets (clamped to 1..=4).
     pub fn with_uv_sets(mut self, n: usize) -> Self {
         self.uv_sets = n.clamp(1, MeshData::MAX_UV_SETS);
+        self
+    }
+
+    /// Emit `n` custom data sets (clamped to 0..=2): `Vertex::custom`, for
+    /// material shaders.
+    pub fn with_custom_sets(mut self, n: usize) -> Self {
+        self.custom_sets = n.min(MeshData::MAX_CUSTOM_SETS);
         self
     }
 
@@ -593,6 +611,14 @@ impl MeshBuilder {
                         if let Some(c) = mesh.colors.get(k) {
                             v.color = *c;
                         }
+                        for (s, set) in mesh
+                            .custom
+                            .iter()
+                            .enumerate()
+                            .take(MeshData::MAX_CUSTOM_SETS)
+                        {
+                            v.custom[s] = set[k];
+                        }
                         let ni = self.vertex(g.material_slot, v);
                         remap.insert(i, ni);
                         ni
@@ -608,6 +634,9 @@ impl MeshBuilder {
                 self.colors = true;
             }
             self.uv_sets = self.uv_sets.max(mesh.uvs.len().min(MeshData::MAX_UV_SETS));
+            self.custom_sets = self
+                .custom_sets
+                .max(mesh.custom.len().min(MeshData::MAX_CUSTOM_SETS));
         }
     }
 
@@ -638,6 +667,7 @@ impl MeshBuilder {
         let weld = self.weld;
         let mut mesh = MeshData::default();
         let mut uvs: Vec<Vec<Vec2>> = vec![Vec::new(); self.uv_sets];
+        let mut custom: Vec<Vec<Vec4>> = vec![Vec::new(); self.custom_sets];
         for (slot, mut g) in self.groups.into_iter().enumerate() {
             if let Some(tol) = weld {
                 weld_group(&mut g, tol);
@@ -665,6 +695,9 @@ impl MeshBuilder {
                 for (s, set) in uvs.iter_mut().enumerate() {
                     set.push(v.uv[s]);
                 }
+                for (s, set) in custom.iter_mut().enumerate() {
+                    set.push(v.custom[s]);
+                }
                 if self.colors {
                     mesh.colors.push(v.color);
                 }
@@ -677,6 +710,7 @@ impl MeshBuilder {
             });
         }
         mesh.uvs = uvs;
+        mesh.custom = custom;
         if self.tangents {
             mesh.generate_tangents();
         }
@@ -701,13 +735,16 @@ fn weld_group(g: &mut Group, tol: f32) {
     let mut remap = Vec::with_capacity(g.vertices.len());
     let mut out: Vec<Vertex> = Vec::new();
     for v in &g.vertices {
-        let mut key = Vec::with_capacity(18);
+        let mut key = Vec::with_capacity(26);
         key.extend(v.position.to_array().map(|x| quantize(x, tol)));
         key.extend(v.normal.to_array().map(|x| quantize(x, tol)));
         for uv in &v.uv {
             key.extend(uv.to_array().map(|x| quantize(x, tol)));
         }
         key.extend(v.color.map(|x| quantize(x, tol)));
+        for c in &v.custom {
+            key.extend(c.to_array().map(|x| quantize(x, tol)));
+        }
         let id = *map.entry(key).or_insert_with(|| {
             out.push(*v);
             (out.len() - 1) as u32
@@ -983,6 +1020,43 @@ mod tests {
         // Different slots force a split; open outlines have no seam.
         let c = ring_columns(&circle[..5], false, 0.5, &[0, 1, 1, 1]);
         assert_eq!(c.columns.len(), 6);
+    }
+
+    #[test]
+    fn custom_sets_are_emitted_welded_and_appended() {
+        let quad = |b: &mut MeshBuilder, x: f32, data: f32| {
+            let v = |dx: f32, dz: f32| {
+                let mut v = Vertex::new(Vec3::new(x + dx, 0.0, dz), Vec3::Y, Vec2::ZERO);
+                v.custom[0] = Vec4::splat(data);
+                v.custom[1] = Vec4::new(dx, dz, 0.0, 1.0);
+                v
+            };
+            let i = [v(0.0, 0.0), v(0.0, 1.0), v(1.0, 1.0), v(1.0, 0.0)].map(|v| b.vertex(0, v));
+            b.triangle_indices(0, [i[0], i[1], i[2]]);
+            b.triangle_indices(0, [i[0], i[2], i[3]]);
+        };
+        // Without `with_custom_sets` nothing is emitted.
+        let mut b = MeshBuilder::new();
+        quad(&mut b, 0.0, 1.0);
+        assert!(b.finish().custom.is_empty());
+
+        // Two quads sharing an edge: the shared positions differ in set 0
+        // (and set 1), so welding keeps them apart.
+        let mut b = MeshBuilder::new().with_custom_sets(2).with_weld(1e-4);
+        quad(&mut b, 0.0, 1.0);
+        quad(&mut b, 1.0, 2.0);
+        let m = b.finish();
+        m.validate().unwrap();
+        assert_eq!(m.custom.len(), 2);
+        assert_eq!(m.vertex_count(), 8);
+        assert!(m.custom[0].iter().all(|c| c.x == 1.0 || c.x == 2.0));
+        assert!(m.custom[1].iter().all(|c| c.w == 1.0));
+
+        // Appending a mesh with custom data turns the sets on.
+        let mut b = MeshBuilder::new();
+        b.append(&m, Affine3A::IDENTITY);
+        let again = b.finish();
+        assert_eq!(again.custom, m.custom);
     }
 
     #[test]

@@ -16,15 +16,19 @@ pub enum Pane {
     Console,
     /// The asset browser (M4).
     Assets,
+    /// Luau files edited in the editor (`script_editor/`), a tab beside the
+    /// viewport.
+    Script,
 }
 
 impl Pane {
-    pub const ALL: [Pane; 5] = [
+    pub const ALL: [Pane; 6] = [
         Pane::Viewport,
         Pane::Hierarchy,
         Pane::Inspector,
         Pane::Console,
         Pane::Assets,
+        Pane::Script,
     ];
 
     pub fn title(self) -> &'static str {
@@ -34,6 +38,7 @@ impl Pane {
             Pane::Inspector => "Inspector",
             Pane::Console => "Console",
             Pane::Assets => "Assets",
+            Pane::Script => "Script",
         }
     }
 }
@@ -95,7 +100,7 @@ fn tree_id() -> egui::Id {
 pub fn default_layout() -> Tree<Pane> {
     let mut tiles = Tiles::default();
     let hierarchy = tabs(&mut tiles, &[Pane::Hierarchy]);
-    let viewport = tabs(&mut tiles, &[Pane::Viewport]);
+    let viewport = tabs(&mut tiles, &[Pane::Viewport, Pane::Script]);
     let console = tabs(&mut tiles, &[Pane::Assets, Pane::Console]);
     let inspector = tabs(&mut tiles, &[Pane::Inspector]);
     let top = linear(
@@ -181,6 +186,7 @@ pub fn load_layout(path: &Path) -> Result<Tree<Pane>, LayoutError> {
     }
     let mut tree = file.tree;
     add_missing_assets_tab(&mut tree);
+    add_missing_tab(&mut tree, Pane::Script, &[Pane::Viewport, Pane::Console]);
     validate(&tree)?;
     Ok(tree)
 }
@@ -212,6 +218,29 @@ fn add_missing_assets_tab(tree: &mut Tree<Pane>) {
         tabs.add_child(assets);
     } else {
         tree.tiles.remove(assets);
+    }
+}
+
+/// Layouts saved before a pane existed: add it as a tab beside the first of
+/// `beside` found, so such files still load.
+fn add_missing_tab(tree: &mut Tree<Pane>, pane: Pane, beside: &[Pane]) {
+    if tree.tiles.find_pane(&pane).is_some() {
+        return;
+    }
+    let Some(parent) = beside
+        .iter()
+        .filter_map(|p| tree.tiles.find_pane(p))
+        .find_map(|id| tree.tiles.parent_of(id))
+    else {
+        return;
+    };
+    let id = tree.tiles.insert_pane(pane);
+    if let Some(egui_tiles::Tile::Container(egui_tiles::Container::Tabs(tabs))) =
+        tree.tiles.get_mut(parent)
+    {
+        tabs.add_child(id);
+    } else {
+        tree.tiles.remove(id);
     }
 }
 
@@ -301,6 +330,25 @@ mod tests {
             loaded.tiles.parent_of(assets),
             loaded.tiles.parent_of(console),
             "tabbed with the console"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn layouts_from_before_the_script_pane_get_it_beside_the_viewport() {
+        let dir = temp_dir("layout_no_script");
+        let path = layout_path(&dir);
+        let mut tree = default_layout();
+        let script = tree.tiles.find_pane(&Pane::Script).unwrap();
+        tree.remove_recursively(script);
+        save_layout(&path, &tree).unwrap();
+        let loaded = load_layout(&path).expect("an older layout still loads");
+        let script = loaded.tiles.find_pane(&Pane::Script).unwrap();
+        let viewport = loaded.tiles.find_pane(&Pane::Viewport).unwrap();
+        assert_eq!(
+            loaded.tiles.parent_of(script),
+            loaded.tiles.parent_of(viewport),
+            "tabbed with the viewport"
         );
         let _ = std::fs::remove_dir_all(&dir);
     }

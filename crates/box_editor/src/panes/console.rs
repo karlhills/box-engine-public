@@ -85,9 +85,15 @@ impl ConsoleState {
 
 /// What a row asked for this frame.
 enum RowOp {
-    Click { seq: u64, toggle: bool, range: bool },
+    Click {
+        seq: u64,
+        toggle: bool,
+        range: bool,
+    },
     CopySelected,
     CopyAll,
+    /// Open this script at this line in the Script pane.
+    OpenScript(String, u32),
 }
 
 pub fn console_ui(ui: &mut Ui, state: &mut EditorState) {
@@ -233,6 +239,12 @@ pub fn console_ui(ui: &mut Ui, state: &mut EditorState) {
                     range: m.shift,
                 });
             }
+            let script = crate::script_editor::script_location(&rec.message);
+            if resp.double_clicked()
+                && let Some((path, line)) = &script
+            {
+                ops.push(RowOp::OpenScript(path.clone(), *line));
+            }
             if resp.secondary_clicked() && !selected {
                 ops.push(RowOp::Click {
                     seq: rec.seq,
@@ -250,6 +262,11 @@ pub fn console_ui(ui: &mut Ui, state: &mut EditorState) {
                 ui.label(egui::RichText::new(&rec.message).font(mono.clone()));
             });
             resp.context_menu(|ui| {
+                if let Some((path, line)) = &script
+                    && ui.button(format!("Open {path}:{line}")).clicked()
+                {
+                    ops.push(RowOp::OpenScript(path.clone(), *line));
+                }
                 if ui.button("Copy").clicked() {
                     ops.push(RowOp::CopySelected);
                 }
@@ -278,6 +295,7 @@ pub fn console_ui(ui: &mut Ui, state: &mut EditorState) {
     if copy && console.focused && !ui.ctx().egui_wants_keyboard_input() {
         ops.push(RowOp::CopySelected);
     }
+    let mut open = None;
     for op in ops {
         match op {
             RowOp::Click { seq, toggle, range } => {
@@ -294,7 +312,13 @@ pub fn console_ui(ui: &mut Ui, state: &mut EditorState) {
                 let text = console.copy_text(console.rows.iter().copied());
                 ui.ctx().copy_text(text);
             }
+            RowOp::OpenScript(path, line) => open = Some((path, line)),
         }
+    }
+    if let Some((path, line)) = open
+        && let Err(e) = state.open_script(&path, Some(line))
+    {
+        tracing::warn!("{e}");
     }
 }
 

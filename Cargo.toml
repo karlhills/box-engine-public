@@ -6,6 +6,7 @@ members = [
     "crates/box_engine",
     "crates/box_editor",
     "crates/box_physics",
+    "crates/box_nav",
     "crates/box_assets",
     "crates/box_proc",
     "crates/box_audio",
@@ -37,12 +38,16 @@ box_render = { path = "crates/box_render" }
 box_engine = { path = "crates/box_engine" }
 box_editor = { path = "crates/box_editor" }
 box_physics = { path = "crates/box_physics" }
+box_nav = { path = "crates/box_nav" }
 box_proc = { path = "crates/box_proc" }
 box_assets = { path = "crates/box_assets" }
 box_audio = { path = "crates/box_audio" }
 box_ui = { path = "crates/box_ui" }
 box_script = { path = "crates/box_script" }
 box_export = { path = "crates/box_export" }
+
+# Navmesh generation (box_nav, D21): a Rust port of Recast on our glam.
+rerecast = "1.0.0"
 
 wgpu = "30.0.2"
 naga = { version = "30.0.2", features = ["wgsl-in"] }

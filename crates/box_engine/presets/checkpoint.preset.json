@@ -1,0 +1,30 @@
+{
+  "name": "checkpoint",
+  "title": "Checkpoint",
+  "category": "Gameplay",
+  "description": "A flag: walking past it makes it the place the player respawns.",
+  "entities": [
+    {
+      "name": "Checkpoint",
+      "components": {
+        "Primitive": { "shape": { "Cylinder": { "radius": 0.06, "height": 2.2, "segments": 8 } } },
+        "Transform": { "translation": [0.0, 1.1, 0.0] },
+        "StandardMaterial": { "base_color": [0.8, 0.78, 0.74, 1.0], "roughness": 0.5 },
+        "Interactable": {
+          "trigger": "Touch",
+          "radius": 1.5,
+          "offset": [0.0, -0.2, 0.0],
+          "once": true,
+          "actions": [
+            "SetCheckpoint",
+            { "Burst": { "style": "Flame", "count": 30 } },
+            { "Show": { "target": { "Child": "Lit Flag" }, "collide": false } },
+            { "Hide": { "target": { "Child": "Flag" }, "collide": false } }
+          ]
+        }
+      }
+    },
+    { "name": "Flag", "parent": "Checkpoint", "components": { "Transform": { "translation": [0.35, 0.8, 0.0] }, "Primitive": { "shape": { "Cuboid": { "size": [0.65, 0.42, 0.04] } }, "cast_shadows": false }, "StandardMaterial": { "base_color": [0.45, 0.45, 0.48, 1.0], "roughness": 0.8, "double_sided": true } } },
+    { "name": "Lit Flag", "parent": "Checkpoint", "components": { "Transform": { "translation": [0.35, 0.8, 0.0] }, "Visible": false, "Primitive": { "shape": { "Cuboid": { "size": [0.65, 0.42, 0.04] } }, "cast_shadows": false }, "StandardMaterial": { "base_color": [1.0, 0.45, 0.08, 1.0], "roughness": 0.6, "emissive": [0.6, 0.2, 0.02, 1.0], "double_sided": true } } }
+  ]
+}

@@ -85,7 +85,8 @@ pub(crate) struct GlobalsUniform {
     pub wind: [f32; 4],
     /// x = gust speed (m/s).
     pub wind_gust: [f32; 4],
-    /// x = 1 when the scene depth (prepass depth, binding 7) is bound.
+    /// x = 1 when the scene depth (prepass depth, binding 7) is bound,
+    /// y = 1 when the frame copies the opaque scene's colour (binding 9).
     pub scene_depth: [f32; 4],
 }
 
@@ -139,15 +140,20 @@ pub(crate) struct GpuVertex {
     /// UV set 1 (zero when the mesh has none): data for material shaders,
     /// such as box_arch's weathering coordinates.
     pub uv1: [f32; 2],
+    /// `MeshData::custom` sets 0 and 1 (zero when the mesh has none): free
+    /// data for material shaders.
+    pub custom: [[f32; 4]; 2],
 }
 
-pub(crate) const MESH_ATTRIBUTES: [wgpu::VertexAttribute; 6] = wgpu::vertex_attr_array![
+pub(crate) const MESH_ATTRIBUTES: [wgpu::VertexAttribute; 8] = wgpu::vertex_attr_array![
     0 => Float32x3,
     1 => Float32x3,
     2 => Float32x2,
     3 => Float32x4,
     4 => Float32x4,
     5 => Float32x2,
+    6 => Float32x4,
+    7 => Float32x4,
 ];
 
 /// One point or spot light in the light storage buffer (`LocalLight` in
@@ -209,7 +215,7 @@ pub(crate) const LINE_ATTRIBUTES: [wgpu::VertexAttribute; 2] = wgpu::vertex_attr
 
 const _: () = assert!(std::mem::size_of::<ObjectUniform>() as u64 <= UNIFORM_SLOT);
 const _: () = assert!(std::mem::size_of::<GlobalsUniform>() == 640 + 28 * 16);
-const _: () = assert!(std::mem::size_of::<GpuVertex>() == 72);
+const _: () = assert!(std::mem::size_of::<GpuVertex>() == 104);
 const _: () = assert!(std::mem::size_of::<GpuLocalLight>() == 64);
 const _: () = assert!(std::mem::size_of::<GpuAmbientVolume>() == 96);
 const _: () = assert!(LIGHTS_HEADER.is_multiple_of(16));

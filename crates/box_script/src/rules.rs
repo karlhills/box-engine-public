@@ -126,6 +126,7 @@ use box_core::reflect::{ReflectComponent, ReflectDefault, Registry, did_you_mean
 use box_core::transform::{GlobalTransform, Transform};
 use box_core::world::{Entity, World};
 use box_proc::derive::Part;
+use box_proc::ground::{Ground, GroundSample, GroundView};
 use box_proc::overrides::Overrides;
 use box_proc::rule::{RuleAppExt, RuleOutput, RuleParts, RuleSource, SourceRules};
 use glam::{Affine3A, Quat, Vec3};
@@ -349,6 +350,11 @@ struct RuleFile {
     primed: bool,
     /// Converted part components by content, shared by its runs.
     converted: ConvCache,
+    /// Its runs sample the ground: terrain changes under its intents re-run
+    /// them.
+    reads_ground: bool,
+    /// The ground version its last run saw.
+    ground_version: u64,
 }
 
 /// The script rule host: a [`RuleSource`] running every rule file that a
@@ -616,6 +622,8 @@ impl ScriptRules {
             failed: false,
             primed: false,
             converted: ConvCache::default(),
+            reads_ground: false,
+            ground_version: 0,
         });
         Some(self.rules.len() - 1)
     }
@@ -774,6 +782,41 @@ impl ScriptRules {
         Some((target, context, gone))
     }
 
+    /// Records the intents of rule `r` under ground that changed since its
+    /// last run, if it samples the ground: as changes (a scoped rule runs
+    /// for them), or a run over every intent when the changes are too old
+    /// to know.
+    fn ground_changes(&mut self, world: &World, r: usize) {
+        let Some(ground) = world.get_resource::<Ground>() else {
+            return;
+        };
+        let f = &mut self.rules[r];
+        if !f.primed || !f.reads_ground || f.ground_version == ground.version() {
+            return;
+        }
+        match ground.changed_since(f.ground_version) {
+            None => f.file_changed = true,
+            Some(areas) => {
+                for (s, &i) in f.members.iter().enumerate() {
+                    let b = f.bounds[s];
+                    let hit = areas.iter().any(|(lo, hi)| {
+                        b.min.x <= hi.x && b.max.x >= lo.x && b.min.z <= hi.y && b.max.z >= lo.y
+                    });
+                    if hit {
+                        let c = &self.cache[i];
+                        f.changes.push(Change {
+                            entity: c.entity,
+                            uid: c.uid,
+                            before: Some(b),
+                            after: Some(b),
+                        });
+                    }
+                }
+            }
+        }
+        f.ground_version = ground.version();
+    }
+
     /// Runs rule `r` over its intents (all of them, or the scope of its
     /// changes) and reconciles the output.
     fn run_rule(&mut self, world: &mut World, r: usize, list: &mut SourceRules) {
@@ -824,6 +867,9 @@ impl ScriptRules {
         };
         let every_uid: Vec<Uid> = all.iter().map(|c| c.uid).collect();
         let full = targets.is_none();
+        let (ground, ground_version) = world
+            .get_resource::<Ground>()
+            .map_or((None, 0), |g| (Some(g.view().clone()), g.version()));
         let file = &mut self.rules[r];
         let result = match (&file.module, self.vm.as_ref()) {
             (Some(module), Some(vm)) => Some(vm.run(
@@ -834,9 +880,17 @@ impl ScriptRules {
                 target_uids,
                 &mut file.converted,
                 full,
+                ground,
             )),
             _ => None,
         };
+        let result = result.map(|r| {
+            r.map(|(output, read)| {
+                file.reads_ground = read || (file.reads_ground && !full);
+                file.ground_version = ground_version;
+                output
+            })
+        });
         let rule_time = start.elapsed();
         let info = list.get_mut(file.info);
         info.intents = every_uid.len();
@@ -982,6 +1036,7 @@ impl RuleSource for ScriptRules {
                 f.changes.clear();
                 continue;
             }
+            self.ground_changes(world, r);
             let f = &mut self.rules[r];
             let ready = f.module.is_some() || f.problem.is_some();
             if !f.primed {
@@ -1014,6 +1069,10 @@ struct Collector {
     /// The rule has a `scope` (no `math.random`).
     scoped: bool,
     converted: ConvCache,
+    /// The world's ground as the run began (`ground`).
+    ground: Option<GroundView>,
+    /// The run sampled `ground`.
+    read_ground: bool,
 }
 
 /// The module's `scope`: `"file"` (or absent), `"intent"`, or
@@ -1249,6 +1308,9 @@ impl RuleVm {
             stub.set_metatable(Some(mt))?;
             g.set(*lib, stub)?;
         }
+        let ground = lua.create_table()?;
+        api::ground::install_functions(&lua, &ground, rule_ground)?;
+        g.set("ground", ground)?;
         let out = lua.create_table()?;
         out.set("part", lua.create_function(out_part)?)?;
         out.set("warn", lua.create_function(out_warn)?)?;
@@ -1367,7 +1429,8 @@ impl RuleVm {
         targets: Option<HashSet<Uid>>,
         converted: &mut ConvCache,
         full: bool,
-    ) -> Result<RuleOutput, String> {
+        ground: Option<GroundView>,
+    ) -> Result<(RuleOutput, bool), String> {
         let lua = &self.lua;
         *self.host.current_path.borrow_mut() = Some(Rc::from(name));
         let built = (|| -> mlua::Result<Table> {
@@ -1388,6 +1451,8 @@ impl RuleVm {
             targets,
             scoped: module.scope != Scope::File,
             converted: std::mem::take(converted),
+            ground,
+            read_ground: false,
         });
         self.deadline.set(Some(Instant::now() + self.budget));
         let result = seeded
@@ -1399,11 +1464,14 @@ impl RuleVm {
         *converted = c.converted;
         converted.end(full && result.is_ok());
         result.map_err(|e| describe_error(&e))?;
-        Ok(RuleOutput {
-            parts: c.parts,
-            warnings: c.warnings,
-            quiet: false,
-        })
+        Ok((
+            RuleOutput {
+                parts: c.parts,
+                warnings: c.warnings,
+                quiet: false,
+            },
+            c.read_ground,
+        ))
     }
 
     fn intent_table(&self, c: &Cached, decls: &[PropertyDecl]) -> mlua::Result<Table> {
@@ -1536,6 +1604,17 @@ fn out_part(
     }
     collector_mut(lua, "out:part")?.parts.push(part);
     Ok(())
+}
+
+/// `ground.height` / `ground.at` in a rule: the run's ground, and a note
+/// that the rule reads it (so terrain changes re-run it).
+fn rule_ground(lua: &Lua, x: f32, z: f32) -> mlua::Result<Option<GroundSample>> {
+    let view = {
+        let mut c = collector_mut(lua, "ground")?;
+        c.read_ground = true;
+        c.ground.clone()
+    };
+    Ok(view.and_then(|v| v.sample(x, z)))
 }
 
 fn collector<'a>(lua: &'a Lua, what: &str) -> mlua::Result<mlua::AppDataRef<'a, Collector>> {

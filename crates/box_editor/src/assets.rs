@@ -839,8 +839,8 @@ impl EditorState {
     }
 
     /// Opens an item (double-click): a `.scene.json` opens as the scene
-    /// (through the unsaved-changes prompt), a glTF shows or hides its
-    /// sub-assets.
+    /// (through the unsaved-changes prompt), a `.luau` file in the Script
+    /// pane, a glTF shows or hides its sub-assets.
     pub fn open_asset(&mut self, item: &AssetItem) {
         let Some(server) = &self.asset_server else {
             return;
@@ -848,6 +848,12 @@ impl EditorState {
         let Some(path) = server.path_of(item.id) else {
             return;
         };
+        if item.label.is_none() && path.ends_with(".luau") {
+            if let Err(e) = self.open_script(&path, None) {
+                tracing::warn!("{e}");
+            }
+            return;
+        }
         match (FileKind::of(&path), &item.label) {
             (FileKind::Scene, None) => {
                 self.requests.open_scene = Some(server.assets_dir().join(&path));
@@ -1100,8 +1106,9 @@ impl EditorState {
     /// Drops a browser item into the scene at `at`: a glTF (its `#Scene`) or
     /// a `.scene.json` becomes an entity with [`PrefabInstance`], a mesh
     /// sub-asset an entity with [`MeshAsset`] (with the glTF's materials for
-    /// it when its scene is loaded). One undo step; the new entity is
-    /// selected. Returns its uid, or `None` for items that cannot be placed.
+    /// it when its scene is loaded). When its meshes are loaded it stands on
+    /// `at` by its lowest point ([`Self::land_on_surface`]). One undo step;
+    /// the new entity is selected. Returns its uid, or `None` for items that cannot be placed.
     pub fn drop_asset_at(&mut self, item: &AssetItem, at: Vec3) -> Option<Uid> {
         let server = self.asset_server.clone()?;
         let path = server.path_of(item.id)?;
@@ -1135,9 +1142,9 @@ impl EditorState {
                     return None;
                 }
             };
-        self.finish_edit();
         let uid = Uid::new();
         let name = self.unique_name(&name);
+        self.begin_edit(format!("Create {name}"));
         let transform = Transform::from_translation(at);
         let components: [(&str, &dyn PartialReflect); 2] =
             [("Transform", &transform), (component, value.as_ref())];
@@ -1148,10 +1155,50 @@ impl EditorState {
             Placement::last(None),
             &components,
         );
-        self.report(&format!("place {name}"), r)?;
+        if self.report(&format!("place {name}"), r).is_none() {
+            self.finish_edit();
+            return None;
+        }
+        self.land_on_surface(uid, at.y);
+        self.finish_edit();
         self.changed(true);
         self.select(Some(uid));
         Some(uid)
+    }
+
+    /// Lifts or lowers a just-placed entity so the lowest point of its
+    /// meshes is at `surface` (a model whose origin is at its centre would
+    /// otherwise sink halfway into the ground), as part of the open edit.
+    /// Only when its meshes are already loaded: instancing a loaded prefab
+    /// and building its renderers here is change-driven and cheap; an
+    /// unloaded one keeps its origin on the surface.
+    fn land_on_surface(&mut self, uid: Uid, surface: f32) {
+        // Prefab contents are instanced by the asset sync and placed by the
+        // propagation after it, so run both twice.
+        for _ in 0..2 {
+            box_engine::sync_scene_meshes(&mut self.world);
+            box_core::transform::propagate_transforms(&mut self.world);
+        }
+        let Some(e) = self.world.entity_by_uid(uid) else {
+            return;
+        };
+        let Some(bounds) = crate::state::entity_bounds(&self.world, e) else {
+            return;
+        };
+        let lift = surface - bounds.min.y;
+        if lift.abs() < 1e-4 || !lift.is_finite() {
+            return;
+        }
+        let Some(mut t) = self.world.get::<Transform>(e).map(|t| *t) else {
+            return;
+        };
+        t.translation.y += lift;
+        let r = self
+            .world
+            .field_path("Transform")
+            .map_err(box_core::edit::EditError::from)
+            .and_then(|path| self.edits.set_field(&mut self.world, uid, &path, &t));
+        self.report("land on the surface", r);
     }
 
     /// The materials the glTF's scene gives the mesh `label`, if its scene

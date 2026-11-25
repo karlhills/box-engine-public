@@ -23,6 +23,7 @@ pub const MATERIAL_SCENES: &[&str] = &[
     "multi_material",
     "shader_material",
     "pipeline_state",
+    "refraction",
 ];
 
 /// Builds the material scene `name` with its lights and camera. Returns
@@ -37,6 +38,7 @@ pub fn build_material_scene(world: &mut World, name: &str) -> bool {
         "multi_material" => build_multi_material(world),
         "shader_material" => build_shader_material(world),
         "pipeline_state" => build_pipeline_state(world),
+        "refraction" => build_refraction(world),
         _ => return false,
     }
     true
@@ -864,6 +866,94 @@ pub fn build_pipeline_state(world: &mut World) {
             distance: 11.5,
             yaw: 0.0,
             pitch: 0.5,
+            ..Default::default()
+        },
+    );
+}
+
+/// A walled pond of the `pond.wgsl` material shader, which reads the scene
+/// colour: ripples bend the view of the tiles on its floor, the deep end
+/// (under the far wall the floor drops away from the surface) darkens, and
+/// a post, a ball and a ramp break the surface, with foam around them. A
+/// second, still pond beside it shows the same floor undistorted.
+pub fn build_refraction(world: &mut World) {
+    use box_core::shader_material::ShaderParamValue as V;
+    ground(world, 24.0);
+    let stone = std_material(
+        world,
+        StandardMaterial {
+            base_color: Color::hex(0xb8a888),
+            roughness: 0.9,
+            ..Default::default()
+        },
+    );
+    let tiles = [0xc8523a, 0xe8dcc0, 0x2f6f8f, 0xe8dcc0].map(|hex| {
+        std_material(
+            world,
+            StandardMaterial {
+                base_color: Color::hex(hex),
+                roughness: 0.8,
+                ..Default::default()
+            },
+        )
+    });
+    let pond = add_shader(
+        world,
+        "shaders/pond.wgsl",
+        include_str!("../assets/pond.wgsl"),
+    );
+    let tile = add_mesh(world, MeshData::cuboid(Vec3::new(0.5, 0.06, 0.5)));
+    let wall_x = add_mesh(world, MeshData::cuboid(Vec3::new(3.4, 0.9, 0.2)));
+    let wall_z = add_mesh(world, MeshData::cuboid(Vec3::new(0.2, 0.9, 3.0)));
+    let post = add_mesh(world, MeshData::cuboid(Vec3::new(0.16, 1.6, 0.16)));
+    let ball = add_mesh(world, MeshData::uv_sphere(0.4, 32, 16));
+    let ramp = add_mesh(world, MeshData::cuboid(Vec3::new(1.0, 0.08, 2.2)));
+    let surface = add_mesh(world, MeshData::plane(3.0, 3.0));
+    for (i, x) in [-1.9f32, 1.9].into_iter().enumerate() {
+        let at = |dx: f32, y: f32, dz: f32| Transform::from_xyz(x + dx, y, dz);
+        // A floor that slopes down toward the back: 0.15 m of water at the
+        // front, 1.3 m at the back.
+        for row in 0..6 {
+            for col in 0..6 {
+                let (fx, fz) = (col as f32 * 0.5 - 1.25, row as f32 * 0.5 - 1.25);
+                let depth = 0.15 + (1.25 - fz) / 2.5 * 1.15;
+                spawn(
+                    world,
+                    at(fx, 0.75 - depth - 0.03, fz),
+                    tile,
+                    tiles[(row + col * 3) % 4],
+                );
+            }
+        }
+        spawn(world, at(0.0, 0.45, -1.6), wall_x, stone);
+        spawn(world, at(0.0, 0.45, 1.6), wall_x, stone);
+        spawn(world, at(-1.6, 0.45, 0.0), wall_z, stone);
+        spawn(world, at(1.6, 0.45, 0.0), wall_z, stone);
+        spawn(world, at(-0.7, 0.8, -0.5), post, stone);
+        spawn(world, at(0.6, 0.6, 0.3), ball, stone);
+        spawn(
+            world,
+            at(0.9, 0.5, -0.4).with_rotation(Quat::from_rotation_x(-0.35)),
+            ramp,
+            stone,
+        );
+        // The left pond ripples, the right one is still.
+        let ripple = if i == 0 { 0.2 } else { 0.0 };
+        let water = world
+            .resource_or_default::<Assets<ShaderMaterial>>()
+            .add(ShaderMaterial {
+                alpha_mode: AlphaMode::Blend,
+                ..ShaderMaterial::new(pond.clone()).with_param("ripple", V::Float(ripple))
+            });
+        spawn(world, at(0.0, 0.75, 0.0), surface, water);
+    }
+    sun_and_camera(
+        world,
+        OrbitCamera {
+            target: Vec3::new(0.0, 0.4, 0.0),
+            distance: 6.0,
+            yaw: 0.0,
+            pitch: 0.8,
             ..Default::default()
         },
     );

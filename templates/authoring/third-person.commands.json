@@ -445,22 +445,11 @@
         "gravity": 20.0,
         "jump_speed": 7.5
       },
-      "Script": {
-        "source": "scripts/player.luau",
-        "properties": [
-          {
-            "name": "camera",
-            "value": {
-              "Entity": "7e3a0000-0000-4000-8000-00000000000b"
-            }
-          },
-          {
-            "name": "body",
-            "value": {
-              "Entity": "7e3a0000-0000-4000-8000-00000000000a"
-            }
-          }
-        ]
+      "PlayerController": {
+        "speed": 6.0,
+        "run_speed": 10.0,
+        "camera": "7e3a0000-0000-4000-8000-00000000000b",
+        "body": "7e3a0000-0000-4000-8000-00000000000a"
       }
     }
   },
@@ -524,45 +513,8 @@
         "near": 0.1,
         "active": true
       },
-      "Script": {
-        "source": "scripts/camera.luau",
-        "properties": [
-          {
-            "name": "target",
-            "value": {
-              "Entity": "7e3a0000-0000-4000-8000-000000000009"
-            }
-          }
-        ]
-      }
-    }
-  },
-  {
-    "op": "spawn",
-    "uid": "7e3a0000-0000-4000-8000-00000000000c",
-    "name": "HUD",
-    "components": {
-      "Transform": {
-        "translation": [
-          0,
-          0,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "Script": {
-        "source": "scripts/hud.luau",
-        "properties": []
+      "FollowCamera": {
+        "target": "7e3a0000-0000-4000-8000-000000000009"
       }
     }
   },
@@ -616,19 +568,52 @@
           1.0
         ]
       },
-      "Collider": {
-        "shape": {
-          "Sphere": {
-            "radius": 0.5
-          }
-        },
-        "is_trigger": true,
-        "layers": 4,
-        "mask": 2
+      "Spinner": {
+        "speed": 2.0
       },
-      "Script": {
-        "source": "scripts/pickup.luau",
-        "properties": []
+      "Bobber": {
+        "height": 0.15,
+        "period": 3.14
+      },
+      "Interactable": {
+        "trigger": "Touch",
+        "radius": 0.9,
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "once": true,
+        "group": "pickups",
+        "actions": [
+          {
+            "AddVar": {
+              "var": "score",
+              "amount": 1.0
+            }
+          },
+          {
+            "PlaySound": {
+              "clip": {
+                "id": "53ef55aa-f013-4f59-aae2-924e8ed18074",
+                "path": "audio/pickup.wav"
+              },
+              "volume": 1.0
+            }
+          },
+          {
+            "Burst": {
+              "style": "Sparkle",
+              "count": 24
+            }
+          },
+          {
+            "Hide": {
+              "target": "This",
+              "collide": true
+            }
+          }
+        ]
       }
     }
   },
@@ -682,19 +667,52 @@
           1.0
         ]
       },
-      "Collider": {
-        "shape": {
-          "Sphere": {
-            "radius": 0.5
-          }
-        },
-        "is_trigger": true,
-        "layers": 4,
-        "mask": 2
+      "Spinner": {
+        "speed": 2.0
       },
-      "Script": {
-        "source": "scripts/pickup.luau",
-        "properties": []
+      "Bobber": {
+        "height": 0.15,
+        "period": 3.14
+      },
+      "Interactable": {
+        "trigger": "Touch",
+        "radius": 0.9,
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "once": true,
+        "group": "pickups",
+        "actions": [
+          {
+            "AddVar": {
+              "var": "score",
+              "amount": 1.0
+            }
+          },
+          {
+            "PlaySound": {
+              "clip": {
+                "id": "53ef55aa-f013-4f59-aae2-924e8ed18074",
+                "path": "audio/pickup.wav"
+              },
+              "volume": 1.0
+            }
+          },
+          {
+            "Burst": {
+              "style": "Sparkle",
+              "count": 24
+            }
+          },
+          {
+            "Hide": {
+              "target": "This",
+              "collide": true
+            }
+          }
+        ]
       }
     }
   },
@@ -748,19 +766,52 @@
           1.0
         ]
       },
-      "Collider": {
-        "shape": {
-          "Sphere": {
-            "radius": 0.5
-          }
-        },
-        "is_trigger": true,
-        "layers": 4,
-        "mask": 2
+      "Spinner": {
+        "speed": 2.0
       },
-      "Script": {
-        "source": "scripts/pickup.luau",
-        "properties": []
+      "Bobber": {
+        "height": 0.15,
+        "period": 3.14
+      },
+      "Interactable": {
+        "trigger": "Touch",
+        "radius": 0.9,
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "once": true,
+        "group": "pickups",
+        "actions": [
+          {
+            "AddVar": {
+              "var": "score",
+              "amount": 1.0
+            }
+          },
+          {
+            "PlaySound": {
+              "clip": {
+                "id": "53ef55aa-f013-4f59-aae2-924e8ed18074",
+                "path": "audio/pickup.wav"
+              },
+              "volume": 1.0
+            }
+          },
+          {
+            "Burst": {
+              "style": "Sparkle",
+              "count": 24
+            }
+          },
+          {
+            "Hide": {
+              "target": "This",
+              "collide": true
+            }
+          }
+        ]
       }
     }
   },
@@ -814,19 +865,52 @@
           1.0
         ]
       },
-      "Collider": {
-        "shape": {
-          "Sphere": {
-            "radius": 0.5
-          }
-        },
-        "is_trigger": true,
-        "layers": 4,
-        "mask": 2
+      "Spinner": {
+        "speed": 2.0
       },
-      "Script": {
-        "source": "scripts/pickup.luau",
-        "properties": []
+      "Bobber": {
+        "height": 0.15,
+        "period": 3.14
+      },
+      "Interactable": {
+        "trigger": "Touch",
+        "radius": 0.9,
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "once": true,
+        "group": "pickups",
+        "actions": [
+          {
+            "AddVar": {
+              "var": "score",
+              "amount": 1.0
+            }
+          },
+          {
+            "PlaySound": {
+              "clip": {
+                "id": "53ef55aa-f013-4f59-aae2-924e8ed18074",
+                "path": "audio/pickup.wav"
+              },
+              "volume": 1.0
+            }
+          },
+          {
+            "Burst": {
+              "style": "Sparkle",
+              "count": 24
+            }
+          },
+          {
+            "Hide": {
+              "target": "This",
+              "collide": true
+            }
+          }
+        ]
       }
     }
   },
@@ -880,20 +964,79 @@
           1.0
         ]
       },
-      "Collider": {
-        "shape": {
-          "Sphere": {
-            "radius": 0.5
-          }
-        },
-        "is_trigger": true,
-        "layers": 4,
-        "mask": 2
+      "Spinner": {
+        "speed": 2.0
       },
-      "Script": {
-        "source": "scripts/pickup.luau",
-        "properties": []
+      "Bobber": {
+        "height": 0.15,
+        "period": 3.14
+      },
+      "Interactable": {
+        "trigger": "Touch",
+        "radius": 0.9,
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "once": true,
+        "group": "pickups",
+        "actions": [
+          {
+            "AddVar": {
+              "var": "score",
+              "amount": 1.0
+            }
+          },
+          {
+            "PlaySound": {
+              "clip": {
+                "id": "53ef55aa-f013-4f59-aae2-924e8ed18074",
+                "path": "audio/pickup.wav"
+              },
+              "volume": 1.0
+            }
+          },
+          {
+            "Burst": {
+              "style": "Sparkle",
+              "count": 24
+            }
+          },
+          {
+            "Hide": {
+              "target": "This",
+              "collide": true
+            }
+          }
+        ]
       }
+    }
+  },
+  {
+    "op": "set_resource",
+    "path": "GameRules",
+    "value": {
+      "win": [
+        {
+          "GroupDone": {
+            "group": "pickups"
+          }
+        }
+      ],
+      "win_title": "All collected!"
+    }
+  },
+  {
+    "op": "set_resource",
+    "path": "HudSettings",
+    "value": {
+      "vars": [
+        {
+          "var": "score",
+          "label": "Score"
+        }
+      ]
     }
   }
 ]

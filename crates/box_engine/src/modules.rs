@@ -1,5 +1,5 @@
 //! The engine's optional modules: `box_engine`'s cargo features `physics`,
-//! `dynamics`, `audio` and `script` (all on by default).
+//! `dynamics`, `audio`, `script` and `navigation` (all on by default).
 //!
 //! A native game that leaves one out with `default-features = false` does
 //! not compile it, and its registry lacks the module's types. A scene that
@@ -28,13 +28,18 @@ pub struct Module {
     pub types: &'static [&'static str],
 }
 
-/// Every optional module, in dependency order (`dynamics` and `script`
-/// need `physics`).
-pub const MODULES: [Module; 4] = [
+/// Every optional module, in dependency order (`dynamics`, `script` and
+/// `navigation` need `physics`).
+pub const MODULES: [Module; 5] = [
     Module {
         feature: "physics",
         enabled: cfg!(feature = "physics"),
-        types: &["Collider", "KinematicCharacter"],
+        types: &[
+            "Collidable",
+            "Collider",
+            "KinematicCharacter",
+            "PlayerController",
+        ],
     },
     Module {
         feature: "dynamics",
@@ -50,6 +55,11 @@ pub const MODULES: [Module; 4] = [
         feature: "script",
         enabled: cfg!(feature = "script"),
         types: &["Script", "ScriptIntent"],
+    },
+    Module {
+        feature: "navigation",
+        enabled: cfg!(feature = "navigation"),
+        types: &["Chaser", "NavAgent", "NavSettings"],
     },
 ];
 
@@ -203,8 +213,20 @@ mod tests {
             .copied()
             .collect();
         physics.sort();
-        assert_eq!(added(box_physics::register_physics_types), physics);
+        // `PlayerController` is the engine's physics behaviour.
+        assert_eq!(
+            added(|r| {
+                box_physics::register_physics_types(r);
+                crate::behaviours::register_player_types(r);
+            }),
+            physics
+        );
         assert_eq!(added(box_audio::register_audio_types), MODULES[2].types);
         assert_eq!(added(box_script::register_script_types), MODULES[3].types);
+        #[cfg(feature = "navigation")]
+        assert_eq!(
+            added(crate::nav_glue::register_navigation_types),
+            MODULES[4].types
+        );
     }
 }

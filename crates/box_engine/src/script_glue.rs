@@ -19,6 +19,9 @@
 pub mod animation;
 pub mod camera;
 pub mod data;
+pub mod interact;
+#[cfg(feature = "navigation")]
+pub mod nav;
 pub mod particles;
 pub mod save;
 
@@ -180,7 +183,14 @@ pub fn add_scripts(app: &mut App) {
         .add(save::SaveApi)
         .add(data::DataApi)
         .add(particles::ParticlesApi)
-        .add(camera::CameraApi);
+        .add(camera::CameraApi)
+        .add(interact::VarsApi)
+        .add(interact::InteractApi);
+    #[cfg(feature = "navigation")]
+    app.world
+        .resource_or_default::<ScriptApis>()
+        .add(nav::NavApi);
     save::install(app);
+    interact::install(app);
     app.add_plugin(&ScriptPlugin);
 }

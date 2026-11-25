@@ -240,7 +240,8 @@ fn error_toasts_copy_the_message_and_know_its_file() {
     frame(&ctx, &mut editor, 0.0, Vec::new());
     let first = frame(&ctx, &mut editor, 0.05, Vec::new());
     let copy = find_text(&first.shapes, "Copy").expect("a Copy button");
-    assert!(find_text(&first.shapes, "Show File").is_some());
+    // A script error's file button opens the line in the Script pane.
+    assert!(find_text(&first.shapes, "Edit Script").is_some());
     let press = |pressed| Event::PointerButton {
         pos: copy,
         button: PointerButton::Primary,
@@ -260,6 +261,21 @@ fn error_toasts_copy_the_message_and_know_its_file() {
             .iter()
             .any(|t| t.text == "Copied the message")
     );
+    // Where it is now (the "Copied" notice moved the toasts).
+    let now = frame(&ctx, &mut editor, 0.45, Vec::new());
+    let edit = find_text(&now.shapes, "Edit Script").expect("an Edit Script button");
+    let click = |pressed| Event::PointerButton {
+        pos: edit,
+        button: PointerButton::Primary,
+        pressed,
+        modifiers: Default::default(),
+    };
+    frame(&ctx, &mut editor, 0.5, vec![Event::PointerMoved(edit)]);
+    frame(&ctx, &mut editor, 0.6, vec![click(true)]);
+    frame(&ctx, &mut editor, 0.7, vec![click(false)]);
+    let tabs = &editor.state.script_editor().tabs;
+    assert_eq!(tabs.len(), 1, "the script opened");
+    assert_eq!(tabs[0].path, "scripts/door.luau");
 }
 
 /// Toasts with actions over the viewport, for review.

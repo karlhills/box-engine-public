@@ -6,7 +6,19 @@ Every registered event type. `events.send("Name", payload)` builds the event fro
 
 | Event | Description |
 |---|---|
+| [`Interacted`](#interacted) | Sent each time an `Interactable` is used, after its actions ran. |
 | [`PlaySound`](#playsound) | Event: play a clip once. |
+
+## `Interacted`
+
+Sent each time an `Interactable` is used, after its actions ran.
+Scripts: `events.on("Interacted", function(e) ... end)`, with `e.entity`
+and `e.interactor` uids (`world.entity(uid)`).
+
+Scripts: `events.send("Interacted", { ... })`, `events.on("Interacted", function(event) ... end)`.
+
+- **`entity`** `string?` (default `null`): The interactable's uid.
+- **`interactor`** `string?` (default `null`): The interactor's uid.
 
 ## `PlaySound`
 

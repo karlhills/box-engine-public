@@ -19,7 +19,7 @@ use super::{
     RigidBody, Velocity,
 };
 use crate::character::KinematicCharacter;
-use box_core::mesh_asset::MeshAsset;
+use box_core::mesh_asset::{GeneratedMesh, MeshAsset};
 
 use crate::collider::{Collider, ColliderShape, MeshKey, MeshShapes, Resolved, mesh_key};
 use crate::physics::Physics;
@@ -320,7 +320,8 @@ impl Dynamics {
     }
 
     /// The mesh asset version and shape of a `ColliderShape::Mesh` or
-    /// `ConvexHull` collider on `e` (its `MeshAsset`), once loaded.
+    /// `ConvexHull` collider on `e` (its `MeshAsset` or generated mesh), once
+    /// loaded.
     fn mesh_shape(
         &mut self,
         world: &World,
@@ -331,10 +332,23 @@ impl Dynamics {
         if !collider.shape.uses_mesh() {
             return None;
         }
-        let key = mesh_key(world, world.get::<MeshAsset>(e).as_deref())?;
+        let key = mesh_key(
+            world,
+            world.get::<MeshAsset>(e).as_deref(),
+            world.get::<GeneratedMesh>(e).as_deref(),
+        )?;
         Some((
             key,
-            self.mesh_shapes.get(world, key, scale, &collider.shape)?,
+            self.mesh_shapes.get(
+                world,
+                key,
+                scale,
+                &collider.shape,
+                world
+                    .get::<GeneratedMesh>(e)
+                    .and_then(|g| g.heights.clone())
+                    .as_deref(),
+            )?,
         ))
     }
 
@@ -421,6 +435,7 @@ impl Dynamics {
     #[profiling::function]
     fn sync_bodies(&mut self, world: &World, dt: f32) {
         let pass = self.pass;
+        let off = crate::collider::non_collidable_entities(world);
         let mut query = world.query::<(
             Entity,
             &RigidBody,
@@ -442,7 +457,7 @@ impl Dynamics {
                 });
                 continue;
             };
-            let mut collider = collider.filter(|c| !c.is_trigger);
+            let mut collider = collider.filter(|c| !c.is_trigger && !off.contains(&e));
             if collider.is_some_and(|c| c.shape == ColliderShape::Mesh)
                 && rb.kind != BodyKind::Fixed
             {
@@ -548,12 +563,13 @@ impl Dynamics {
     #[profiling::function]
     fn sync_statics(&mut self, world: &World) {
         let pass = self.pass;
+        let off = crate::collider::non_collidable_entities(world);
         let mut query = world.query::<Without<
             Without<(Entity, &Collider, &GlobalTransform, Option<&Primitive>), &RigidBody>,
             &KinematicCharacter,
         >>();
         for (e, collider, global, primitive) in query.iter() {
-            if collider.is_trigger {
+            if collider.is_trigger || off.contains(&e) {
                 continue;
             }
             let Some((scale, pose)) = decompose(&global.0) else {

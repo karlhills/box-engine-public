@@ -45,6 +45,11 @@ pub enum DocAction {
 
 impl DocAction {
     /// The "before ..." phrase of the unsaved-changes prompt.
+    /// It closes the project (its open scripts close too).
+    fn leaves_project(&self) -> bool {
+        !matches!(self, Self::NewScene | Self::OpenScene(_))
+    }
+
     fn before(&self) -> String {
         match self {
             Self::NewScene => "before creating a new scene".into(),
@@ -215,7 +220,8 @@ impl Editor {
         }
         // Every document action works on the edit world: end Play first.
         self.state.stop_play();
-        if self.state.is_dirty() {
+        let scripts = action.leaves_project() && !self.state.dirty_scripts().is_empty();
+        if self.state.is_dirty() || scripts {
             self.dialog = Some(Dialog::Unsaved {
                 action,
                 error: None,
@@ -238,6 +244,17 @@ impl Editor {
         let Some(Dialog::Unsaved { action, .. }) = self.dialog.clone() else {
             return;
         };
+        if choice == UnsavedChoice::Save && action.leaves_project() {
+            if let Err(e) = self.state.save_all_scripts() {
+                self.set_dialog_error(format!("Save failed: {e}"));
+                return;
+            }
+            if !self.state.is_dirty() {
+                self.dialog = None;
+                self.perform(action, false);
+                return;
+            }
+        }
         match choice {
             UnsavedChoice::Cancel => self.dialog = None,
             UnsavedChoice::DontSave => {
@@ -701,6 +718,13 @@ impl Editor {
         let t = self.tokens;
         let scene = self.state.scene.name.clone();
         let has_file = self.state.scene.path.is_some();
+        let scene_dirty = self.state.is_dirty();
+        let scripts: Vec<String> = self
+            .state
+            .dirty_scripts()
+            .iter()
+            .map(|p| p.rsplit('/').next().unwrap_or(p).to_string())
+            .collect();
         let in_project = self.state.project.is_some();
         self.load_previews(ctx);
         let native_dialogs = self.native_dialogs;
@@ -715,7 +739,8 @@ impl Editor {
         modal.show(ctx, |ui| {
             outcome = match dialog {
                 Dialog::Unsaved { action, error } => {
-                    unsaved_ui(ui, &t, &scene, has_file, action, error.as_deref())
+                    let what = unsaved_what(&scene, scene_dirty, &scripts, action);
+                    unsaved_ui(ui, &t, &what, has_file || !scene_dirty, action, error.as_deref())
                 }
                 Dialog::Recovery { recovery } => {
                     let file = match project {
@@ -833,6 +858,26 @@ pub(crate) fn error_line(ui: &mut Ui, t: &Tokens, error: Option<&str>) {
     }
 }
 
+/// What the unsaved-changes prompt names: the scene, the scripts with
+/// edits (when the action closes the project), or both.
+fn unsaved_what(scene: &str, scene_dirty: bool, scripts: &[String], action: &DocAction) -> String {
+    let scripts = if action.leaves_project() {
+        scripts
+    } else {
+        &[]
+    };
+    let files = match scripts.len() {
+        0 => String::new(),
+        1 => scripts[0].clone(),
+        n => format!("{n} scripts"),
+    };
+    match (scene_dirty, files.is_empty()) {
+        (true, true) | (false, true) => format!("“{scene}”"),
+        (true, false) => format!("“{scene}” and {files}"),
+        (false, false) => files,
+    }
+}
+
 /// Enter saves, Escape cancels.
 fn unsaved_ui(
     ui: &mut Ui,
@@ -846,7 +891,7 @@ fn unsaved_ui(
     title(
         ui,
         t,
-        &format!("Save changes to “{scene}” {}?", action.before()),
+        &format!("Save changes to {scene} {}?", action.before()),
     );
     let body = if has_file {
         "Your changes will be lost if you don't save them."

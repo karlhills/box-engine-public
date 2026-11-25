@@ -5,7 +5,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::PathBuf;
 
-use box_core::edit::{EditError, EditStack};
+use box_core::edit::{EditError, EditStack, Snapped};
 use box_core::identity::{Name, Uid};
 use box_core::math::Aabb;
 use box_core::mesh::MeshData;
@@ -491,6 +491,7 @@ pub enum NewEntity {
     Cylinder,
     Capsule,
     Plane,
+    TerrainPath,
     Empty,
     DirectionalLight,
     PointLight,
@@ -501,12 +502,13 @@ pub enum NewEntity {
 }
 
 impl NewEntity {
-    pub const ALL: [NewEntity; 12] = [
+    pub const ALL: [NewEntity; 13] = [
         Self::Cube,
         Self::Sphere,
         Self::Cylinder,
         Self::Capsule,
         Self::Plane,
+        Self::TerrainPath,
         Self::Empty,
         Self::DirectionalLight,
         Self::PointLight,
@@ -529,6 +531,7 @@ impl NewEntity {
             Self::Cylinder => "Cylinder",
             Self::Capsule => "Capsule",
             Self::Plane => "Plane",
+            Self::TerrainPath => "Terrain Path",
             Self::Empty => "Empty",
             Self::DirectionalLight => "Directional Light",
             Self::PointLight => "Point Light",
@@ -546,6 +549,7 @@ impl NewEntity {
             Self::PointLight => Some("PointLight"),
             Self::SpotLight => Some("SpotLight"),
             Self::AmbientVolume => Some("AmbientVolume"),
+            Self::TerrainPath => Some("TerrainPath"),
             Self::Camera => Some("Camera"),
             Self::ParticleEmitter => Some("ParticleEmitter"),
             _ => None,
@@ -686,6 +690,9 @@ pub struct EditorState {
     /// Game ▸ Project Settings: the settings resource the inspector shows
     /// (see `project_settings.rs`).
     pub(crate) settings_view: Option<crate::project_settings::SettingsView>,
+    /// Settings edits not shown in the inspector (the Mixer's faders) still
+    /// to be written: type name and UI time of the last change.
+    pub(crate) settings_pending: Vec<(&'static str, f64)>,
     /// The derived part shown read-only in the inspector (Cmd+Alt+click;
     /// see `generated.rs`). Cleared by any selection change.
     pub(crate) inspected_part: Option<Uid>,
@@ -695,6 +702,12 @@ pub struct EditorState {
     pub(crate) tools: crate::tools::ToolRegistry,
     /// View ▸ Rules and the session's rule switches (see `rules_panel.rs`).
     pub(crate) rules_panel: crate::rules_panel::RulesPanel,
+    /// View ▸ Mixer (see `mixer_panel.rs`).
+    pub(crate) mixer: crate::mixer_panel::MixerPanel,
+    /// View ▸ Assistant (`assistant/`).
+    pub(crate) assistant: crate::assistant::AssistantPanel,
+    /// The Script pane's open files (`script_editor/`).
+    pub(crate) scripts: crate::script_editor::ScriptEditor,
     /// File ▸ Export… (`export.rs`).
     pub(crate) export: crate::export::ExportPanel,
 }
@@ -764,10 +777,14 @@ impl EditorState {
             after_rebuild: false,
             rebuild: Default::default(),
             settings_view: None,
+            settings_pending: Vec::new(),
             inspected_part: None,
             generated: Default::default(),
             tools,
             rules_panel: Default::default(),
+            assistant: Default::default(),
+            scripts: Default::default(),
+            mixer: Default::default(),
             export: Default::default(),
         }
     }
@@ -1291,6 +1308,58 @@ impl EditorState {
         self.changed(true);
     }
 
+    /// Convert to Script: replaces behaviour `component` on `uids` with its
+    /// script version (the `eject_behaviour` command), as one undo step, and
+    /// writes the script into the project when it lacks it. Returns the
+    /// script's path, or `None` (logged) when it cannot.
+    pub fn convert_to_script(&mut self, uids: &[Uid], component: &str) -> Option<String> {
+        if self.is_playing() {
+            tracing::warn!("Convert to Script: stop Play first");
+            return None;
+        }
+        self.finish_edit();
+        let commands: Vec<box_core::edit::Command> = uids
+            .iter()
+            .map(|u| box_core::edit::Command::EjectBehaviour {
+                entity: u.to_string(),
+                component: component.to_string(),
+            })
+            .collect();
+        let label = format!("Convert {component} to Script");
+        let applied = match box_core::edit::apply_commands_with_warnings(
+            &mut self.world,
+            &mut self.edits,
+            &commands,
+            &label,
+        ) {
+            Ok(a) => a,
+            Err(e) => {
+                tracing::warn!("Convert to Script: {e}");
+                return None;
+            }
+        };
+        let path = applied.files.first().map(|(p, _)| p.clone());
+        match self
+            .world
+            .get_resource::<box_engine::box_assets::AssetServer>()
+        {
+            Some(server) => {
+                if let Err(e) = box_engine::behaviours::scripts::write_missing_files(
+                    server.assets_dir(),
+                    &applied.files,
+                ) {
+                    tracing::warn!("Convert to Script: cannot write the script: {e}");
+                }
+            }
+            None => tracing::warn!(
+                "Convert to Script: no project is open, so {} was not written; save the scene in a project",
+                path.as_deref().unwrap_or("the script")
+            ),
+        }
+        self.changed(true);
+        path
+    }
+
     /// Moves `uid` under `parent` (or to the roots) at sibling `index`.
     /// Cycles are rejected with a warning. Returns false when the move was
     /// rejected; a move to where the entity already is succeeds and records
@@ -1377,6 +1446,52 @@ impl EditorState {
         }
     }
 
+    /// Snap to Ground: moves each selected entity (a selected child of a
+    /// selected entity goes with its parent) down or up onto the terrain
+    /// under it, as one step. The lowest point of its meshes lands on the
+    /// ground (its origin when it has no mesh); rotation is kept. Entities
+    /// outside every terrain stay where they are, with a note. Returns how
+    /// many moved.
+    pub fn snap_selection_to_ground(&mut self) -> usize {
+        let uids = self.topmost_selection();
+        if uids.is_empty() {
+            return 0;
+        }
+        self.begin_edit(format!("Snap {} to Ground", self.selection_label()));
+        let mut moved = 0;
+        let mut missed = 0;
+        for uid in uids {
+            let Some(e) = self.world.entity_by_uid(uid) else {
+                continue;
+            };
+            let origin = box_core::transform::compute_global(&self.world, e)
+                .translation
+                .y;
+            // How far the origin sits above the entity's lowest point.
+            let offset = entity_bounds(&self.world, e).map_or(0.0, |b| origin - b.min.y);
+            let r = self
+                .edits
+                .snap_to_ground(&mut self.world, uid, offset, false);
+            match self.report("snap to ground", r) {
+                Some(Snapped::Moved(_)) => moved += 1,
+                Some(Snapped::NoGround { .. }) => missed += 1,
+                None => {}
+            }
+        }
+        self.finish_edit();
+        if moved > 0 {
+            self.changed(true);
+        }
+        if missed > 0 {
+            self.notify(&match (moved, missed) {
+                (0, _) => "No terrain under the selection: nothing moved".to_string(),
+                (_, 1) => "1 entity is not over a terrain: left where it is".to_string(),
+                _ => format!("{missed} entities are not over a terrain: left where they are"),
+            });
+        }
+        moved
+    }
+
     fn selection_label(&self) -> String {
         match (self.selection.len(), self.primary_entity()) {
             (1, Some(e)) => self.display_name(e),
@@ -1425,6 +1540,10 @@ impl EditorState {
                     return None;
                 }
             }
+        }
+        if kind == NewEntity::TerrainPath {
+            let spline = registry.component("Spline")?.default_value()?;
+            owned.push(("Spline", spline));
         }
         let components: Vec<(&str, &dyn PartialReflect)> =
             owned.iter().map(|(n, v)| (*n, v.as_ref())).collect();

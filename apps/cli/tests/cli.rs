@@ -61,6 +61,30 @@ fn new_project(name: &str) -> PathBuf {
 
 const SCENE: &str = "assets/scenes/main.scene.json";
 
+#[test]
+fn playtest_log_checks_ignore_terminal_log_filter() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let out = box_cmd(
+        &root,
+        &["playtest", "examples/collector_luau", "route", "--json"],
+    )
+    .env("RUST_LOG", "warn")
+    .output()
+    .expect("run playtest");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{stdout}\n{stderr}");
+    let report: Json = serde_json::from_str(&stdout).expect("playtest report");
+    assert!(
+        report["checks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|check| { check["check"] == "log_contains" && check["passed"] == true })
+    );
+    assert!(!stderr.contains("score 20"), "{stderr}");
+}
+
 fn write(dir: &Path, name: &str, value: &Json) -> PathBuf {
     let p = dir.join(name);
     std::fs::write(&p, serde_json::to_string_pretty(value).unwrap()).unwrap();
@@ -507,10 +531,21 @@ fn registry_lists_engine_types() {
     }
     assert!(!components.contains(&"MeshRenderer".to_string()));
     // The audio and physics settings resources come with the default
-    // `audio` and `dynamics` features.
+    // `audio` and `dynamics` features; `GameVars` holds interaction state,
+    // `GameRules`, `GameState` and `HudSettings` the behaviours' rules,
+    // `NavSettings` the navmesh's agent size (`navigation`).
     assert_eq!(
         names("resources"),
-        vec!["AudioSettings", "Environment", "PhysicsSettings"]
+        vec![
+            "AudioSettings",
+            "Environment",
+            "GameRules",
+            "GameState",
+            "GameVars",
+            "HudSettings",
+            "NavSettings",
+            "PhysicsSettings"
+        ]
     );
     for c in ["RigidBody", "Joint", "Velocity", "Collider"] {
         assert!(components.contains(&c.to_string()), "{c} in {components:?}");
@@ -657,6 +692,123 @@ fn usage_errors_exit_with_2_wherever_they_are_detected() {
     let (out, json) = run(&base, &["check", "--json"]);
     assert_eq!(json["error"]["code"], "not_a_project");
     assert_eq!(out.status.code(), Some(1));
+}
+
+/// W1: views chosen without editing the scene: --eye/--look-at, --overview
+/// and several poses from a --views file in one run.
+#[test]
+fn render_poses_overview_and_views() {
+    if !gpu_tests_enabled() {
+        return;
+    }
+    let project = new_project("poses");
+    let before = std::fs::read(project.join(SCENE)).unwrap();
+    let captures = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("cli_poses");
+    let eye = captures.join("eye.png");
+    let Some(r) = render(
+        &project,
+        &[
+            ".",
+            "--out",
+            eye.to_str().unwrap(),
+            "--size",
+            "320x180",
+            "--eye",
+            "0,8,-6",
+            "--look-at",
+            "0,0,0",
+            "--fov",
+            "50",
+        ],
+    ) else {
+        return;
+    };
+    assert_eq!(r["camera"]["pose"]["eye"], json!([0.0, 8.0, -6.0]));
+    assert_eq!(r["camera"]["pose"]["fov"], 50.0);
+    assert!(eye.is_file());
+
+    let top = captures.join("top.png");
+    let r = render(
+        &project,
+        &[
+            ".",
+            "--out",
+            top.to_str().unwrap(),
+            "--size",
+            "320x180",
+            "--overview",
+        ],
+    )
+    .unwrap();
+    assert_eq!(r["camera"]["overview"], true);
+
+    let views = write(
+        &project,
+        "views.json",
+        &json!([
+            { "name": "front", "eye": [0.0, 2.0, 8.0], "look_at": [0.0, 0.5, 0.0] },
+            { "name": "above", "overview": true },
+            { "name": "scene_camera", "camera": "Camera" }
+        ]),
+    );
+    let shots = captures.join("shot.png");
+    let r = render(
+        &project,
+        &[
+            ".",
+            "--out",
+            shots.to_str().unwrap(),
+            "--size",
+            "320x180",
+            "--views",
+            views.to_str().unwrap(),
+        ],
+    )
+    .unwrap();
+    let list = r["views"].as_array().unwrap();
+    assert_eq!(list.len(), 3);
+    for name in ["front", "above", "scene_camera"] {
+        let file = captures.join(format!("shot_{name}.png"));
+        assert!(file.is_file(), "{name}");
+    }
+    assert_eq!(list[2]["camera"]["name"], "Camera");
+    let a = std::fs::read(captures.join("shot_front.png")).unwrap();
+    let b = std::fs::read(captures.join("shot_above.png")).unwrap();
+    assert_ne!(a, b, "different poses, different images");
+
+    // Bad poses are usage errors; the scene file never changes.
+    let err = fails(
+        &project,
+        &[
+            "render",
+            ".",
+            "--out",
+            "x.png",
+            "--eye",
+            "1,1,1",
+            "--look-at",
+            "1,1,1",
+        ],
+    );
+    assert_eq!(err["code"], "usage", "{err:#}");
+    let bad = write(
+        &project,
+        "bad.json",
+        &json!([{ "name": "a b", "overview": true }]),
+    );
+    let err = fails(
+        &project,
+        &[
+            "render",
+            ".",
+            "--out",
+            "x.png",
+            "--views",
+            bad.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(err["code"], "usage", "{err:#}");
+    assert_eq!(std::fs::read(project.join(SCENE)).unwrap(), before);
 }
 
 #[test]

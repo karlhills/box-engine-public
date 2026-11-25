@@ -93,6 +93,54 @@ impl EditorState {
             return false;
         };
         let name = view.name;
+        if !self.apply_settings_field(name, path, value) {
+            return false;
+        }
+        if let Some(v) = &mut self.settings_view {
+            v.pending_since = Some(now);
+        }
+        true
+    }
+
+    /// Sets a field (`"AudioSettings.music"`) of the settings resource
+    /// `name` (any settings type, shown or not: the Mixer's bus faders) like
+    /// [`Self::edit_settings`]: in the world shown and, during Play, the
+    /// edit world, written to the file later by
+    /// [`Self::flush_settings_edit`].
+    pub fn set_settings_field(
+        &mut self,
+        name: &str,
+        path: &str,
+        value: &dyn PartialReflect,
+        now: f64,
+    ) -> bool {
+        let Some(name) = self.settings_types().into_iter().find(|n| *n == name) else {
+            tracing::warn!("`{name}` is not a settings type of this game");
+            return false;
+        };
+        if !self.apply_settings_field(name, path, value) {
+            return false;
+        }
+        if self.settings_view.as_ref().is_some_and(|v| v.name == name) {
+            if let Some(v) = &mut self.settings_view {
+                v.pending_since = Some(now);
+            }
+        } else if let Some(p) = self.settings_pending.iter_mut().find(|p| p.0 == name) {
+            p.1 = now;
+        } else {
+            self.settings_pending.push((name, now));
+        }
+        true
+    }
+
+    /// Sets `path` of settings resource `name` in the shown world and,
+    /// during Play, the edit world.
+    fn apply_settings_field(
+        &mut self,
+        name: &'static str,
+        path: &str,
+        value: &dyn PartialReflect,
+    ) -> bool {
         if let Err(e) = self.ensure_writable() {
             tracing::warn!("{name}: {e:#}");
             return false;
@@ -116,9 +164,6 @@ impl EditorState {
         {
             tracing::warn!("set {path} in the edit world: {e}");
         }
-        if let Some(v) = &mut self.settings_view {
-            v.pending_since = Some(now);
-        }
         true
     }
 
@@ -127,17 +172,31 @@ impl EditorState {
     /// last change. The write's hot reload is not applied back over newer
     /// edits.
     pub fn flush_settings_edit(&mut self, now: f64, idle: bool) {
-        let Some(view) = &mut self.settings_view else {
-            return;
-        };
-        let Some(since) = view.pending_since else {
-            return;
-        };
-        if !idle && now - since < SETTINGS_WRITE_DELAY_S {
-            return;
+        let due = |since: f64| idle || now - since >= SETTINGS_WRITE_DELAY_S;
+        let mut names: Vec<&'static str> = Vec::new();
+        self.settings_pending.retain(|(name, since)| {
+            if due(*since) {
+                names.push(name);
+                false
+            } else {
+                true
+            }
+        });
+        if let Some(view) = &mut self.settings_view
+            && let Some(since) = view.pending_since
+            && due(since)
+        {
+            view.pending_since = None;
+            names.push(view.name);
         }
-        view.pending_since = None;
-        let name = view.name;
+        for name in names {
+            self.write_settings_file(name);
+        }
+    }
+
+    /// Writes settings resource `name` of the edit world to its file. The
+    /// write's hot reload is not applied back over newer edits.
+    fn write_settings_file(&mut self, name: &'static str) {
         let Some(project) = &self.project else {
             return;
         };

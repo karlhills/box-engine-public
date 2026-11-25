@@ -1,0 +1,39 @@
+{
+  "name": "spawner",
+  "title": "Spawner",
+  "category": "Gameplay",
+  "description": "Makes copies of its first child every few seconds around itself: here, rolling spike balls that hurt the player. Replace the child with anything to spawn that instead.",
+  "entities": [
+    {
+      "name": "Spawner",
+      "components": {
+        "Transform": { "translation": [0.0, 0.05, 0.0] },
+        "Primitive": { "shape": { "Cylinder": { "radius": 0.8, "height": 0.1, "segments": 24 } } },
+        "StandardMaterial": { "base_color": [0.35, 0.12, 0.4, 1.0], "roughness": 0.6, "emissive": [0.25, 0.05, 0.3, 1.0] },
+        "Spawner": { "interval": 3.0, "max_alive": 3, "radius": 3.0, "lifetime": 10.0 }
+      }
+    },
+    {
+      "name": "Spike Ball",
+      "parent": "Spawner",
+      "components": {
+        "Transform": { "translation": [0.0, 0.5, 0.0] },
+        "Primitive": { "shape": { "Sphere": { "radius": 0.35 } } },
+        "StandardMaterial": { "base_color": [0.5, 0.08, 0.06, 1.0], "roughness": 0.5 },
+        "Spinner": { "axis": [1.0, 0.0, 0.0], "speed": 4.0 },
+        "Bobber": { "height": 0.1, "period": 1.0 },
+        "Interactable": {
+          "trigger": "Touch",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "once": true,
+          "actions": [
+            { "Damage": { "target": "Interactor", "amount": 1.0 } },
+            { "Burst": { "style": "Dust", "count": 16 } },
+            { "Despawn": { "target": "This" } }
+          ]
+        }
+      }
+    }
+  ]
+}

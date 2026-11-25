@@ -40,6 +40,26 @@
 // sky), `scene_depth` returns SCENE_DEPTH_FAR, so a gap reads as "deep";
 // `scene_depth_available()` tells the cases apart. The prepass holds opaque
 // and masked surfaces only, so an opaque material reads its own depth.
+//
+// Scene colour: a transparent material can also read the colour of the
+// opaque scene behind it (refraction, heat haze, frosted glass):
+//
+//     let uv = scene_uv(in.frag_coord) + offset;
+//     s.emissive = scene_color_at(uv) * (1.0 - tint);
+//     s.alpha = 1.0;
+//
+// `scene_color(frag_coord)` is the colour straight behind the pixel and
+// `scene_color_at(uv)` the filtered colour at a viewport position (0..1,
+// from the top left; clamped at the edges). The colour is linear HDR, lit
+// and fogged, before exposure and tone mapping, and holds opaque and masked
+// surfaces, the sky and scene lines; never other transparent surfaces.
+// Calling either makes the engine draw transparent surfaces in a second
+// pass after copying the opaque scene, while the material is visible. An
+// offset sample can land on something in front of the surface: compare
+// `scene_depth_at(uv)` with `fragment_view_depth` and fall back to the
+// straight sample. Where the colour is unavailable (opaque and masked
+// materials, the prepass, the shadow passes) both return black;
+// `scene_color_available()` tells.
 // Requires common.wgsl and lighting.wgsl.
 
 struct SurfaceInput {
@@ -54,6 +74,11 @@ struct SurfaceInput {
     // UV set 1 (zero when the mesh has none): data channels such as
     // box_arch's weathering coordinates
     uv1: vec2<f32>,
+    // the mesh's custom data sets 0 and 1 (`MeshData::custom`; zero when
+    // the mesh has none), interpolated across the triangle. The `vertex`
+    // hook reads the per-vertex values as `in.custom0` / `in.custom1`.
+    custom0: vec4<f32>,
+    custom1: vec4<f32>,
     // vertex colour (linear)
     color: vec4<f32>,
     // unit vector toward the camera
@@ -93,6 +118,43 @@ fn scene_depth(frag_coord: vec4<f32>) -> f32 {
     }
     // Infinite reverse-Z: NDC depth = near / view depth.
     return globals.camera_pos.w / d;
+}
+
+// Viewport position (0..1 from the top left) of `frag_coord`, for
+// `scene_color_at` and `scene_depth_at`.
+fn scene_uv(frag_coord: vec4<f32>) -> vec2<f32> {
+    return frag_coord.xy / globals.viewport.xy;
+}
+
+// `scene_depth` at a viewport position (0..1), clamped to the view.
+fn scene_depth_at(uv: vec2<f32>) -> f32 {
+    let size = vec2<f32>(textureDimensions(opaque_depth));
+    let p = clamp(uv, vec2<f32>(0.0), vec2<f32>(1.0)) * size;
+    return scene_depth(vec4<f32>(min(p, size - vec2<f32>(0.5)), 0.0, 1.0));
+}
+
+// True when the opaque scene's colour is bound here: the transparent draws
+// of a frame where a visible material shader reads it.
+fn scene_color_available() -> bool {
+    return globals.scene_depth_on.y > 0.5 && textureDimensions(opaque_color).x > 1u;
+}
+
+// Linear HDR colour of the opaque scene straight behind `frag_coord`
+// (`SurfaceInput.frag_coord`); black where it is unavailable.
+fn scene_color(frag_coord: vec4<f32>) -> vec3<f32> {
+    if !scene_color_available() {
+        return vec3<f32>(0.0);
+    }
+    let size = vec2<i32>(textureDimensions(opaque_color));
+    let p = clamp(vec2<i32>(frag_coord.xy), vec2<i32>(0), size - vec2<i32>(1));
+    return textureLoad(opaque_color, p, 0).rgb;
+}
+
+// Filtered linear HDR colour of the opaque scene at a viewport position
+// (0..1 from the top left, clamped); black where it is unavailable.
+fn scene_color_at(uv: vec2<f32>) -> vec3<f32> {
+    let c = textureSampleLevel(opaque_color, scene_sampler, uv, 0.0).rgb;
+    return select(vec3<f32>(0.0), c, scene_color_available());
 }
 
 // Linear view depth (metres) of the fragment at `frag_coord` itself.

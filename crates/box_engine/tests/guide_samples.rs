@@ -189,7 +189,7 @@ fn the_main_sample_scene_works() {
     let mut app = play("main", 60);
     no_failed_scripts(&mut app, "main");
     let stats = app.world.resource::<ScriptRuntime>().stats();
-    assert_eq!(stats.instances, 20, "{stats:?}");
+    assert_eq!(stats.instances, 21, "{stats:?}");
     let swarm = entity(&app, "Swarm");
     assert_eq!(
         app.world.children(swarm).len(),
@@ -280,6 +280,12 @@ fn the_main_sample_scene_works() {
     assert!(app.world.find_by_name("Gem").is_none());
     assert_eq!(script_field::<i64>(&app, "Score", "score"), 20);
     assert_eq!(script_field::<i64>(&app, "Game", "coins"), 2);
+    // The walk passed the Altar (a Touch Interactable): its action added an
+    // offering, its script heard the use and the change (altar.luau).
+    let vars = app.world.resource::<box_engine::interact::GameVars>();
+    assert_eq!((vars.get("offerings"), vars.get("visits")), (1.0, 1.0));
+    assert_eq!(script_field::<String>(&app, "Altar", "used_by"), "Player");
+    assert_eq!(script_field::<f64>(&app, "Altar", "offerings"), 1.0);
     no_failed_scripts(&mut app, "main");
 }
 

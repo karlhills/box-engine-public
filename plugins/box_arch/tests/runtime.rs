@@ -193,3 +193,156 @@ fn anchors_on_roofs_and_bad_targets() {
     // A missing target leaves the decoration where it was.
     assert_eq!(world_pos(&app, lost), Vec3::splat(7.0));
 }
+
+/// Every vertex of a wall generated through the runtime has a unit tangent
+/// perpendicular to its normal (the generator itself emits none).
+#[test]
+fn generated_walls_get_tangents() {
+    let game = Game::new().with_plugin(ArchPlugin);
+    let mut app = game.new_app();
+    let e = app
+        .world
+        .spawn_saved(
+            Uid::new(),
+            "wall",
+            (
+                Transform::default(),
+                Wall {
+                    openings: vec![Opening::door(2.0)],
+                    ..Wall::through(&[Vec2::new(0.0, 0.0), Vec2::new(5.0, 0.0)])
+                },
+            ),
+        )
+        .unwrap();
+    app.run_frames(2, DT);
+    let handle = app.world.get::<ProcState>(e).unwrap().mesh().unwrap();
+    let mesh = app
+        .world
+        .resource::<Assets<MeshData>>()
+        .get(handle)
+        .unwrap();
+    assert!(mesh.vertex_count() > 0);
+    assert_eq!(mesh.tangents.len(), mesh.vertex_count());
+    for (t, n) in mesh.tangents.iter().zip(&mesh.normals) {
+        let t3 = t.truncate();
+        assert!((t3.length() - 1.0).abs() < 1e-3, "unit: {t}");
+        assert!(t3.dot(*n).abs() < 1e-3, "perpendicular: {t} to {n}");
+        assert!(t.w == 1.0 || t.w == -1.0);
+    }
+}
+
+/// A normal map shows on a generated wall: the same wall under a grazing
+/// sun, with and without a ribbed normal map. The capture goes to
+/// `target/captures/arch/normal_map.png`.
+#[test]
+fn normal_maps_show_on_generated_walls() {
+    use box_engine::box_render::Renderer;
+    if std::env::var_os("BOX_SKIP_GPU_TESTS").is_some() {
+        eprintln!("skipping: BOX_SKIP_GPU_TESTS");
+        return;
+    }
+    const W: u32 = 640;
+    const H: u32 = 360;
+    let Ok(mut renderer) = Renderer::new_headless(W, H) else {
+        eprintln!("skipping: no GPU");
+        return;
+    };
+    let render = |renderer: &mut Renderer, normal_map: bool| {
+        let game = Game::new().with_plugin(ArchPlugin);
+        let mut app = game.new_app();
+        // Horizontal ribs, one per metre (the wall's UVs are in metres).
+        let size = 64u32;
+        let mut rgba = Vec::with_capacity((size * size * 4) as usize);
+        for y in 0..size {
+            let phase = (y as f32 + 0.5) / size as f32 * std::f32::consts::TAU;
+            let n = Vec3::new(0.0, -box_engine::box_core::pmath::cos(phase) * 1.5, 1.0).normalize();
+            let c = (n * 0.5 + Vec3::splat(0.5)) * 255.0;
+            for _ in 0..size {
+                rgba.extend([c.x as u8, c.y as u8, c.z as u8, 255]);
+            }
+        }
+        let mut image = ImageData::new(size, size, ColorSpace::Linear, rgba).unwrap();
+        image.generate_mips();
+        let handle = app
+            .world
+            .resource_or_default::<Assets<ImageData>>()
+            .add(image);
+        app.world.resource_or_default::<AssetLookup>().insert(
+            AssetId::new(),
+            None,
+            Some("textures/ribs.png"),
+            handle,
+        );
+        {
+            let env = app.world.resource_or_default::<Environment>();
+            *env = Environment::day();
+            env.ambient_occlusion.enabled = false;
+            env.bloom.enabled = false;
+        }
+        app.world.spawn((
+            Transform::default().looking_to(Vec3::new(-0.3, -0.8, -0.35), Vec3::Y),
+            DirectionalLight {
+                shadows: false,
+                ..Default::default()
+            },
+        ));
+        app.world.spawn((
+            Transform::from_xyz(2.5, 1.6, 6.0).looking_at(Vec3::new(2.5, 1.4, 0.0), Vec3::Y),
+            Camera::default(),
+        ));
+        app.world
+            .spawn_saved(
+                Uid::new(),
+                "wall",
+                (
+                    Transform::default(),
+                    Wall {
+                        openings: vec![Opening::door(2.0)],
+                        ..Wall::through(&[Vec2::new(0.0, 0.0), Vec2::new(5.0, 0.0)])
+                    },
+                    StandardMaterial {
+                        base_color: Color::srgb(0.85, 0.8, 0.7),
+                        roughness: 0.8,
+                        normal_texture: if normal_map {
+                            AssetRef::path("textures/ribs.png")
+                        } else {
+                            AssetRef::NONE
+                        },
+                        ..Default::default()
+                    },
+                ),
+            )
+            .unwrap();
+        app.run_frames(3, DT);
+        settle(&mut app.world);
+        app.run_frames(2, DT);
+        renderer.capture(&mut app.world).unwrap();
+        renderer.capture(&mut app.world).unwrap()
+    };
+    let flat = render(&mut renderer, false);
+    let ribbed = render(&mut renderer, true);
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/captures/arch");
+    std::fs::create_dir_all(&dir).unwrap();
+    ribbed.save(dir.join("normal_map.png")).unwrap();
+    flat.save(dir.join("normal_map_off.png")).unwrap();
+    // Luminance along a column of the wall face, left of the door: flat
+    // without the map, banded with it.
+    let column = |rgba: &[u8]| -> Vec<f32> {
+        (H / 2 - 40..H / 2 + 40)
+            .map(|y| {
+                let i = ((y * W + W / 4) * 4) as usize;
+                (rgba[i] as f32 + rgba[i + 1] as f32 + rgba[i + 2] as f32) / 3.0
+            })
+            .collect()
+    };
+    let spread = |v: &[f32]| {
+        v.iter().cloned().fold(f32::MIN, f32::max) - v.iter().cloned().fold(f32::MAX, f32::min)
+    };
+    let (a, b) = (
+        spread(&column(flat.as_raw())),
+        spread(&column(ribbed.as_raw())),
+    );
+    assert!(a < 12.0, "flat wall without the map: spread {a}");
+    assert!(b > a + 25.0, "ribs with the map: spread {b} against {a}");
+    assert_eq!(renderer.validation_errors(), 0);
+}

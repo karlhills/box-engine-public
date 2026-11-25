@@ -1,0 +1,16 @@
+[package]
+name = "box_nav"
+description = "box-engine navigation: navmesh tiles baked from triangles with rerecast (a Recast port), and path, closest-point and walkability queries."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+glam.workspace = true
+rerecast.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

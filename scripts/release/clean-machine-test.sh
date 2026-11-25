@@ -146,6 +146,24 @@ gallery() {
   echo "gallery: $(ls -d "$dir"/*/ | wc -l | tr -d ' ') projects"
 }
 step "Examples gallery in the app" gallery
+
+# The no-code path: the First Game example (presets only) from the gallery,
+# as Open Example copies it: it checks without warnings, plays and exports.
+first="$projects/first-game"
+first_game_copy() {
+  ditto "$app/Contents/Resources/templates/examples/first_game" "$first"
+  local out
+  out="$(in_projects box check first-game 2>&1)"
+  echo "$out" | tail -1
+  echo "$out" | tail -1 | grep -q ' 0 error(s), 0 warning(s)' || fail "first_game does not check clean: $out"
+}
+step "First Game example: box check" first_game_copy
+gpu_step "First Game example: box run --frames 120" in_projects box run first-game --frames 120
+first_game_export() {
+  in_projects box export --project first-game --target macos --profile release --out first-game/export
+  ls -d "$first"/export/*.app >/dev/null 2>&1 || fail "no .app in $first/export"
+}
+step "First Game example: box export" first_game_export
 game="$projects/my-game"
 
 # The guide's first script and its `box scene apply` commands, copied from the

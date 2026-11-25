@@ -212,11 +212,12 @@ fn commands_clamp_numbers_to_the_field_range_with_a_warning() {
     assert_eq!(applied.created.len(), 1);
     assert_eq!(applied.warnings.len(), 2, "{:?}", applied.warnings);
     assert_eq!(
-        applied.warnings[0],
+        applied.warnings[0].message,
         "command 1 (set): `Coin.points` = 5000 is outside its range 0..=1000; clamped to 1000"
     );
+    assert_eq!(applied.warnings[0].kind.code(), "value_clamped");
     assert!(
-        applied.warnings[1].contains("clamped to -20.0"),
+        applied.warnings[1].message.contains("clamped to -20.0"),
         "{:?}",
         applied.warnings
     );

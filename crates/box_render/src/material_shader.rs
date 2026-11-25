@@ -43,6 +43,9 @@ pub(crate) struct ComposedShader {
     /// The file calls `scene_depth`: materials using it run the depth
     /// prepass while visible.
     pub reads_scene_depth: bool,
+    /// The file calls `scene_color` or `scene_color_at`: transparent
+    /// materials using it get the opaque scene's colour while visible.
+    pub reads_scene_color: bool,
 }
 
 /// Checks a material shader file (`.wgsl` defining `fn surface`) the way the
@@ -120,7 +123,10 @@ pub(crate) fn compose(
     prelude.push_str("@group(2) @binding(0) var<uniform> material: MaterialParams;\n");
     prelude.push_str(&format!("#include \"{file}\"\n"));
     let has_vertex = defines("vertex");
-    let reads_scene_depth = code_tokens.contains(&"scene_depth");
+    let reads_scene_depth =
+        code_tokens.contains(&"scene_depth") || code_tokens.contains(&"scene_depth_at");
+    let reads_scene_color =
+        code_tokens.contains(&"scene_color") || code_tokens.contains(&"scene_color_at");
     if !has_vertex {
         prelude.push_str(
             "fn vertex(position: vec3<f32>, in: VertexInput, p: MaterialParams) -> vec3<f32> {\n    \
@@ -158,6 +164,7 @@ pub(crate) fn compose(
         uniform_size: (span as u64).max(16).next_multiple_of(16),
         has_vertex,
         reads_scene_depth,
+        reads_scene_color,
     })
 }
 
@@ -235,6 +242,8 @@ pub(crate) struct CompiledShader {
     pub has_vertex: bool,
     /// See [`ComposedShader::reads_scene_depth`].
     pub reads_scene_depth: bool,
+    /// See [`ComposedShader::reads_scene_color`].
+    pub reads_scene_color: bool,
 }
 
 /// The compile state of one `ShaderSource` asset.
@@ -384,6 +393,7 @@ fn compile(
         uniform_size: composed.uniform_size,
         has_vertex: composed.has_vertex,
         reads_scene_depth: composed.reads_scene_depth,
+        reads_scene_color: composed.reads_scene_color,
     })
 }
 
@@ -493,6 +503,21 @@ fn surface(in: SurfaceInput, p: P) -> Surface {
         )
         .unwrap();
         assert!(!plain.reads_scene_depth);
+        assert!(!plain.reads_scene_color);
+        assert!(!c.reads_scene_color);
+        let refract = "\
+fn surface(in: SurfaceInput, p: MaterialParams) -> Surface {
+    var s = default_surface(in);
+    let uv = scene_uv(in.frag_coord) + vec2f(0.01, 0.0);
+    let behind = scene_depth_at(uv) > fragment_view_depth(in.frag_coord);
+    s.emissive = select(scene_color(in.frag_coord), scene_color_at(uv), behind);
+    s.alpha = select(0.5, 1.0, scene_color_available());
+    return s;
+}
+";
+        let c = compose(&library(), &ShaderSource::new("refract.wgsl", refract)).unwrap();
+        assert!(c.reads_scene_color);
+        assert!(c.reads_scene_depth, "scene_depth_at reads the depth");
         // A mention in a comment is not a call.
         let commented = "// scene_depth(in.frag_coord) later\n\
                          fn surface(in: SurfaceInput, p: MaterialParams) -> Surface {\n    \

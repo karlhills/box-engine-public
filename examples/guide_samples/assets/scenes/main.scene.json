@@ -23,7 +23,9 @@
       "bloom": {
         "enabled": true,
         "intensity": 0.025,
-        "scatter": 0.7
+        "scatter": 0.7,
+        "threshold": 0.0,
+        "knee": 0.5
       },
       "color_grading": {
         "temperature": 0.0,
@@ -134,7 +136,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, 0.0, 0.0],
@@ -235,7 +241,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, 0.92, 4.0],
@@ -325,7 +335,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, 1.0, 2.0],
@@ -391,7 +405,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, 1.0, 0.0],
@@ -455,7 +473,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, 1.0, -2.0],
@@ -519,7 +541,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, 1.0, -14.0],
@@ -577,7 +603,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-3.0, 1.0, -2.0],
@@ -641,7 +671,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [3.0, 0.5, 2.0],
@@ -711,7 +745,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [4.0, 0.5, -3.0],
@@ -1007,7 +1045,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [2.0, 0.5, 4.0],
@@ -1075,6 +1117,86 @@
         },
         "Transform": {
           "translation": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "uid": "6a1d0000-0000-4000-8000-00000000001a",
+      "name": "Altar",
+      "parent": null,
+      "components": {
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 1.2,
+          "offset": [0.0, 0.42, 0.0],
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "offerings",
+                "amount": 1.0
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0
+        },
+        "Primitive": {
+          "shape": {
+            "Cylinder": {
+              "radius": 0.3,
+              "height": 0.2,
+              "segments": 32
+            }
+          },
+          "cast_shadows": true
+        },
+        "Script": {
+          "source": {
+            "id": "fb26ccc3-a84a-49a3-8b99-1753b4ab12de",
+            "path": "scripts/altar.luau"
+          },
+          "properties": []
+        },
+        "StandardMaterial": {
+          "base_color": [0.5, 0.45, 0.4, 1.0],
+          "roughness": 0.8,
+          "metallic": 0.0,
+          "emissive": [0.0, 0.0, 0.0, 1.0],
+          "base_color_texture": null,
+          "normal_texture": null,
+          "orm_texture": null,
+          "emissive_texture": null,
+          "alpha_mode": "Opaque",
+          "double_sided": false,
+          "depth_fade": 0.0,
+          "wind": {
+            "strength": 0.0,
+            "frequency": 1.2,
+            "weight": {
+              "HeightRamp": {
+                "bottom": 0.0,
+                "top": 1.0
+              }
+            }
+          },
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
+        },
+        "Transform": {
+          "translation": [0.0, 0.5, 1.0],
           "rotation": [0.0, 0.0, 0.0, 1.0],
           "scale": [1.0, 1.0, 1.0]
         }

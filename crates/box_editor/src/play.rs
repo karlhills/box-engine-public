@@ -371,6 +371,8 @@ pub(crate) struct PlayMode {
     assets: AssetForwarder,
     /// Values to apply to the edit scene on Stop ("Keep after Stop").
     kept: Vec<Kept>,
+    /// Save the scene at Stop (an agent applied edits with `save`).
+    pub(crate) save_on_stop: bool,
 }
 
 /// A play-world value marked "Keep after Stop": the field (or whole
@@ -391,6 +393,23 @@ impl PlayMode {
     /// Undo steps of the parked edit world.
     pub(crate) fn edit_undo_len(&self) -> usize {
         self.parked.edits.undo_len()
+    }
+
+    /// Apply edit commands to the parked edit world (undoable there after
+    /// Stop), for agent edits that must outlive the Play session.
+    pub(crate) fn apply_to_edit_world(
+        &mut self,
+        commands: &[box_core::edit::Command],
+        label: &str,
+    ) -> Result<serde_json::Value, box_engine::control::ControlError> {
+        self.parked.edits.commit();
+        box_engine::control::apply_to_world(
+            &mut self.parked.world,
+            &mut self.parked.edits,
+            commands,
+            false,
+            label,
+        )
     }
 }
 
@@ -540,6 +559,7 @@ impl EditorState {
             free_camera: false,
             assets,
             kept: Vec::new(),
+            save_on_stop: false,
         });
         Ok(())
     }
@@ -670,6 +690,7 @@ impl EditorState {
         };
         let frames = mode.session.frames();
         let autosave = mode.autosave.clone();
+        let save = mode.save_on_stop;
         // Read the kept values while the play world is still here.
         let kept: Vec<(Kept, box_core::reflect::Value)> = mode
             .kept
@@ -701,10 +722,13 @@ impl EditorState {
         if let Some(p) = autosave.filter(|p| Some(p) != self.recovery_path().as_ref()) {
             let _ = std::fs::remove_file(p);
         }
-        if unchanged {
+        if unchanged && !save {
             tracing::info!("Stop after {frames} frames; the edit scene is unchanged");
         } else {
             tracing::info!("Stop after {frames} frames");
+        }
+        if save && let Err(e) = self.save_scene() {
+            tracing::error!("saving the agent's edits at Stop failed: {e:#}");
         }
     }
 

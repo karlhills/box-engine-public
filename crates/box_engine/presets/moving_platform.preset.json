@@ -1,0 +1,18 @@
+{
+  "name": "moving_platform",
+  "title": "Moving Platform",
+  "category": "Gameplay",
+  "description": "A platform that slides back and forth between two points and carries the player standing on it. Edit Mover.points to change its path.",
+  "entities": [
+    {
+      "name": "Moving Platform",
+      "components": {
+        "Transform": { "translation": [0.0, 0.5, 0.0] },
+        "Primitive": { "shape": { "Cuboid": { "size": [3.0, 0.5, 3.0] } } },
+        "StandardMaterial": { "base_color": [0.36, 0.52, 0.62, 1.0], "roughness": 0.7 },
+        "Collider": { "shape": "Primitive" },
+        "Mover": { "points": [[0.0, 0.0, 0.0], [6.0, 0.0, 0.0]], "speed": 2.0, "mode": "PingPong", "wait": 0.8 }
+      }
+    }
+  ]
+}

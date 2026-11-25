@@ -1,0 +1,169 @@
+[
+  {
+    "op": "spawn",
+    "uid": "eb000000-0000-4000-8000-000000000001",
+    "name": "Brazier",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "MeshAsset": {
+        "mesh": "models/props.glb#Mesh/Brazier",
+        "materials": [
+          "materials/ash.material.json",
+          "models/props.glb#Material/Iron",
+          "models/props.glb#Material/Stone"
+        ]
+      },
+      "Collider": {
+        "shape": {
+          "Cylinder": {
+            "radius": 0.55,
+            "height": 1.3
+          }
+        },
+        "offset": [
+          0,
+          0.65,
+          0
+        ]
+      }
+    }
+  },
+  {
+    "op": "spawn",
+    "uid": "eb000000-0000-4000-8000-000000000002",
+    "name": "Flame",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          1.3,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "ParticleEmitter": {
+        "playing": false,
+        "looping": true,
+        "rate": 40,
+        "max_particles": 96,
+        "lifetime": [
+          0.5,
+          0.9
+        ],
+        "speed": [
+          0.6,
+          1.4
+        ],
+        "direction": [
+          0,
+          1,
+          0
+        ],
+        "cone_angle": 0.35,
+        "spawn_radius": 0.25,
+        "gravity": [
+          0,
+          1.5,
+          0
+        ],
+        "size": [
+          {
+            "t": 0,
+            "value": 0.35
+          },
+          {
+            "t": 1,
+            "value": 0.05
+          }
+        ],
+        "color": [
+          {
+            "t": 0,
+            "color": [
+              1.0,
+              0.7,
+              0.25,
+              1.0
+            ]
+          },
+          {
+            "t": 1,
+            "color": [
+              0.9,
+              0.15,
+              0.02,
+              0.0
+            ]
+          }
+        ],
+        "intensity": 6,
+        "blend": "Additive"
+      }
+    },
+    "parent": "eb000000-0000-4000-8000-000000000001"
+  },
+  {
+    "op": "spawn",
+    "uid": "eb000000-0000-4000-8000-000000000003",
+    "name": "Glow",
+    "components": {
+      "Transform": {
+        "translation": [
+          0,
+          1.8,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "PointLight": {
+        "color": [
+          1.0,
+          0.5,
+          0.18,
+          1.0
+        ],
+        "intensity": 0.0,
+        "range": 9.0,
+        "shadows": false
+      }
+    },
+    "parent": "eb000000-0000-4000-8000-000000000001"
+  }
+]

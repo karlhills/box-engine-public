@@ -1092,3 +1092,53 @@ fn scoped_rules_get_no_random_numbers_and_bad_scopes_are_errors() {
         "{msg}"
     );
 }
+
+#[test]
+fn a_rule_builds_custom_profile_sweeps_and_lathes() {
+    let src = r#"
+local R = {}
+R.scope = "intent"
+function R.rule(intents, out)
+    for _, it in intents do
+        out:part(it, "path", {
+            Spline = { points = { { position = vector.create(0, 0, 0) }, { position = vector.create(4, 1, 0) } }, mode = "Polyline" },
+            Sweep = { profile = { Custom = { points = { {-1, 0}, {-0.8, 0.1}, {0.8, 0.1}, {1, 0} }, closed = false } } },
+        })
+        out:part(it, "urn", {
+            Lathe = { shape = { Custom = { profile = { {0, 0}, {0.4, 0}, {0.5, 0.6}, {0, 0.8} }, closed = false } } },
+        }, { position = vector.create(0, 0, 3) })
+    end
+end
+return R
+"#;
+    let p = Project::new("rules_profiles", &[("rules/profiles.luau", src)]);
+    let mut ed = Edit::new(&p);
+    let e = spawn_intent(ed.world(), "I", ScriptIntent::new("rules/profiles.luau"));
+    let meshed = |w: &World| {
+        let parts = parts_of(w, e);
+        parts.len() == 2
+            && parts
+                .iter()
+                .all(|(p, _)| w.get::<ProcState>(*p).is_some_and(|s| s.mesh().is_some()))
+    };
+    assert!(ed.until(meshed), "warnings: {:?}", warnings(ed.world(), e));
+    assert!(
+        warnings(ed.world(), e).is_empty(),
+        "{:?}",
+        warnings(ed.world(), e)
+    );
+    let w = ed.world();
+    for (part, d) in parts_of(w, e) {
+        let mesh = w.get::<ProcState>(part).unwrap().mesh().unwrap();
+        let bounds = w.resource::<Assets<MeshData>>().get(mesh).unwrap().bounds();
+        match d.key.role() {
+            // The custom outline is 2 m across the path, 0.1 m high.
+            "path" => assert!(
+                (bounds.max.z - bounds.min.z - 2.0).abs() < 0.05,
+                "{bounds:?}"
+            ),
+            "urn" => assert!((bounds.max.y - 0.8).abs() < 0.01, "{bounds:?}"),
+            other => panic!("unexpected part {other}"),
+        }
+    }
+}

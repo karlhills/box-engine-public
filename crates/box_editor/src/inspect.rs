@@ -56,6 +56,8 @@ pub enum FieldKind {
     List {
         len: usize,
     },
+    /// A reference to a saved entity (`Option<Uid>`), picked by name.
+    Entity,
     /// Shown read-only (maps, arrays, opaque types).
     ReadOnly(String),
 }
@@ -496,7 +498,13 @@ fn children(
                     .name_at(i)
                     .map(str::to_owned)
                     .unwrap_or_else(|| i.to_string());
-                walk(registry, &format!("{path}.{name}"), &name, f, depth, out);
+                // A one-field tuple variant (`Child("Flame")`) labels its
+                // field with the variant's name instead of `0`.
+                let label = match e.name_at(i) {
+                    None if e.field_len() == 1 => e.variant_name().to_owned(),
+                    _ => name.clone(),
+                };
+                walk(registry, &format!("{path}.{name}"), &label, f, depth, out);
             }
         }
         _ => {}
@@ -575,6 +583,8 @@ fn leaf_kind(v: &dyn PartialReflect) -> Option<FieldKind> {
             signed: true,
             bits: 64,
         }
+    } else if is!(Option<Uid>) {
+        FieldKind::Entity
     } else if is!(Uid) {
         FieldKind::ReadOnly(
             v.try_downcast_ref::<Uid>()
@@ -918,11 +928,11 @@ pub fn component_category(name: &str) -> ComponentCategory {
             ComponentCategory::Lights
         }
         "MeshAsset" | "PrefabInstance" => ComponentCategory::AssetsPrefabs,
-        "Script" => ComponentCategory::Gameplay,
+        "Script" | "Interactable" | "Interactor" => ComponentCategory::Gameplay,
         n if box_engine::shared_engine_registry().component(n).is_none() => {
             ComponentCategory::Gameplay
         }
-        n if n.contains("Collider") || n.contains("Body") || n.contains("Joint") => {
+        n if n.contains("Collid") || n.contains("Body") || n.contains("Joint") => {
             ComponentCategory::Physics
         }
         _ => ComponentCategory::Other,

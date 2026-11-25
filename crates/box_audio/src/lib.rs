@@ -11,6 +11,11 @@
 //!   active camera, through [`AudioPlugin::with_default_listener`]).
 //! - [`AudioSettings`]: master and bus volumes, a project settings resource.
 //! - [`Audio`]: the resource holding the output and the playing voices.
+//! - Mixer: each voice's level at the listener ([`VoiceInfo::level`],
+//!   measured on kira's audio thread, any output but silent), its distance,
+//!   attenuation and pan ([`VoiceInfo::spatial`]), and runtime solo and
+//!   mute of entities (with the sources below them), buses and clips
+//!   ([`Audio::solo`], [`Audio::mute`], [`MixTarget`]).
 //! - [`AudioOutput`]: device, silent or capture (tests). Nothing opens a
 //!   device unless the process called [`enable_device_output`] (windowed
 //!   runs do); a missing device logs one warning and plays silently.
@@ -29,12 +34,14 @@
 mod audio;
 mod clip;
 mod components;
+mod meter;
 mod output;
 pub mod wav;
 
 pub use audio::{Audio, OutputKind, PENDING_TIMEOUT, VoiceInfo, VoiceState, update_audio};
 pub use clip::{AudioClip, AudioImportSettings, AudioImporter, STREAM_AUTO_SECONDS, StreamMode};
 pub use components::{AudioBus, AudioListener, AudioSettings, AudioSource, PlaySound};
+pub use meter::{Mix, MixTarget, Spatial, VoiceLevel, amplitude_db, spatial};
 pub use output::{AudioOutput, OutputLevels, device_output_enabled, enable_device_output};
 
 use box_assets::AssetServer;

@@ -265,6 +265,102 @@ pub fn orbit_camera_system(world: &mut World) {
     }
 }
 
+/// A camera pose given as an eye position and a point to look at, with an
+/// optional vertical field of view in degrees: what agent tools take
+/// (`box render --eye/--look-at`, `--views`, the MCP `screenshot` tool), so
+/// a view is chosen without editing the scene.
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CameraPose {
+    /// Where the camera is, in metres.
+    pub eye: [f32; 3],
+    /// The point it looks at.
+    pub look_at: [f32; 3],
+    /// Vertical field of view in degrees (default: the `Camera` default).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fov: Option<f32>,
+}
+
+impl CameraPose {
+    pub fn new(eye: Vec3, look_at: Vec3) -> Self {
+        Self {
+            eye: eye.to_array(),
+            look_at: look_at.to_array(),
+            fov: None,
+        }
+    }
+
+    /// The camera's transform (+Y up; straight up or down uses -Z as up),
+    /// or an error naming what is wrong with the pose.
+    pub fn transform(&self) -> Result<Transform, String> {
+        let eye = Vec3::from_array(self.eye);
+        let target = Vec3::from_array(self.look_at);
+        if !eye.is_finite() || !target.is_finite() {
+            return Err("eye and look_at must be finite numbers".into());
+        }
+        let dir = target - eye;
+        if dir.length_squared() < 1e-8 {
+            return Err("eye and look_at are the same point".into());
+        }
+        let up = if dir.normalize().y.abs() > 0.999 {
+            Vec3::NEG_Z
+        } else {
+            Vec3::Y
+        };
+        Ok(Transform::from_translation(eye).looking_at(target, up))
+    }
+
+    /// The pose as a renderer view camera (`Renderer::render_to`).
+    pub fn view_camera(&self) -> Result<box_render::ViewCamera, String> {
+        Ok(box_render::ViewCamera::new(
+            &self.transform()?,
+            self.camera()?,
+        ))
+    }
+
+    /// A camera with this pose's field of view, active.
+    pub fn camera(&self) -> Result<Camera, String> {
+        let mut camera = Camera::default();
+        if let Some(fov) = self.fov {
+            if !(1.0..=170.0).contains(&fov) {
+                return Err(format!("fov {fov} is outside 1..170 degrees"));
+            }
+            camera.fov_y = fov.to_radians();
+        }
+        camera.active = true;
+        Ok(camera)
+    }
+}
+
+/// A camera transform that frames `bounds` from above at an angle (about
+/// 55 degrees down, from the south-east): the overview of a level or a
+/// village, so its layout reads in one image.
+pub fn overview_transform(bounds: &Aabb, fov_y: f32, aspect: f32) -> Transform {
+    let center = bounds.center();
+    // Seen from above, height matters less than the ground area.
+    let h = bounds.half_extents();
+    let radius = Vec3::new(h.x, h.y * 0.5, h.z).length().max(0.01);
+    let half_v = (fov_y * 0.5).clamp(0.01, 1.5);
+    let half_h = (half_v.tan() * aspect.max(0.01)).atan();
+    let distance = radius / half_v.min(half_h).sin() * 0.95;
+    let direction = Vec3::new(0.35, 0.82, 0.45).normalize();
+    Transform::from_translation(center + direction * distance).looking_at(center, Vec3::Y)
+}
+
+/// Parses `"x,y,z"` (spaces allowed) into a point.
+pub fn parse_point(text: &str) -> Result<Vec3, String> {
+    let parts: Vec<&str> = text.split(',').map(str::trim).collect();
+    if parts.len() != 3 {
+        return Err(format!("`{text}`: expected x,y,z"));
+    }
+    let mut v = [0.0f32; 3];
+    for (out, part) in v.iter_mut().zip(&parts) {
+        *out = part
+            .parse()
+            .map_err(|_| format!("`{text}`: `{part}` is not a number"))?;
+    }
+    Ok(Vec3::from_array(v))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

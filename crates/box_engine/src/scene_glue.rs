@@ -42,12 +42,19 @@ pub fn engine_registry() -> Registry {
     let mut registry = Registry::with_core_types();
     register_render_types(&mut registry);
     box_proc::register_proc_types(&mut registry);
+    crate::interact::register_interact_types(&mut registry);
+    crate::behaviours::register_behaviour_types(&mut registry);
     #[cfg(feature = "physics")]
-    box_physics::register_physics_types(&mut registry);
+    {
+        box_physics::register_physics_types(&mut registry);
+        crate::behaviours::register_player_types(&mut registry);
+    }
     #[cfg(feature = "audio")]
     box_audio::register_audio_types(&mut registry);
     #[cfg(feature = "script")]
     box_script::register_script_types(&mut registry);
+    #[cfg(feature = "navigation")]
+    crate::nav_glue::register_navigation_types(&mut registry);
     registry
 }
 
@@ -60,6 +67,8 @@ pub fn engine_registry_for(features: &[&str]) -> Registry {
     let mut registry = Registry::with_core_types();
     register_render_types(&mut registry);
     box_proc::register_proc_types(&mut registry);
+    crate::interact::register_interact_types(&mut registry);
+    crate::behaviours::register_behaviour_types(&mut registry);
     #[cfg(feature = "physics")]
     if features.contains(&"physics") {
         if features.contains(&"dynamics") {
@@ -67,6 +76,7 @@ pub fn engine_registry_for(features: &[&str]) -> Registry {
         } else {
             box_physics::register_query_types(&mut registry);
         }
+        crate::behaviours::register_player_types(&mut registry);
     }
     #[cfg(feature = "audio")]
     if features.contains(&"audio") {
@@ -75,6 +85,10 @@ pub fn engine_registry_for(features: &[&str]) -> Registry {
     #[cfg(feature = "script")]
     if features.contains(&"script") {
         box_script::register_script_types(&mut registry);
+    }
+    #[cfg(feature = "navigation")]
+    if features.contains(&"navigation") {
+        crate::nav_glue::register_navigation_types(&mut registry);
     }
     let _ = features;
     registry
@@ -242,6 +256,8 @@ impl SceneMaterial {
 /// mesh and the material asset built for it.
 pub fn sync_scene_meshes(world: &mut World) {
     crate::asset_glue::sync_assets(world);
+    // The ground before the rules, so rules and followers see its heights.
+    crate::terrain_glue::update_ground(world);
     // Rules first, so parts they spawn or change generate this frame. A
     // no-op without a `RuleRegistry`, and cheap when no intent changed (the
     // app's own rules system then finds nothing to do).
@@ -489,6 +505,51 @@ pub fn scene_bounds(world: &World) -> Option<Aabb> {
         bounds = Some(match bounds {
             Some(acc) => acc.including(b.min).including(b.max),
             None => b,
+        });
+    }
+    bounds
+}
+
+/// Like [`scene_bounds`], but around where most objects are: the box of
+/// the 5th to 95th percentile of object centres on X and Z (plus a 15%
+/// margin), with every object clipped to it. Far backdrops (hills, a sky
+/// dome) and a ground plane much larger than the content do not widen it,
+/// so an overview of a village shows the village. Scenes with fewer than
+/// 10 meshes use [`scene_bounds`].
+pub fn content_bounds(world: &World) -> Option<Aabb> {
+    let meshes = world.get_resource::<Assets<MeshData>>()?;
+    let boxes: Vec<Aabb> = world
+        .query::<(&GlobalTransform, &MeshRenderer)>()
+        .iter()
+        .filter_map(|(gt, mr)| {
+            let mesh = meshes.get(mr.mesh)?;
+            (!mesh.positions.is_empty()).then(|| mesh.bounds().transformed(&gt.0))
+        })
+        .filter(|b| b.min.is_finite() && b.max.is_finite())
+        .collect();
+    if boxes.len() < 10 {
+        return scene_bounds(world);
+    }
+    let percentile = |axis: usize, q: f32| {
+        let mut v: Vec<f32> = boxes.iter().map(|b| b.center()[axis]).collect();
+        v.sort_by(f32::total_cmp);
+        v[((v.len() - 1) as f32 * q).round() as usize]
+    };
+    let (x0, x1) = (percentile(0, 0.05), percentile(0, 0.95));
+    let (z0, z1) = (percentile(2, 0.05), percentile(2, 0.95));
+    let margin = ((x1 - x0).max(z1 - z0) * 0.15).max(1.0);
+    let lo = Vec3::new(x0 - margin, f32::MIN, z0 - margin);
+    let hi = Vec3::new(x1 + margin, f32::MAX, z1 + margin);
+    let mut bounds: Option<Aabb> = None;
+    for b in &boxes {
+        let c = b.center();
+        if c.x < lo.x || c.x > hi.x || c.z < lo.z || c.z > hi.z {
+            continue;
+        }
+        let clipped = Aabb::new(b.min.max(lo), b.max.min(hi));
+        bounds = Some(match bounds {
+            Some(acc) => acc.including(clipped.min).including(clipped.max),
+            None => clipped,
         });
     }
     bounds

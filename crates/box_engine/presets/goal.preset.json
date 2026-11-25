@@ -1,0 +1,27 @@
+{
+  "name": "goal",
+  "title": "Goal",
+  "category": "Gameplay",
+  "description": "A glowing pad that wins the game when the player steps on it. Add a GroupDone condition to `requires` to make it wait until every pickup is collected.",
+  "entities": [
+    {
+      "name": "Goal",
+      "components": {
+        "Transform": { "translation": [0.0, 0.05, 0.0] },
+        "Primitive": { "shape": { "Cylinder": { "radius": 1.2, "height": 0.1, "segments": 32 } } },
+        "StandardMaterial": { "base_color": [0.2, 0.9, 0.45, 1.0], "roughness": 0.4, "emissive": [0.1, 0.6, 0.25, 1.0] },
+        "Collider": { "shape": "Primitive" },
+        "Interactable": {
+          "trigger": "Touch",
+          "radius": 1.3,
+          "offset": [0.0, 0.9, 0.0],
+          "actions": [
+            { "Burst": { "style": "Sparkle", "count": 60 } },
+            "Win"
+          ]
+        }
+      }
+    },
+    { "name": "Beacon", "parent": "Goal", "components": { "Transform": { "translation": [0.0, 1.6, 0.0] }, "Primitive": { "shape": { "Sphere": { "radius": 0.25 } }, "cast_shadows": false }, "StandardMaterial": { "base_color": [0.3, 1.0, 0.55, 1.0], "emissive": [0.6, 2.0, 1.0, 1.0] }, "Spinner": {}, "Bobber": { "height": 0.2 } } }
+  ]
+}

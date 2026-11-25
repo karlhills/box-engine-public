@@ -23,7 +23,9 @@
       "bloom": {
         "enabled": true,
         "intensity": 0.025,
-        "scatter": 0.7
+        "scatter": 0.7,
+        "threshold": 0.0,
+        "knee": 0.5
       },
       "color_grading": {
         "temperature": 0.0,
@@ -82,6 +84,34 @@
         "gust_length": 17.0,
         "gust_speed": 3.0
       }
+    },
+    "GameRules": {
+      "win": [
+        {
+          "GroupDone": {
+            "group": "pickups"
+          }
+        }
+      ],
+      "lose": [],
+      "time_limit": 0.0,
+      "lives": 0,
+      "menus": true,
+      "next_scene": "",
+      "win_title": "All collected!",
+      "lose_title": "Game over"
+    },
+    "HudSettings": {
+      "enabled": true,
+      "vars": [
+        {
+          "var": "score",
+          "label": "Score"
+        }
+      ],
+      "groups": true,
+      "lives": true,
+      "timer": true
     }
   },
   "entities": [
@@ -147,7 +177,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, -0.25, 0.0],
@@ -200,7 +234,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [4.0, 0.4, -1.0],
@@ -253,7 +291,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [7.5, 0.9, -4.5],
@@ -306,7 +348,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [4.0, 1.4, -8.5],
@@ -359,7 +405,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-5.0, 0.5, -3.0],
@@ -412,7 +462,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-6.0, 0.6, 3.0],
@@ -467,7 +521,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-3.0, 1.5, -8.0],
@@ -510,25 +568,15 @@
           "step_height": 0.3,
           "mass": 80.0
         },
-        "Script": {
-          "source": {
-            "id": "676b0f8b-1665-4d92-8446-e3e2f7649078",
-            "path": "scripts/player.luau"
-          },
-          "properties": [
-            {
-              "name": "camera",
-              "value": {
-                "Entity": "7e3a0000-0000-4000-8000-00000000000b"
-              }
-            },
-            {
-              "name": "body",
-              "value": {
-                "Entity": "7e3a0000-0000-4000-8000-00000000000a"
-              }
-            }
-          ]
+        "PlayerController": {
+          "enabled": true,
+          "speed": 6.0,
+          "run_speed": 10.0,
+          "jump": true,
+          "turn_rate": 12.0,
+          "fall_limit": -20.0,
+          "camera": "7e3a0000-0000-4000-8000-00000000000b",
+          "body": "7e3a0000-0000-4000-8000-00000000000a"
         },
         "Transform": {
           "translation": [0.0, 0.92, 4.0],
@@ -578,19 +626,17 @@
           "near": 0.1,
           "active": true
         },
-        "Script": {
-          "source": {
-            "id": "660d1a75-0314-4a13-adea-4a9f2a881d9c",
-            "path": "scripts/camera.luau"
-          },
-          "properties": [
-            {
-              "name": "target",
-              "value": {
-                "Entity": "7e3a0000-0000-4000-8000-000000000009"
-              }
-            }
-          ]
+        "FollowCamera": {
+          "enabled": true,
+          "target": "7e3a0000-0000-4000-8000-000000000009",
+          "mode": "Orbit",
+          "distance": 7.0,
+          "height": 1.2,
+          "pitch": 0.35,
+          "smoothing": 10.0,
+          "look_speed": 2.5,
+          "mouse_sensitivity": 0.004,
+          "capture_mouse": true
         },
         "Transform": {
           "translation": [0.0, 4.5203, 10.5756],
@@ -600,41 +646,59 @@
       }
     },
     {
-      "uid": "7e3a0000-0000-4000-8000-00000000000c",
-      "name": "HUD",
-      "parent": null,
-      "components": {
-        "Script": {
-          "source": {
-            "id": "09fed29e-fbc5-4957-9dac-3b0d23c94f9a",
-            "path": "scripts/hud.luau"
-          },
-          "properties": []
-        },
-        "Transform": {
-          "translation": [0.0, 0.0, 0.0],
-          "rotation": [0.0, 0.0, 0.0, 1.0],
-          "scale": [1.0, 1.0, 1.0]
-        }
-      }
-    },
-    {
       "uid": "7e3a0000-0000-4000-8000-00000000000d",
       "name": "Pickup 1",
       "parent": null,
       "components": {
-        "Collider": {
-          "shape": {
-            "Sphere": {
-              "radius": 0.5
-            }
-          },
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.14
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
           "offset": [0.0, 0.0, 0.0],
-          "is_trigger": true,
-          "layers": 4,
-          "mask": 2,
-          "friction": 0.5,
-          "restitution": 0.0
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "PlaySound": {
+                "clip": {
+                  "id": "53ef55aa-f013-4f59-aae2-924e8ed18074",
+                  "path": "audio/pickup.wav"
+                },
+                "volume": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
         },
         "Primitive": {
           "shape": {
@@ -644,12 +708,10 @@
           },
           "cast_shadows": true
         },
-        "Script": {
-          "source": {
-            "id": "93233cda-0495-4a12-a678-be56b9ebabcb",
-            "path": "scripts/pickup.luau"
-          },
-          "properties": []
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.0
         },
         "StandardMaterial": {
           "base_color": [1.0, 0.36, 0.01, 1.0],
@@ -673,7 +735,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [0.0, 0.9, -3.0],
@@ -687,18 +753,55 @@
       "name": "Pickup 2",
       "parent": null,
       "components": {
-        "Collider": {
-          "shape": {
-            "Sphere": {
-              "radius": 0.5
-            }
-          },
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.14
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
           "offset": [0.0, 0.0, 0.0],
-          "is_trigger": true,
-          "layers": 4,
-          "mask": 2,
-          "friction": 0.5,
-          "restitution": 0.0
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "PlaySound": {
+                "clip": {
+                  "id": "53ef55aa-f013-4f59-aae2-924e8ed18074",
+                  "path": "audio/pickup.wav"
+                },
+                "volume": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
         },
         "Primitive": {
           "shape": {
@@ -708,12 +811,10 @@
           },
           "cast_shadows": true
         },
-        "Script": {
-          "source": {
-            "id": "93233cda-0495-4a12-a678-be56b9ebabcb",
-            "path": "scripts/pickup.luau"
-          },
-          "properties": []
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.0
         },
         "StandardMaterial": {
           "base_color": [1.0, 0.36, 0.01, 1.0],
@@ -737,7 +838,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [-6.0, 1.9, 3.0],
@@ -751,18 +856,55 @@
       "name": "Pickup 3",
       "parent": null,
       "components": {
-        "Collider": {
-          "shape": {
-            "Sphere": {
-              "radius": 0.5
-            }
-          },
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.14
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
           "offset": [0.0, 0.0, 0.0],
-          "is_trigger": true,
-          "layers": 4,
-          "mask": 2,
-          "friction": 0.5,
-          "restitution": 0.0
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "PlaySound": {
+                "clip": {
+                  "id": "53ef55aa-f013-4f59-aae2-924e8ed18074",
+                  "path": "audio/pickup.wav"
+                },
+                "volume": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
         },
         "Primitive": {
           "shape": {
@@ -772,12 +914,10 @@
           },
           "cast_shadows": true
         },
-        "Script": {
-          "source": {
-            "id": "93233cda-0495-4a12-a678-be56b9ebabcb",
-            "path": "scripts/pickup.luau"
-          },
-          "properties": []
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.0
         },
         "StandardMaterial": {
           "base_color": [1.0, 0.36, 0.01, 1.0],
@@ -801,7 +941,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [4.0, 1.7, -1.0],
@@ -815,18 +959,55 @@
       "name": "Pickup 4",
       "parent": null,
       "components": {
-        "Collider": {
-          "shape": {
-            "Sphere": {
-              "radius": 0.5
-            }
-          },
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.14
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
           "offset": [0.0, 0.0, 0.0],
-          "is_trigger": true,
-          "layers": 4,
-          "mask": 2,
-          "friction": 0.5,
-          "restitution": 0.0
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "PlaySound": {
+                "clip": {
+                  "id": "53ef55aa-f013-4f59-aae2-924e8ed18074",
+                  "path": "audio/pickup.wav"
+                },
+                "volume": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
         },
         "Primitive": {
           "shape": {
@@ -836,12 +1017,10 @@
           },
           "cast_shadows": true
         },
-        "Script": {
-          "source": {
-            "id": "93233cda-0495-4a12-a678-be56b9ebabcb",
-            "path": "scripts/pickup.luau"
-          },
-          "properties": []
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.0
         },
         "StandardMaterial": {
           "base_color": [1.0, 0.36, 0.01, 1.0],
@@ -865,7 +1044,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [7.5, 2.7, -4.5],
@@ -879,18 +1062,55 @@
       "name": "Pickup 5",
       "parent": null,
       "components": {
-        "Collider": {
-          "shape": {
-            "Sphere": {
-              "radius": 0.5
-            }
-          },
+        "Bobber": {
+          "enabled": true,
+          "height": 0.15,
+          "period": 3.14
+        },
+        "Interactable": {
+          "enabled": true,
+          "trigger": "Touch",
+          "action": "interact",
+          "radius": 0.9,
           "offset": [0.0, 0.0, 0.0],
-          "is_trigger": true,
-          "layers": 4,
-          "mask": 2,
-          "friction": 0.5,
-          "restitution": 0.0
+          "prompt": "Use",
+          "prompt_key": "",
+          "blocked_prompt": "",
+          "blocked_prompt_key": "",
+          "requires": [],
+          "actions": [
+            {
+              "AddVar": {
+                "var": "score",
+                "amount": 1.0
+              }
+            },
+            {
+              "PlaySound": {
+                "clip": {
+                  "id": "53ef55aa-f013-4f59-aae2-924e8ed18074",
+                  "path": "audio/pickup.wav"
+                },
+                "volume": 1.0
+              }
+            },
+            {
+              "Burst": {
+                "style": "Sparkle",
+                "count": 24
+              }
+            },
+            {
+              "Hide": {
+                "target": "This",
+                "collide": true
+              }
+            }
+          ],
+          "once": true,
+          "cooldown": 0.25,
+          "uses": 0,
+          "group": "pickups"
         },
         "Primitive": {
           "shape": {
@@ -900,12 +1120,10 @@
           },
           "cast_shadows": true
         },
-        "Script": {
-          "source": {
-            "id": "93233cda-0495-4a12-a678-be56b9ebabcb",
-            "path": "scripts/pickup.luau"
-          },
-          "properties": []
+        "Spinner": {
+          "enabled": true,
+          "axis": [0.0, 1.0, 0.0],
+          "speed": 2.0
         },
         "StandardMaterial": {
           "base_color": [1.0, 0.36, 0.01, 1.0],
@@ -929,7 +1147,11 @@
               }
             }
           },
-          "uv_scale": [1.0, 1.0]
+          "uv_scale": [1.0, 1.0],
+          "sort_bias": 0,
+          "depth_write": "Auto",
+          "depth_test": true,
+          "prewrite_depth": false
         },
         "Transform": {
           "translation": [4.0, 3.7, -8.5],

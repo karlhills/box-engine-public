@@ -29,6 +29,11 @@ pub struct MeshData {
     pub uvs: Vec<Vec<Vec2>>,
     /// Linear RGBA vertex colours.
     pub colors: Vec<[f32; 4]>,
+    /// Up to two sets of four free numbers per vertex for material shaders
+    /// (`custom0` and `custom1` of `VertexInput` and `SurfaceInput`): growth
+    /// stamps, flow directions, wetness. The engine uploads them unchanged
+    /// (zero where a mesh has none) and never reads them.
+    pub custom: Vec<Vec<Vec4>>,
     /// Reserved for skinning (M7).
     pub joints: Vec<[u16; 4]>,
     /// Reserved for skinning (M7).
@@ -47,6 +52,7 @@ pub enum MeshError {
         actual: usize,
     },
     TooManyUvSets(usize),
+    TooManyCustomSets(usize),
     IndexCountNotMultipleOfThree(usize),
     IndexOutOfRange {
         index: u32,
@@ -64,6 +70,7 @@ impl std::error::Error for MeshError {}
 
 impl MeshData {
     pub const MAX_UV_SETS: usize = 4;
+    pub const MAX_CUSTOM_SETS: usize = 2;
 
     pub fn vertex_count(&self) -> usize {
         self.positions.len()
@@ -100,6 +107,12 @@ impl MeshData {
         }
         for uv in &self.uvs {
             check("uvs", uv.len(), false)?;
+        }
+        if self.custom.len() > Self::MAX_CUSTOM_SETS {
+            return Err(MeshError::TooManyCustomSets(self.custom.len()));
+        }
+        for set in &self.custom {
+            check("custom", set.len(), false)?;
         }
         if !self.indices.len().is_multiple_of(3) {
             return Err(MeshError::IndexCountNotMultipleOfThree(self.indices.len()));
@@ -388,6 +401,24 @@ mod tests {
             let n = m.normals[t[0] as usize] + m.normals[t[1] as usize] + m.normals[t[2] as usize];
             assert!(geo.dot(n) > 0.0, "inward-facing triangle {t:?}");
         }
+    }
+
+    #[test]
+    fn custom_sets_are_validated() {
+        let mut m = MeshData::plane(1.0, 1.0);
+        m.custom = vec![vec![Vec4::ONE; m.vertex_count()]; 2];
+        m.validate().unwrap();
+        m.custom.push(vec![Vec4::ONE; m.vertex_count()]);
+        assert_eq!(m.validate(), Err(MeshError::TooManyCustomSets(3)));
+        m.custom.truncate(1);
+        m.custom[0].pop();
+        assert!(matches!(
+            m.validate(),
+            Err(MeshError::ChannelLength {
+                channel: "custom",
+                ..
+            })
+        ));
     }
 
     #[test]

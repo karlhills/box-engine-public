@@ -466,6 +466,24 @@ impl Project {
 /// Write a new project's files into `root`, the project file last and
 /// atomically, recording each created file in `created` so a failure can be
 /// undone.
+/// The agent guide written into new projects (`AGENTS.md`).
+pub const AGENT_GUIDE: &str = include_str!("project_agents.md");
+
+/// The agent guide files a new project gets, for those it does not have:
+/// `AGENTS.md`, and `CLAUDE.md` pointing to it.
+pub fn agent_guide_files(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+    let mut files = Vec::new();
+    let agents = root.join("AGENTS.md");
+    if !agents.exists() {
+        files.push((agents, AGENT_GUIDE.as_bytes().to_vec()));
+    }
+    let claude = root.join("CLAUDE.md");
+    if !claude.exists() {
+        files.push((claude, b"@AGENTS.md\n".to_vec()));
+    }
+    files
+}
+
 fn write_new_project(
     root: &Path,
     file: &ProjectFile,
@@ -491,6 +509,7 @@ fn write_new_project(
         files.push((gitignore, b".box/\n".to_vec()));
     }
     files.push((project_path, text.into_bytes()));
+    files.extend(agent_guide_files(root));
     for (path, bytes) in files {
         write_atomic(&path, &bytes).map_err(io(&path))?;
         created.push(path);
@@ -619,8 +638,9 @@ pub fn starter_environment() -> Environment {
     }
 }
 
-/// The scene a new project starts with: a 200 m ground plane, a cube, a
-/// sun, a camera framing the cube and the [`starter_environment`].
+/// The scene a new project starts with: a 200 m ground plane (solid, with
+/// the physics module), a cube, a sun, a camera framing the cube and the
+/// [`starter_environment`].
 pub fn starter_scene() -> World {
     let mut w = World::with_registry(shared_engine_registry());
     w.insert_resource(starter_environment());
@@ -647,6 +667,12 @@ pub fn starter_scene() -> World {
                 ..Default::default()
             },
         ),
+    );
+    // Solid, so a player added from Add ▸ Gameplay stands on it.
+    #[cfg(feature = "physics")]
+    let _ = w.insert_one(
+        ground,
+        box_physics::Collider::new(box_physics::ColliderShape::Primitive),
     );
 
     let cube = spawn(&mut w, "Cube");
@@ -721,6 +747,23 @@ mod tests {
             Err(ProjectError::AlreadyExists(_))
         ));
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn new_projects_get_an_agent_guide_but_keep_their_own() {
+        let dir = temp_dir("agents");
+        Project::create(&dir, "Demo").unwrap();
+        let guide = std::fs::read_to_string(dir.join("AGENTS.md")).unwrap();
+        assert!(guide.contains("## Known limits"));
+        assert!(guide.contains("box walk"));
+        assert_eq!(
+            std::fs::read_to_string(dir.join("CLAUDE.md")).unwrap(),
+            "@AGENTS.md\n"
+        );
+        let other = temp_dir("agents_own");
+        std::fs::create_dir_all(&other).unwrap();
+        std::fs::write(other.join("AGENTS.md"), "mine").unwrap();
+        assert_eq!(agent_guide_files(&other).len(), 1, "only CLAUDE.md");
     }
 
     #[test]

@@ -358,7 +358,8 @@ fn welcome_card_and_file_menu_open_the_dialogs() {
 
     d.click(&mut ed, "File");
     d.click(&mut ed, "Open Example…");
-    assert_eq!(chosen_example(&ed).as_deref(), Some("collector_luau"));
+    // The gallery opens on its first example: the no-code First Game.
+    assert_eq!(chosen_example(&ed).as_deref(), Some("first_game"));
     d.click(&mut ed, "Cancel");
 
     d.click(&mut ed, "File");

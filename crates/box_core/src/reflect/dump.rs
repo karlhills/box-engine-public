@@ -160,7 +160,7 @@ impl Registry {
     /// order is declaration order. Settings resources have `"settings": true`
     /// and their `"file"`. Used by `box registry --json` and written to a
     /// native project's `.box/registry.json`. Schema-only types are not
-    /// included.
+    /// included. `"presets"` lists the placeable presets (`add_preset`).
     pub fn to_json(&self) -> Json {
         let components: Vec<Json> = self
             .components()
@@ -196,7 +196,20 @@ impl Registry {
                 )
             })
             .collect();
-        let mut dump = json!({ "components": components, "resources": resources });
+        let presets: Vec<Json> = self
+            .presets()
+            .map(|p| {
+                json!({
+                    "name": p.name,
+                    "title": p.title,
+                    "category": p.category,
+                    "description": p.description,
+                    "entities": p.entities.iter().map(|e| e.name.clone()).collect::<Vec<_>>(),
+                })
+            })
+            .collect();
+        let mut dump =
+            json!({ "components": components, "resources": resources, "presets": presets });
         let renames: Map<String, Json> = self
             .migrations()
             .renames()

@@ -282,14 +282,14 @@ fn undo_and_redo_restore_the_selection_and_toast_readable_labels() {
 #[derive(Reflect, Default, Clone, Debug, PartialEq)]
 #[reflect(Component, Default, Clone)]
 #[type_path = "feedback_test"]
-struct PlayerController {
+struct GuardPatrol {
     speed: f32,
 }
 
 struct GameTypes;
 impl Plugin for GameTypes {
     fn register(&self, registry: &mut box_core::reflect::Registry) {
-        registry.register::<PlayerController>().unwrap();
+        registry.register::<GuardPatrol>().unwrap();
     }
     fn build(&self, _app: &mut App) {}
 }
@@ -306,7 +306,7 @@ fn unknown_components_are_announced_once_and_listed_for_the_inspector() {
         .spawn_saved(
             uid,
             "Player",
-            (Transform::default(), PlayerController { speed: 4.0 }),
+            (Transform::default(), GuardPatrol { speed: 4.0 }),
         )
         .unwrap();
     std::fs::write(project.start_scene_path(), scene::save(&world).unwrap()).unwrap();
@@ -320,14 +320,14 @@ fn unknown_components_are_announced_once_and_listed_for_the_inspector() {
     };
     let mut editor = build_editor(&options, log.clone()).unwrap();
     // The scene loader's own warning about the type is not toasted again.
-    tracing::warn!(target: "box_core::scene", "unknown component `PlayerController` (kept as raw data)");
+    tracing::warn!(target: "box_core::scene", "unknown component `GuardPatrol` (kept as raw data)");
     editor.state.poll_log();
     let warnings: Vec<_> = editor
         .state
         .toasts()
         .items()
         .iter()
-        .filter(|t| t.text.contains("PlayerController"))
+        .filter(|t| t.text.contains("GuardPatrol"))
         .cloned()
         .collect();
     assert_eq!(warnings.len(), 1, "{warnings:?}");
@@ -338,7 +338,7 @@ fn unknown_components_are_announced_once_and_listed_for_the_inspector() {
     let e = editor.state.world.entity_by_uid(uid).unwrap();
     let unknown = feedback::unknown_components(&editor.state.world, e);
     assert_eq!(unknown.len(), 1);
-    assert_eq!(unknown[0].0, "PlayerController");
+    assert_eq!(unknown[0].0, "GuardPatrol");
     assert!(unknown[0].1.contains("\"speed\": 4.0"), "{}", unknown[0].1);
 
     // Opening it again logs to the console but does not toast again.
@@ -350,7 +350,7 @@ fn unknown_components_are_announced_once_and_listed_for_the_inspector() {
         .toasts()
         .items()
         .iter()
-        .filter(|t| t.text.contains("PlayerController"))
+        .filter(|t| t.text.contains("GuardPatrol"))
         .map(|t| t.count)
         .sum::<u32>();
     assert_eq!(n, 1);
@@ -486,7 +486,7 @@ fn feedback_captures() {
         .spawn_saved(
             uid,
             "Player",
-            (Transform::default(), PlayerController { speed: 4.0 }),
+            (Transform::default(), GuardPatrol { speed: 4.0 }),
         )
         .unwrap();
     std::fs::write(project.start_scene_path(), scene::save(&world).unwrap()).unwrap();

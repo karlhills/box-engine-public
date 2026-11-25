@@ -955,3 +955,72 @@ fn script_input_moves_the_character_in_the_same_fixed_step_as_native_input() {
         "{fixed:?}"
     );
 }
+
+#[cfg(feature = "navigation")]
+const NAV: &str = r#"
+local T = {}
+function T.on_start(self)
+    -- The navmesh is baked on a worker: wait for it.
+    wait_until(nav.ready)
+    local p = nav.path(vector.create(-6, 0, -6), vector.create(-6, 0, 6))
+    self.corners = if p then #p else 0
+    self.blocked = not nav.reachable(vector.create(-6, 0, -6), vector.create(30, 0, 30))
+    local c = nav.closest(vector.create(-6, 2, -6))
+    self.closest_y = if c then c.y else 99
+    local r = nav.random_near(vector.create(5, 0, 5), 2, 7)
+    self.random_ok = r ~= nil and vector.magnitude(vector.create(r.x - 5, 0, r.z - 5)) <= 2.01
+    self.same_seed = nav.random_near(vector.create(5, 0, 5), 2, 7) == r
+    self.entity:move_to(vector.create(-6, 0, 6))
+    wait_frames(2)
+    self.status_moving = self.entity:nav_status()
+    for _ = 1, 900 do
+        if self.entity:nav_status() == "arrived" then break end
+        wait_frames(1)
+    end
+    self.status_end = self.entity:nav_status()
+    self.end_z = self.entity:position().z
+    self.entity:stop()
+    wait_frames(1)
+    self.status_stopped = self.entity:nav_status()
+    local ok, err = pcall(function() world.find("Floor"):move_to(vector.create(0, 0, 0)) end)
+    self.needs_character = not ok and string.find(tostring(err), "KinematicCharacter") ~= nil
+    self.done = true
+end
+return T
+"#;
+
+#[cfg(feature = "navigation")]
+#[test]
+fn nav_queries_and_move_to() {
+    let p = Project::new("nav", &[("scripts/n.luau", NAV)]);
+    let mut app = p.app();
+    floor(&mut app);
+    // A wall across z = 0 with a gap at x = 0.
+    for (x, w) in [(-11.0, 20.0), (11.0, 20.0)] {
+        app.world.spawn((
+            Name::new("Wall"),
+            Transform::from_xyz(x, 1.5, 0.0),
+            Collider::cuboid(Vec3::new(w, 3.0, 0.4)),
+        ));
+    }
+    let e = spawn_script(
+        &mut app,
+        "Walker",
+        "scripts/n.luau",
+        (
+            Transform::from_xyz(-6.0, 0.92, -6.0),
+            KinematicCharacter::default(),
+        ),
+    );
+    finish(&mut app, e);
+    assert!(field::<u32>(&app, e, "corners") >= 3);
+    assert!(field::<bool>(&app, e, "blocked"));
+    assert!(field::<f32>(&app, e, "closest_y").abs() < 0.3);
+    assert!(field::<bool>(&app, e, "random_ok"));
+    assert!(field::<bool>(&app, e, "same_seed"));
+    assert_eq!(field::<String>(&app, e, "status_moving"), "moving");
+    assert_eq!(field::<String>(&app, e, "status_end"), "arrived");
+    assert!(field::<f32>(&app, e, "end_z") > 5.0);
+    assert_eq!(field::<String>(&app, e, "status_stopped"), "idle");
+    assert!(field::<bool>(&app, e, "needs_character"));
+}

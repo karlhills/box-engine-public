@@ -7,7 +7,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [features]
-default = ["physics", "dynamics", "audio", "script"]
+default = ["physics", "dynamics", "audio", "script", "navigation"]
 tracy = ["profiling/profile-with-tracy"]
 # Colliders and spatial queries (box_physics): re-exported in the prelude,
 # `Collider` registered in `engine_registry()`.
@@ -26,6 +26,10 @@ audio = ["dep:box_audio"]
 # (`scenes`, `animation`, `save`, `data`, `particles`; box_ui's `ui` and
 # `strings`).
 script = ["dep:box_script", "physics", "box_ui/script"]
+# Navigation (box_nav on rerecast, D21): `NavSettings` in `engine_registry()`,
+# the navmesh baked from static colliders in every `app_with_world`
+# (`nav_glue`), path queries.
+navigation = ["physics", "dep:box_nav"]
 
 [dependencies]
 box_core.workspace = true
@@ -33,9 +37,11 @@ box_assets.workspace = true
 box_render.workspace = true
 box_proc.workspace = true
 box_ui.workspace = true
+bevy_reflect.workspace = true
 box_physics = { workspace = true, optional = true }
 box_audio = { workspace = true, optional = true }
 box_script = { workspace = true, optional = true }
+box_nav = { workspace = true, optional = true }
 winit.workspace = true
 gilrs.workspace = true
 glam.workspace = true
@@ -62,6 +68,19 @@ required-features = ["dynamics"]
 [[test]]
 name = "dynamics"
 required-features = ["dynamics"]
+
+[[test]]
+name = "audio_mixer"
+required-features = ["audio"]
+
+[[test]]
+name = "world_building"
+required-features = ["physics"]
+
+# The collector_luau route checks for the audio `PlaySound` event.
+[[test]]
+name = "playtest"
+required-features = ["script", "audio"]
 
 [[test]]
 name = "luau_definitions"
@@ -96,6 +115,40 @@ required-features = ["script"]
 [[test]]
 name = "m8_game"
 required-features = ["script", "dynamics"]
+
+[[test]]
+name = "interact"
+required-features = ["script", "physics", "audio"]
+
+# Presets and rules play a character (PlayerController).
+[[test]]
+name = "behaviours"
+required-features = ["physics"]
+
+# The navmesh baked from colliders (box_nav).
+[[test]]
+name = "navigation"
+required-features = ["navigation"]
+
+# examples/first_game: rules, reachability, a playthrough.
+[[test]]
+name = "first_game"
+required-features = ["navigation"]
+
+# Convert to Script: behaviours next to their script versions.
+[[test]]
+name = "behaviours_b3"
+required-features = ["script"]
+
+# Health, spawners and the B2a presets, played with a character.
+[[test]]
+name = "behaviours_b2"
+required-features = ["physics"]
+
+# Both templates play Luau (scripts, a script rule).
+[[test]]
+name = "templates"
+required-features = ["script"]
 
 # Runs itself as a child process that panics on its main thread (where the
 # crash reporter installs), so it has its own `main`.

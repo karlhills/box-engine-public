@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use box_core::assets::{AssetLookup, Assets};
 use box_core::mesh::MeshData;
-use box_core::mesh_asset::MeshAsset;
+use box_core::mesh_asset::{GeneratedMesh, HeightGrid, MeshAsset};
 use box_core::primitive::Shape;
 use box_core::reflect::{
     Range, Reflect, ReflectComponent, ReflectDefault, ReflectVariantDefaults, Step, Unit,
@@ -54,6 +54,43 @@ pub struct Collider {
     pub restitution: f32,
 }
 
+/// Whether this entity's colliders and those of its descendants take part
+/// in physics (default `true`). `Collidable(false)` switches the whole
+/// subtree off: queries, triggers, characters and rigid bodies ignore its
+/// colliders until it is set back to `true` (a hidden bridge, a door that
+/// opened). A parent's `false` wins over its children's `true`. Saved in
+/// scenes. The physics counterpart of `Visible`, which only hides drawing.
+#[derive(Reflect, Clone, Copy, Debug, PartialEq, Eq)]
+#[reflect(Component, Default, Clone, Debug, PartialEq)]
+#[type_path = "box_engine"]
+pub struct Collidable(pub bool);
+
+impl Default for Collidable {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
+/// Entities switched off by a `Collidable(false)` on themselves or an
+/// ancestor. Costs one query over `Collidable` components when none is off.
+pub fn non_collidable_entities(
+    world: &World,
+) -> std::collections::HashSet<box_core::world::Entity> {
+    let mut out = std::collections::HashSet::new();
+    let mut stack: Vec<box_core::world::Entity> = world
+        .query::<(box_core::world::Entity, &Collidable)>()
+        .iter()
+        .filter(|(_, c)| !c.0)
+        .map(|(e, _)| e)
+        .collect();
+    while let Some(e) = stack.pop() {
+        if out.insert(e) {
+            stack.extend(world.children(e));
+        }
+    }
+    out
+}
+
 /// The shape of a [`Collider`]. Round shapes are aligned with Y.
 #[derive(Reflect, Clone, Debug, Default, PartialEq)]
 #[reflect(Default, Clone, Debug, PartialEq, VariantDefaults)]
@@ -94,19 +131,22 @@ pub enum ColliderShape {
         #[reflect(@Range { min: 0.0, max: 1000.0 }, @Unit("m"), @Step(0.01))]
         height: f32,
     },
-    /// The triangles of the entity's `MeshAsset` mesh (imported level
-    /// geometry), as a triangle mesh in the entity's pose and scale. Found
-    /// through the world's `AssetLookup`; there is no collider until the
-    /// mesh is loaded, and it is rebuilt when the mesh asset changes.
+    /// The triangles of the entity's mesh, as a triangle mesh in the
+    /// entity's pose and scale: its `MeshAsset` mesh (imported level
+    /// geometry, found through the world's `AssetLookup`), or, without one,
+    /// the mesh its generator made (a `Primitive`, `Sweep`, `Lathe`, a rule
+    /// part and so on). There is no collider until the mesh is loaded or
+    /// generated, and it is rebuilt when the mesh changes. An entity with
+    /// neither gets no collider and a warning naming it.
     /// Triangle meshes are surfaces with no inside (`contains_point` finds
     /// nothing) and are static: on a `RigidBody` other than `Fixed` the
     /// collider is left out of the simulation (warned once). `offset` is
     /// ignored.
     Mesh,
-    /// The convex hull of the entity's `MeshAsset` mesh vertices, in the
-    /// entity's pose and scale: a solid shape, for imported props that move
-    /// (dynamic and kinematic bodies can use it). Found through
-    /// `AssetLookup` like `Mesh`; rebuilt when the mesh asset changes. Holes
+    /// The convex hull of the entity's mesh vertices (its `MeshAsset` mesh
+    /// or its generated mesh, as for `Mesh`), in the entity's pose and
+    /// scale: a solid shape, for props that move (dynamic and kinematic
+    /// bodies can use it). Rebuilt when the mesh changes. Holes
     /// and concave parts are filled in. `offset` is ignored.
     ConvexHull,
 }
@@ -133,7 +173,7 @@ impl VariantDefaults for ColliderShape {
 }
 
 impl ColliderShape {
-    /// True for the shapes built from the entity's `MeshAsset` (`Mesh`,
+    /// True for the shapes built from the entity's mesh (`Mesh`,
     /// `ConvexHull`).
     pub fn uses_mesh(&self) -> bool {
         matches!(self, Self::Mesh | Self::ConvexHull)
@@ -322,10 +362,20 @@ pub(crate) struct MeshKey {
     pub(crate) version: u64,
 }
 
-/// The loaded mesh `mesh` names, if any (through `AssetLookup`).
-pub(crate) fn mesh_key(world: &World, mesh: Option<&MeshAsset>) -> Option<MeshKey> {
-    let r = &mesh?.mesh;
-    let handle = world.get_resource::<AssetLookup>()?.get::<MeshData>(r)?;
+/// The loaded mesh of a `Mesh` or `ConvexHull` collider, if any: the mesh
+/// `mesh` names (through `AssetLookup`), else the mesh a generator made for
+/// the entity (`generated`).
+pub(crate) fn mesh_key(
+    world: &World,
+    mesh: Option<&MeshAsset>,
+    generated: Option<&GeneratedMesh>,
+) -> Option<MeshKey> {
+    let handle = match mesh {
+        Some(mesh) => world
+            .get_resource::<AssetLookup>()?
+            .get::<MeshData>(&mesh.mesh)?,
+        None => generated?.mesh?,
+    };
     let version = world.get_resource::<Assets<MeshData>>()?.version(handle)?;
     Some(MeshKey {
         id: handle.id(),
@@ -352,12 +402,21 @@ impl MeshShapes {
         key: MeshKey,
         scale: Vec3,
         shape: &ColliderShape,
+        heights: Option<&HeightGrid>,
     ) -> Option<SharedShape> {
         let hull = *shape == ColliderShape::ConvexHull;
         let scale = scale.abs();
         let k = (key, scale.to_array().map(f32::to_bits), hull);
         if let Some(shape) = self.shapes.get(&k) {
             return shape.clone();
+        }
+        if !hull && let Some(grid) = heights.filter(|g| g.is_valid()) {
+            // The same surface as a heightfield: built in O(cells), no BVH.
+            self.shapes
+                .retain(|(old, _, _), _| old.id != key.id || old.version == key.version);
+            let shape = Some(heightfield(grid, scale));
+            self.shapes.insert(k, shape.clone());
+            return shape;
         }
         self.shapes
             .retain(|(old, _, _), _| old.id != key.id || old.version == key.version);
@@ -374,6 +433,45 @@ impl MeshShapes {
         self.shapes.insert(k, shape.clone());
         shape
     }
+}
+
+/// A parry heightfield of `grid` at `scale`, placed in the entity's space
+/// (parry centres heightfields on their origin), with each cell split along
+/// the grid's diagonal so it matches the drawn mesh.
+fn heightfield(grid: &HeightGrid, scale: Vec3) -> SharedShape {
+    use parry3d::shape::{HeightField, HeightFieldCellStatus};
+    use parry3d::utils::Array2;
+    profiling::scope!("collider heightfield");
+    let (cols, rows) = (grid.columns as usize, grid.rows as usize);
+    // Column-major, rows along Z and columns along X.
+    let mut data = vec![0.0; cols * rows];
+    for r in 0..rows {
+        for c in 0..cols {
+            data[r + c * rows] = grid.heights[r * cols + c];
+        }
+    }
+    let width = (cols - 1) as f32 * grid.cell_size;
+    let depth = (rows - 1) as f32 * grid.cell_size;
+    let mut field = HeightField::new(
+        Array2::new(rows, cols, data),
+        Vec3::new(width * scale.x, scale.y, depth * scale.z),
+    );
+    for r in 0..rows - 1 {
+        for c in 0..cols - 1 {
+            if grid.main_diagonal[r * (cols - 1) + c] {
+                field.set_cell_status(r, c, HeightFieldCellStatus::ZIGZAG_SUBDIVISION);
+            }
+        }
+    }
+    let centre = Vec3::new(
+        (grid.origin.x + width * 0.5) * scale.x,
+        0.0,
+        (grid.origin.y + depth * 0.5) * scale.z,
+    );
+    SharedShape::compound(vec![(
+        parry3d::math::Pose::from_parts(centre, glam::Quat::IDENTITY),
+        SharedShape::new(field),
+    )])
 }
 
 /// The convex hull of `mesh`'s finite vertices at `scale`; `None` (warned)

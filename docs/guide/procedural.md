@@ -15,6 +15,8 @@ If you are new to the engine, read [Getting started](getting-started.md) first. 
 - [Overrides: changing one generated part](#overrides-changing-one-generated-part)
 - [Generators in Rust](#generators-in-rust)
 - [Rules in Rust](#rules-in-rust)
+- [Terrain](#terrain)
+- [Terrain paths](#terrain-paths)
 - [Scatter](#scatter)
 - [Bake to Mesh](#bake-to-mesh)
 - [Architecture: box_arch](#architecture-box_arch)
@@ -458,6 +460,95 @@ More in Rust:
 - **Reading another intent type:** `app.rule_reads::<WallPath>("fences")` after `add_rule` lets the `fences` rule read every `WallPath` with `input.read::<WallPath>()` (and re-run when one changes). `examples/walls` uses it so fences butt against walls.
 - **A hand-written system** can call `box_proc::derive::reconcile(world, owner, rule, parts)` directly; it gets the same keys, overrides and warnings, but no change gate, and it does not run in the editor's edit world.
 - **Neighbour facts are parameters.** Generators never look at their neighbours. A rule that sees every intent computes facts such as "this end meets that wall" and writes them into the parts' generator parameters. `examples/walls` (mitred and butted wall junctions, fences with shared corner posts) is the worked example.
+
+## Terrain
+
+`Terrain` is ground shaped by stamps: hills, ridges, basins, flats, walkable strips and noise, applied in order over an area centred on its entity. Add it with Add Component, or with a command. The drawn ground and its collision come from the same surface, so what looks walkable plays walkable.
+
+| Field | What it does |
+|---|---|
+| `size`, `cell_size` | The area on X and Z, and the distance between height samples (smaller is smoother and heavier) |
+| `base_height` | The height before any stamp |
+| `stamps` | The shaping operations, in order (below) |
+| `layers` | Colours of grass, dirt (under walkable strips) and rock (on slopes steeper than `rock_slope`), and a brightness `variation` |
+| `skirt` | Depth of the wall hanging from the edges, so the world does not end in a paper-thin edge |
+| `collide` | Give the ground colliders (on by default) |
+| `show_walkability`, `walk_slope` | Tint ground steeper than `walk_slope` red and ground within 5° of it orange |
+
+| Stamp | What it does |
+|---|---|
+| `Hill { center, radius, height }` | A round hill (a negative height makes a dip) |
+| `Ridge { points, width, height }` | A ridge (or valley) along a line of points |
+| `Basin { center, radius, depth }` | A hollow for a pond |
+| `Flatten { center, radius, height, bank }` | A flat round pad at a height, blending into the ground over `bank` |
+| `FlattenPath { points, width, bank }` | A walkable strip through points `[x, height, z]`: the points' heights are its side profile. Paths, ramps, the rise up to a shrine. Painted with the dirt layer |
+| `Noise { seed, scale, amplitude, octaves }` | Rolling unevenness over everything |
+
+For example, a valley with a hill, a pond and a path that rises 1.4 m to a flat shrine pad:
+
+```json
+{ "op": "spawn", "name": "Valley", "components": { "Terrain": {
+  "size": [96, 96],
+  "stamps": [
+    { "Noise": { "seed": 7, "scale": 18, "amplitude": 0.6, "octaves": 3 } },
+    { "Hill": { "center": [-30, -28], "radius": 22, "height": 9 } },
+    { "Basin": { "center": [18, 6], "radius": 9, "depth": 1.6 } },
+    { "Flatten": { "center": [0, -20], "radius": 6, "height": 1.4, "bank": 5 } },
+    { "FlattenPath": { "points": [[0, 0.1, 30], [-2, 0.67, 2], [0, 1.4, -16]], "width": 3, "bank": 2 } }
+  ] } } }
+```
+
+The ground is drawn and collided in chunks of 32 × 32 cells, rebuilt from the stamps: editing one stamp regenerates only the chunks it reaches. The collision of each chunk is a heightfield of exactly the drawn surface. Check routes with `box walk` (it reports steps, falls and where a character gets stuck) and turn on `show_walkability` to see slopes a character cannot climb.
+
+### Things that follow the ground
+
+Raise a hill and what stands on it rises with it:
+
+- **`FollowGround { offset }`** on an entity keeps its origin on the ground plus `offset` (lamps, landmarks, a stair's foot, a shrine). Move it on X and Z freely; its height belongs to the ground. It follows in the editor and in Play.
+- **`Sweep` with `follow_ground`** (and `ground_offset`) lays a path, kerb or rope on the ground: every sample's height comes from the terrain under it, at least once per terrain cell.
+- **Rules and scripts** read the ground with `ground.height(x, z)` and `ground.at(x, z)` (height, normal, point; nil off the terrain). A rule that samples it re-runs when the terrain under its intents changes; with a `scope`, only for the intents in the changed area.
+
+```lua
+function Lamps.rule(intents, out)
+    for _, it in intents do
+        for i, p in it.points do
+            local y = ground.height(p.x, p.z) or p.y
+            out:part(it, `lamp{i}`, { Primitive = { shape = "Cylinder" } }, { position = vector.create(p.x, y + 1, p.z) })
+        end
+    end
+end
+```
+
+Heights are those of the drawn surface, the one characters walk on, so whatever follows it meets the ground exactly.
+
+To put something on the ground once, without it following later edits, use **Edit ▸ Snap to Ground** (End) on the selection: each selected entity moves straight down or up until the lowest point of its meshes touches the terrain; its rotation stays. Entities outside every terrain stay where they are. It is one undo step. Agents and command files use the `snap_to_ground` command, which places the entity's **origin**, `offset` metres above the ground (give half the height for a shape centred on its origin); `"align": true` also tilts its up axis to the slope:
+
+```json
+{ "op": "snap_to_ground", "entity": "Shrine", "offset": 0.0, "align": true }
+```
+
+A command list that snaps an entity off the terrain fails as a whole and changes nothing.
+
+Not yet: sculpting brushes, painted layers and holes (the stamps are the way to shape it for now), and `Scatter` on a terrain. A model dragged from Assets onto a terrain already stands on it.
+
+### Terrain paths
+
+Use **Add ▸ Terrain Path** to create a `TerrainPath` with a `Spline`. Select it in the hierarchy and use **Edit Spline** to shape the lane. Set its full `width` in metres. In a scene with several terrains, set `terrain` to the target terrain entity.
+
+Lanes on the same terrain merge where their footprints overlap, including crossings and shared endpoints. The engine fits the merged surface to the terrain triangles across the full width of the lane and colours it with `Terrain.layers.dirt`. Terrain still supplies collision. Use terrain stamps such as `FlattenPath` to grade a climb, and use `box walk` to check it.
+
+Scene commands can place a path in the same way. This example uses the scene's sole terrain.
+
+```json
+{ "op": "spawn", "name": "Shrine Lane", "components": {
+  "TerrainPath": { "width": 2.4 },
+  "Spline": { "mode": "Polyline", "closed": false, "points": [
+    { "position": [0, 0, 8] }, { "position": [2, 0, 3] }, { "position": [2, 0, -3] }
+  ] }
+} }
+```
+
+The lane's elevation comes from the terrain. It updates when you edit the spline or raise the ground. Keep the terrain upright. Paths are clipped to its edges and hidden while `show_walkability` is on so the slope tints stay visible. When migrating a lane made from a `Sweep`, retain its `Spline` and replace the `Sweep` with `TerrainPath`.
 
 ## Scatter
 

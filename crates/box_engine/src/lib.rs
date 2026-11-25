@@ -27,9 +27,13 @@
 //! drive it with `App::run_frames`), and the low-level [`default_app`] /
 //! [`run`].
 
+pub mod agent_files;
 mod animation_glue;
 pub mod asset_glue;
+#[cfg(feature = "audio")]
+pub mod audio_mixer;
 pub mod bake;
+pub mod behaviours;
 pub mod camera;
 pub mod control;
 pub mod crash;
@@ -38,15 +42,23 @@ pub mod game;
 pub mod gamepad;
 pub mod input;
 mod input_map;
+pub mod interact;
 pub mod io_hint;
 mod live;
 pub mod log_capture;
 pub mod modules;
+#[cfg(feature = "navigation")]
+pub mod nav_agent;
+#[cfg(feature = "navigation")]
+pub mod nav_glue;
 pub mod packed;
 pub mod player;
+pub mod playtest;
 pub mod proc_glue;
 pub mod project;
 pub mod registry_file;
+#[cfg(feature = "physics")]
+pub mod route;
 mod runner;
 pub mod savegame;
 pub mod scatter_glue;
@@ -57,6 +69,7 @@ pub mod script_glue;
 pub mod settings;
 pub mod splash;
 pub mod templates;
+pub mod terrain_glue;
 pub mod upgrade;
 
 pub use asset_glue::{AssetGluePlugin, settle_assets, settle_step, sync_assets};
@@ -72,7 +85,8 @@ pub use box_render;
 pub use box_script;
 pub use box_ui;
 pub use camera::{
-    OrbitCamera, active_camera, cursor_ray, orbit_camera_system, screen_ray, world_to_screen,
+    CameraPose, OrbitCamera, active_camera, cursor_ray, orbit_camera_system, overview_transform,
+    parse_point, screen_ray, world_to_screen,
 };
 pub use game::Game;
 pub use gamepad::GamepadPoller;
@@ -121,9 +135,10 @@ pub mod prelude {
     #[cfg(feature = "physics")]
     pub use box_physics::prelude::*;
     pub use box_proc::{
-        AppGeneratorExt, ColliderHint, ControlPoint, Extrude, GenContext, GenOutput, Generator,
-        GeneratorRegistry, Hole, Inputs, Lathe, LatheShape, Outline, ProcSettings, ProcState,
-        Procedural, Rng, Spline, SplineMode, Sweep, SweepOrientation, SweepProfile,
+        AppGeneratorExt, ColliderHint, ControlPoint, Extrude, FollowGround, GenContext, GenOutput,
+        Generator, GeneratorRegistry, Ground, GroundSample, Hole, Inputs, Lathe, LatheShape,
+        Outline, ProcSettings, ProcState, Procedural, Rng, Spline, SplineMode, Sweep,
+        SweepOrientation, SweepProfile, Terrain, TerrainLayers, TerrainPath, TerrainStamp,
     };
     pub use box_render::{
         AerialHaze, AlphaMode, AmbientOcclusion, Bloom, Camera, ColorGrading, DebugDraw,
@@ -177,12 +192,15 @@ pub fn app_with_world(world: World) -> App {
     app.add_plugin(&ScenePlugin);
     app.add_plugin(&AssetGluePlugin);
     app.add_plugin(&settings::SettingsPlugin);
+    app.add_plugin(&terrain_glue::TerrainPlugin);
     #[cfg(feature = "physics")]
     {
         app.add_plugin(&box_physics::PhysicsPlugin);
         // Scripted and data projects get kinematic characters without Rust.
         app.add_plugin(&box_physics::CharacterPlugin);
     }
+    #[cfg(feature = "navigation")]
+    app.add_plugin(&nav_glue::NavigationPlugin);
     #[cfg(feature = "audio")]
     app.add_plugin(&box_audio::AudioPlugin::new().with_default_listener(active_camera_pose));
     app.add_plugin(&box_core::tween::TweenPlugin);
@@ -193,6 +211,8 @@ pub fn app_with_world(world: World) -> App {
         .label("ui_screen")
         .before("ui_layout");
     app.add_plugin(&savegame::SavePlugin);
+    app.add_plugin(&interact::InteractPlugin);
+    app.add_plugin(&behaviours::BehavioursPlugin);
     app.add_system(Stage::Update, orbit_camera_system);
     app.add_system(Stage::PostUpdate, sync_scene_meshes);
     app.system(Stage::PostUpdate, box_render::simulate_particles)
@@ -267,9 +287,9 @@ pub fn insert_engine_resources(w: &mut World) {
 /// replaces it.
 pub const TERMINAL_LOG_FILTER: &str = "warn,box=info";
 
-/// The default filter of in-process log consumers (the control socket's
-/// `read_log`, the editor console): info from everything except wgpu and
-/// naga internals. `RUST_LOG` replaces it.
+/// Filter for the capture ring used by playtests and the control socket's
+/// `read_log`: info from everything except wgpu and naga internals.
+/// Keeping it independent of `RUST_LOG` makes replay checks reproducible.
 pub const CAPTURE_LOG_FILTER: &str = "info,wgpu_core=warn,wgpu_hal=warn,naga=warn";
 
 /// `RUST_LOG`, else `default`.
@@ -300,16 +320,15 @@ where
 ///
 /// The terminal gets [`terminal_log_layer`] (quiet by default: warnings, and
 /// info from `box*` targets). Next to it [`log_capture::CaptureLayer`] keeps
-/// records for the control socket's `read_log` (filtered by `RUST_LOG` or
-/// [`CAPTURE_LOG_FILTER`]) once [`log_capture::enable`] is called (the
-/// runner does for `--control`).
+/// records for playtest checks and the control socket's `read_log` (filtered
+/// by [`CAPTURE_LOG_FILTER`]) once [`log_capture::enable`] is called.
 pub fn init_logging() {
-    use tracing_subscriber::Layer;
     use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::util::SubscriberInitExt;
+    use tracing_subscriber::{EnvFilter, Layer};
     let _ = tracing_subscriber::registry()
         .with(terminal_log_layer())
-        .with(log_capture::CaptureLayer.with_filter(env_filter(CAPTURE_LOG_FILTER)))
+        .with(log_capture::CaptureLayer.with_filter(EnvFilter::new(CAPTURE_LOG_FILTER)))
         .try_init();
 }
 

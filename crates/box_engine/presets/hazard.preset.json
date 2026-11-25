@@ -1,0 +1,30 @@
+{
+  "name": "hazard",
+  "title": "Hazard",
+  "category": "Gameplay",
+  "description": "Spikes that send the player back to the last checkpoint (costing a life when the rules count lives).",
+  "entities": [
+    {
+      "name": "Hazard",
+      "components": {
+        "Transform": { "translation": [0.0, 0.05, 0.0] },
+        "Primitive": { "shape": { "Cuboid": { "size": [2.0, 0.1, 2.0] } } },
+        "StandardMaterial": { "base_color": [0.35, 0.05, 0.04, 1.0], "roughness": 0.6 },
+        "Interactable": {
+          "trigger": "Touch",
+          "radius": 1.2,
+          "offset": [0.0, 0.9, 0.0],
+          "cooldown": 0.5,
+          "actions": [
+            { "Burst": { "style": "Dust", "count": 16 } },
+            "Respawn"
+          ]
+        }
+      }
+    },
+    { "name": "Spike 1", "parent": "Hazard", "components": { "Transform": { "translation": [-0.5, 0.3, -0.5] }, "Primitive": { "shape": { "Cylinder": { "radius": 0.12, "height": 0.5, "segments": 6 } } }, "StandardMaterial": { "base_color": [0.75, 0.74, 0.72, 1.0], "metallic": 0.8, "roughness": 0.35 } } },
+    { "name": "Spike 2", "parent": "Hazard", "components": { "Transform": { "translation": [0.5, 0.3, -0.5] }, "Primitive": { "shape": { "Cylinder": { "radius": 0.12, "height": 0.5, "segments": 6 } } }, "StandardMaterial": { "base_color": [0.75, 0.74, 0.72, 1.0], "metallic": 0.8, "roughness": 0.35 } } },
+    { "name": "Spike 3", "parent": "Hazard", "components": { "Transform": { "translation": [-0.5, 0.3, 0.5] }, "Primitive": { "shape": { "Cylinder": { "radius": 0.12, "height": 0.5, "segments": 6 } } }, "StandardMaterial": { "base_color": [0.75, 0.74, 0.72, 1.0], "metallic": 0.8, "roughness": 0.35 } } },
+    { "name": "Spike 4", "parent": "Hazard", "components": { "Transform": { "translation": [0.5, 0.3, 0.5] }, "Primitive": { "shape": { "Cylinder": { "radius": 0.12, "height": 0.5, "segments": 6 } } }, "StandardMaterial": { "base_color": [0.75, 0.74, 0.72, 1.0], "metallic": 0.8, "roughness": 0.35 } } }
+  ]
+}

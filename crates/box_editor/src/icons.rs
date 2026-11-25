@@ -76,6 +76,10 @@ pub struct ViewOptions {
     pub colliders: ColliderDisplay,
     /// Contact points between rigid bodies, while playing.
     pub contacts: bool,
+    /// Sound source ranges, and lines to the listener while playing.
+    pub audio: bool,
+    /// The navmesh: where enemies can walk (View ▸ Navigation).
+    pub nav: bool,
     /// Which particle emitters simulate while editing.
     pub particles: crate::particle_preview::ParticlePreview,
 }
@@ -86,6 +90,8 @@ impl Default for ViewOptions {
             icons: true,
             colliders: ColliderDisplay::Selected,
             contacts: false,
+            audio: false,
+            nav: false,
             particles: Default::default(),
         }
     }

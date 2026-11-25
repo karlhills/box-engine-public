@@ -38,18 +38,29 @@ A rule runs only when one of its intents (values, points, the owner's transform,
 | [`RuleComponents.AnimationStateMachine`](#rulecomponentsanimationstatemachine) | A `AnimationStateMachine` component on the part (its default values patched with these fields). |
 | [`RuleComponents.AudioListener`](#rulecomponentsaudiolistener) | A `AudioListener` component on the part (its default values patched with these fields). |
 | [`RuleComponents.AudioSource`](#rulecomponentsaudiosource) | A `AudioSource` component on the part (its default values patched with these fields). |
+| [`RuleComponents.Bobber`](#rulecomponentsbobber) | A `Bobber` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Camera`](#rulecomponentscamera) | A `Camera` component on the part (its default values patched with these fields). |
+| [`RuleComponents.Chaser`](#rulecomponentschaser) | A `Chaser` component on the part (its default values patched with these fields). |
+| [`RuleComponents.Collidable`](#rulecomponentscollidable) | A `Collidable` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Collider`](#rulecomponentscollider) | A `Collider` component on the part (its default values patched with these fields). |
 | [`RuleComponents.DirectionalLight`](#rulecomponentsdirectionallight) | A `DirectionalLight` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Extrude`](#rulecomponentsextrude) | A `Extrude` component on the part (its default values patched with these fields). |
+| [`RuleComponents.FollowCamera`](#rulecomponentsfollowcamera) | A `FollowCamera` component on the part (its default values patched with these fields). |
+| [`RuleComponents.FollowGround`](#rulecomponentsfollowground) | A `FollowGround` component on the part (its default values patched with these fields). |
+| [`RuleComponents.Health`](#rulecomponentshealth) | A `Health` component on the part (its default values patched with these fields). |
+| [`RuleComponents.Interactable`](#rulecomponentsinteractable) | A `Interactable` component on the part (its default values patched with these fields). |
+| [`RuleComponents.Interactor`](#rulecomponentsinteractor) | A `Interactor` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Interpolated`](#rulecomponentsinterpolated) | A `Interpolated` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Joint`](#rulecomponentsjoint) | A `Joint` component on the part (its default values patched with these fields). |
 | [`RuleComponents.KinematicCharacter`](#rulecomponentskinematiccharacter) | A `KinematicCharacter` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Lathe`](#rulecomponentslathe) | A `Lathe` component on the part (its default values patched with these fields). |
 | [`RuleComponents.MaterialRef`](#rulecomponentsmaterialref) | A `MaterialRef` component on the part (its default values patched with these fields). |
 | [`RuleComponents.MeshAsset`](#rulecomponentsmeshasset) | A `MeshAsset` component on the part (its default values patched with these fields). |
+| [`RuleComponents.Mover`](#rulecomponentsmover) | A `Mover` component on the part (its default values patched with these fields). |
+| [`RuleComponents.NavAgent`](#rulecomponentsnavagent) | A `NavAgent` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Overrides`](#rulecomponentsoverrides) | A `Overrides` component on the part (its default values patched with these fields). |
 | [`RuleComponents.ParticleEmitter`](#rulecomponentsparticleemitter) | A `ParticleEmitter` component on the part (its default values patched with these fields). |
+| [`RuleComponents.PlayerController`](#rulecomponentsplayercontroller) | A `PlayerController` component on the part (its default values patched with these fields). |
 | [`RuleComponents.PointLight`](#rulecomponentspointlight) | A `PointLight` component on the part (its default values patched with these fields). |
 | [`RuleComponents.PrefabInstance`](#rulecomponentsprefabinstance) | A `PrefabInstance` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Primitive`](#rulecomponentsprimitive) | A `Primitive` component on the part (its default values patched with these fields). |
@@ -60,10 +71,16 @@ A rule runs only when one of its intents (values, points, the owner's transform,
 | [`RuleComponents.ScriptIntent`](#rulecomponentsscriptintent) | A `ScriptIntent` component on the part (its default values patched with these fields). |
 | [`RuleComponents.ShaderMaterial`](#rulecomponentsshadermaterial) | A `ShaderMaterial` component on the part (its default values patched with these fields). |
 | [`RuleComponents.SkinBinding`](#rulecomponentsskinbinding) | A `SkinBinding` component on the part (its default values patched with these fields). |
+| [`RuleComponents.Spawner`](#rulecomponentsspawner) | A `Spawner` component on the part (its default values patched with these fields). |
+| [`RuleComponents.Spinner`](#rulecomponentsspinner) | A `Spinner` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Spline`](#rulecomponentsspline) | A `Spline` component on the part (its default values patched with these fields). |
 | [`RuleComponents.SpotLight`](#rulecomponentsspotlight) | A `SpotLight` component on the part (its default values patched with these fields). |
 | [`RuleComponents.StandardMaterial`](#rulecomponentsstandardmaterial) | A `StandardMaterial` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Sweep`](#rulecomponentssweep) | A `Sweep` component on the part (its default values patched with these fields). |
+| [`RuleComponents.Terrain`](#rulecomponentsterrain) | A `Terrain` component on the part (its default values patched with these fields). |
+| [`RuleComponents.TerrainChunk`](#rulecomponentsterrainchunk) | A `TerrainChunk` component on the part (its default values patched with these fields). |
+| [`RuleComponents.TerrainPath`](#rulecomponentsterrainpath) | A `TerrainPath` component on the part (its default values patched with these fields). |
+| [`RuleComponents.TerrainPathChunk`](#rulecomponentsterrainpathchunk) | A `TerrainPathChunk` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Transform`](#rulecomponentstransform) | A `Transform` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Transient`](#rulecomponentstransient) | A `Transient` component on the part (its default values patched with these fields). |
 | [`RuleComponents.Velocity`](#rulecomponentsvelocity) | A `Velocity` component on the part (its default values patched with these fields). |
@@ -200,6 +217,14 @@ RuleComponents.AudioSource: AudioSourcePatch?
 
 A `AudioSource` component on the part (its default values patched with these fields).
 
+### `RuleComponents.Bobber`
+
+```luau
+RuleComponents.Bobber: BobberPatch?
+```
+
+A `Bobber` component on the part (its default values patched with these fields).
+
 ### `RuleComponents.Camera`
 
 ```luau
@@ -207,6 +232,22 @@ RuleComponents.Camera: CameraPatch?
 ```
 
 A `Camera` component on the part (its default values patched with these fields).
+
+### `RuleComponents.Chaser`
+
+```luau
+RuleComponents.Chaser: ChaserPatch?
+```
+
+A `Chaser` component on the part (its default values patched with these fields).
+
+### `RuleComponents.Collidable`
+
+```luau
+RuleComponents.Collidable: CollidablePatch?
+```
+
+A `Collidable` component on the part (its default values patched with these fields).
 
 ### `RuleComponents.Collider`
 
@@ -231,6 +272,46 @@ RuleComponents.Extrude: ExtrudePatch?
 ```
 
 A `Extrude` component on the part (its default values patched with these fields).
+
+### `RuleComponents.FollowCamera`
+
+```luau
+RuleComponents.FollowCamera: FollowCameraPatch?
+```
+
+A `FollowCamera` component on the part (its default values patched with these fields).
+
+### `RuleComponents.FollowGround`
+
+```luau
+RuleComponents.FollowGround: FollowGroundPatch?
+```
+
+A `FollowGround` component on the part (its default values patched with these fields).
+
+### `RuleComponents.Health`
+
+```luau
+RuleComponents.Health: HealthPatch?
+```
+
+A `Health` component on the part (its default values patched with these fields).
+
+### `RuleComponents.Interactable`
+
+```luau
+RuleComponents.Interactable: InteractablePatch?
+```
+
+A `Interactable` component on the part (its default values patched with these fields).
+
+### `RuleComponents.Interactor`
+
+```luau
+RuleComponents.Interactor: InteractorPatch?
+```
+
+A `Interactor` component on the part (its default values patched with these fields).
 
 ### `RuleComponents.Interpolated`
 
@@ -280,6 +361,22 @@ RuleComponents.MeshAsset: MeshAssetPatch?
 
 A `MeshAsset` component on the part (its default values patched with these fields).
 
+### `RuleComponents.Mover`
+
+```luau
+RuleComponents.Mover: MoverPatch?
+```
+
+A `Mover` component on the part (its default values patched with these fields).
+
+### `RuleComponents.NavAgent`
+
+```luau
+RuleComponents.NavAgent: NavAgentPatch?
+```
+
+A `NavAgent` component on the part (its default values patched with these fields).
+
 ### `RuleComponents.Overrides`
 
 ```luau
@@ -295,6 +392,14 @@ RuleComponents.ParticleEmitter: ParticleEmitterPatch?
 ```
 
 A `ParticleEmitter` component on the part (its default values patched with these fields).
+
+### `RuleComponents.PlayerController`
+
+```luau
+RuleComponents.PlayerController: PlayerControllerPatch?
+```
+
+A `PlayerController` component on the part (its default values patched with these fields).
 
 ### `RuleComponents.PointLight`
 
@@ -376,6 +481,22 @@ RuleComponents.SkinBinding: SkinBindingPatch?
 
 A `SkinBinding` component on the part (its default values patched with these fields).
 
+### `RuleComponents.Spawner`
+
+```luau
+RuleComponents.Spawner: SpawnerPatch?
+```
+
+A `Spawner` component on the part (its default values patched with these fields).
+
+### `RuleComponents.Spinner`
+
+```luau
+RuleComponents.Spinner: SpinnerPatch?
+```
+
+A `Spinner` component on the part (its default values patched with these fields).
+
 ### `RuleComponents.Spline`
 
 ```luau
@@ -407,6 +528,38 @@ RuleComponents.Sweep: SweepPatch?
 ```
 
 A `Sweep` component on the part (its default values patched with these fields).
+
+### `RuleComponents.Terrain`
+
+```luau
+RuleComponents.Terrain: TerrainPatch?
+```
+
+A `Terrain` component on the part (its default values patched with these fields).
+
+### `RuleComponents.TerrainChunk`
+
+```luau
+RuleComponents.TerrainChunk: TerrainChunkPatch?
+```
+
+A `TerrainChunk` component on the part (its default values patched with these fields).
+
+### `RuleComponents.TerrainPath`
+
+```luau
+RuleComponents.TerrainPath: TerrainPathPatch?
+```
+
+A `TerrainPath` component on the part (its default values patched with these fields).
+
+### `RuleComponents.TerrainPathChunk`
+
+```luau
+RuleComponents.TerrainPathChunk: TerrainPathChunkPatch?
+```
+
+A `TerrainPathChunk` component on the part (its default values patched with these fields).
 
 ### `RuleComponents.Transform`
 

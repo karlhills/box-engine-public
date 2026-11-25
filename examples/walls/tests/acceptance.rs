@@ -281,7 +281,13 @@ fn the_fence_shares_the_adjacency_and_needs_no_engine_code() {
     // `adjacency::analyse` as walls and registers with the same
     // `app.add_rule`; the engine has no fence (or wall) type.
     let game = game();
-    let rules: Vec<(&str, &str)> = game.rules().rules().map(|r| (r.name, r.intent)).collect();
+    let engine_rules = Game::new().rules();
+    let rules: Vec<(&str, &str)> = game
+        .rules()
+        .rules()
+        .map(|r| (r.name, r.intent))
+        .filter(|(name, _)| engine_rules.get(name).is_none())
+        .collect();
     assert_eq!(
         rules,
         [(plan::RULE, "WallPath"), (fence::RULE, "FencePath")]

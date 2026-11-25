@@ -54,6 +54,8 @@ pub enum Command {
         value: Json,
     },
     /// Set a resource field (or a whole resource): `"path": "Environment.fog.density"`.
+    /// A registered resource the scene does not have yet (`GameRules`) is
+    /// added with its defaults first.
     SetResource {
         path: String,
         value: Json,
@@ -92,6 +94,38 @@ pub enum Command {
     Duplicate {
         entity: String,
     },
+    /// Move the entity's origin onto the ground under it, `offset` metres
+    /// above (default 0); with `align`, also turn its up axis to the
+    /// ground's normal, keeping its heading. Fails where there is no ground
+    /// under it.
+    SnapToGround {
+        entity: String,
+        #[serde(default)]
+        offset: f32,
+        #[serde(default)]
+        align: bool,
+    },
+    /// Place a registered preset (`box registry` lists them): its entities
+    /// with fresh uids, the root at `at` (default the origin) under `parent`,
+    /// named `name` (default the preset's root name, made unique).
+    AddPreset {
+        preset: String,
+        #[serde(default)]
+        at: Option<[f32; 3]>,
+        #[serde(default)]
+        name: Option<String>,
+        #[serde(default)]
+        parent: Option<String>,
+    },
+    /// Convert to Script: replace behaviour `component` on `entity` with a
+    /// `Script` running its script version (`Registry::behaviour_script`),
+    /// the component's values as the script's properties. The script file
+    /// is listed in [`Applied::files`] for the caller to create when the
+    /// project lacks it.
+    EjectBehaviour {
+        entity: String,
+        component: String,
+    },
 }
 
 impl Command {
@@ -107,6 +141,9 @@ impl Command {
             Command::Despawn { .. } => "despawn",
             Command::Rename { .. } => "rename",
             Command::Duplicate { .. } => "duplicate",
+            Command::SnapToGround { .. } => "snap_to_ground",
+            Command::AddPreset { .. } => "add_preset",
+            Command::EjectBehaviour { .. } => "eject_behaviour",
         }
     }
 
@@ -119,8 +156,11 @@ impl Command {
             | Command::Reparent { entity, .. }
             | Command::Despawn { entity }
             | Command::Rename { entity, .. }
-            | Command::Duplicate { entity } => Some(entity),
+            | Command::Duplicate { entity }
+            | Command::SnapToGround { entity, .. }
+            | Command::EjectBehaviour { entity, .. } => Some(entity),
             Command::SetResource { .. } => None,
+            Command::AddPreset { preset, name, .. } => Some(name.as_deref().unwrap_or(preset)),
         }
     }
 
@@ -128,7 +168,8 @@ impl Command {
         match self {
             Command::Set { path, .. } | Command::SetResource { path, .. } => Some(path),
             Command::AddComponent { component, .. }
-            | Command::RemoveComponent { component, .. } => Some(component),
+            | Command::RemoveComponent { component, .. }
+            | Command::EjectBehaviour { component, .. } => Some(component),
             _ => None,
         }
     }
@@ -181,9 +222,61 @@ pub fn parse_commands(text: &str) -> Result<Vec<Command>, CommandParseError> {
 pub struct Applied {
     /// Uids of entities created by `spawn` and `duplicate`, in order.
     pub created: Vec<Uid>,
-    /// Things that were applied, but differently from what was asked: a
-    /// number outside its field's `@Range` was clamped.
-    pub warnings: Vec<String>,
+    /// Things that were applied, but differently from what was asked.
+    pub warnings: Vec<CommandWarning>,
+    /// Files (path under `assets/`, text) the applied commands need: write
+    /// each one the project does not have yet (`eject_behaviour`'s script).
+    pub files: Vec<(String, String)>,
+}
+
+/// A command applied differently from what was asked.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CommandWarning {
+    pub kind: WarningKind,
+    /// What happened, starting with the command's index and op.
+    pub message: String,
+}
+
+impl CommandWarning {
+    fn clamped(message: String) -> Self {
+        Self {
+            kind: WarningKind::ValueClamped,
+            message,
+        }
+    }
+
+    fn defaulted(message: String) -> Self {
+        Self {
+            kind: WarningKind::FieldDefaulted,
+            message,
+        }
+    }
+}
+
+impl std::fmt::Display for CommandWarning {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+/// The kind of a [`CommandWarning`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum WarningKind {
+    /// A number outside its field's `@Range` was clamped to it.
+    ValueClamped,
+    /// A field an enum variant needs was left out and filled with its
+    /// type's default (the enum has no `VariantDefaults` for it).
+    FieldDefaulted,
+}
+
+impl WarningKind {
+    /// The stable code agents read (`value_clamped`, `field_defaulted`).
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::ValueClamped => "value_clamped",
+            Self::FieldDefaulted => "field_defaulted",
+        }
+    }
 }
 
 /// Apply `commands` as one transaction labelled `label`. All or nothing: on
@@ -209,8 +302,8 @@ pub fn apply_commands(
     Ok(applied.created)
 }
 
-/// [`apply_commands`], returning the warnings (clamped values) instead of
-/// logging them.
+/// [`apply_commands`], returning the warnings (clamped values, defaulted
+/// variant fields) instead of logging them.
 pub fn apply_commands_with_warnings(
     world: &mut World,
     stack: &mut EditStack,
@@ -220,11 +313,15 @@ pub fn apply_commands_with_warnings(
     stack.begin(label);
     let mut created = Vec::new();
     let mut warnings = Vec::new();
+    let mut files = Vec::new();
     for (index, command) in commands.iter().enumerate() {
-        let mut warn = |message: String| {
-            warnings.push(format!("command {index} ({}): {message}", command.op()));
+        let mut warn = |w: CommandWarning| {
+            warnings.push(CommandWarning {
+                message: format!("command {index} ({}): {}", command.op(), w.message),
+                ..w
+            });
         };
-        if let Err(source) = apply_one(world, stack, command, &mut created, &mut warn) {
+        if let Err(source) = apply_one(world, stack, command, &mut created, &mut files, &mut warn) {
             let source = match stack.rollback(world) {
                 Ok(()) => source,
                 Err(rollback) => {
@@ -245,7 +342,12 @@ pub fn apply_commands_with_warnings(
         }
     }
     stack.commit();
-    Ok(Applied { created, warnings })
+    files.dedup();
+    Ok(Applied {
+        created,
+        warnings,
+        files,
+    })
 }
 
 const INTEGER_TYPES: [&str; 12] = [
@@ -313,7 +415,7 @@ fn component_value(
     world: &World,
     component: &str,
     json: &Json,
-    warn: &mut dyn FnMut(String),
+    warn: &mut dyn FnMut(CommandWarning),
 ) -> Result<Value, EditError> {
     let registry = world.registry();
     let ty = registry
@@ -333,21 +435,21 @@ fn completed(
     type_id: std::any::TypeId,
     json: &Json,
     path: &str,
-    warn: &mut dyn FnMut(String),
+    warn: &mut dyn FnMut(CommandWarning),
 ) -> Result<Json, EditError> {
     let mut json = json.clone();
     let filled = world
         .registry()
         .complete_variants(type_id, &mut json, path)?;
     if !filled.is_empty() {
-        warn(format!(
+        warn(CommandWarning::defaulted(format!(
             "{} not given: using the field type's default (give the field to choose a value)",
             filled
                 .iter()
                 .map(|f| format!("`{f}`"))
                 .collect::<Vec<_>>()
                 .join(", ")
-        ));
+        )));
     }
     Ok(json)
 }
@@ -358,7 +460,7 @@ fn field_value(
     current: &dyn bevy_reflect::PartialReflect,
     path: &FieldPath,
     json: &Json,
-    warn: &mut dyn FnMut(String),
+    warn: &mut dyn FnMut(CommandWarning),
 ) -> Result<Value, EditError> {
     let info = current
         .get_represented_type_info()
@@ -394,7 +496,7 @@ fn schema_value(
     world: &World,
     schema: &SchemaType,
     value: Option<&Json>,
-    warn: &mut dyn FnMut(String),
+    warn: &mut dyn FnMut(CommandWarning),
 ) -> Result<Json, EditError> {
     let value = match value {
         Some(v) => v.clone(),
@@ -406,7 +508,9 @@ fn schema_value(
     let (value, warnings) = schema
         .validate(world.registry(), &value)
         .map_err(EditError::Invalid)?;
-    warnings.into_iter().for_each(&mut *warn);
+    warnings
+        .into_iter()
+        .for_each(|w| warn(CommandWarning::clamped(w)));
     Ok(value)
 }
 
@@ -425,7 +529,7 @@ fn set_schema_field(
     entity: Option<&str>,
     path: &str,
     value: &Json,
-    warn: &mut dyn FnMut(String),
+    warn: &mut dyn FnMut(CommandWarning),
 ) -> Result<bool, EditError> {
     let (target, rest) = split_path(path);
     let Some(schema) = schema_of(world, target) else {
@@ -464,7 +568,9 @@ fn set_schema_field(
         Some((uid, _)) => stack.set_raw_component(world, uid, target, Some(new))?,
         None => stack.set_raw_resource(world, target, Some(new))?,
     }
-    warnings.into_iter().for_each(&mut *warn);
+    warnings
+        .into_iter()
+        .for_each(|w| warn(CommandWarning::clamped(w)));
     Ok(true)
 }
 
@@ -473,7 +579,8 @@ fn apply_one(
     stack: &mut EditStack,
     command: &Command,
     created: &mut Vec<Uid>,
-    warn: &mut dyn FnMut(String),
+    files: &mut Vec<(String, String)>,
+    warn: &mut dyn FnMut(CommandWarning),
 ) -> Result<(), EditError> {
     match command {
         Command::Spawn {
@@ -530,7 +637,7 @@ fn apply_one(
             let v = field_value(world, current.as_ref(), &path, &value, warn)?;
             stack.set_field(world, uid, &path, v.as_ref())?;
             if let Some(w) = warning {
-                warn(w);
+                warn(CommandWarning::clamped(w));
             }
         }
         Command::SetResource { path, value } => {
@@ -538,10 +645,15 @@ fn apply_one(
                 return Ok(());
             }
             let path = world.field_path(path)?;
+            // A registered scene resource the world lacks (GameRules) is
+            // added with its defaults first.
+            if path.is_resource() && world.get_resource_field(&path).is_err() {
+                stack.ensure_resource(world, path.target())?;
+            }
             let current = world.get_resource_field(&path)?;
             let (value, warning) = clamp_to_range(world, &path, value);
             if let Some(w) = warning {
-                warn(w);
+                warn(CommandWarning::clamped(w));
             }
             let v = field_value(world, current.as_ref(), &path, &value, warn)?;
             stack.set_resource_field(world, &path, v.as_ref())?;
@@ -601,6 +713,100 @@ fn apply_one(
         Command::Duplicate { entity } => {
             let uid = resolve_entity(world, entity)?;
             created.push(stack.duplicate(world, uid)?);
+        }
+        Command::SnapToGround {
+            entity,
+            offset,
+            align,
+        } => {
+            let uid = resolve_entity(world, entity)?;
+            if let super::Snapped::NoGround { x, z } =
+                stack.snap_to_ground(world, uid, *offset, *align)?
+            {
+                return Err(EditError::Invalid(format!(
+                    "there is no ground under it (x {x:.2}, z {z:.2}): it is outside every Terrain"
+                )));
+            }
+        }
+        Command::AddPreset {
+            preset,
+            at,
+            name,
+            parent,
+        } => {
+            let Some(p) = world.registry().preset(preset).cloned() else {
+                let known: Vec<String> =
+                    world.registry().presets().map(|p| p.name.clone()).collect();
+                return Err(EditError::Invalid(format!(
+                    "no preset `{preset}` (presets: {})",
+                    if known.is_empty() {
+                        "none".into()
+                    } else {
+                        known.join(", ")
+                    }
+                )));
+            };
+            for c in p.spawn_commands(world, *at, name.as_deref(), parent.as_deref()) {
+                apply_one(world, stack, &c, created, files, warn)?;
+            }
+        }
+        Command::EjectBehaviour { entity, component } => {
+            let uid = resolve_entity(world, entity)?;
+            let e = world
+                .entity_by_uid(uid)
+                .ok_or_else(|| EditError::Invalid(format!("no entity {uid}")))?;
+            let name = world
+                .registry()
+                .component(component)
+                .map(|c| c.name())
+                .ok_or_else(|| ReflectError::UnknownType(component.to_string()))?;
+            let Some(script) = world.registry().behaviour_script(name).copied() else {
+                let known: Vec<&str> = world
+                    .registry()
+                    .behaviour_scripts()
+                    .map(|s| s.component)
+                    .collect();
+                return Err(EditError::Invalid(format!(
+                    "{name} has no script version (behaviours that do: {})",
+                    known.join(", ")
+                )));
+            };
+            let path = world.field_path(name)?;
+            let value = world.get_field(e, &path)?;
+            let json = world.registry().value_to_json(value.as_ref())?;
+            let properties = (script.properties)(&json).map_err(EditError::Invalid)?;
+            if world.registry().component("Script").is_none() {
+                return Err(EditError::Invalid(
+                    "scripts are not part of this build (the `script` module)".into(),
+                ));
+            }
+            apply_one(
+                world,
+                stack,
+                &Command::RemoveComponent {
+                    entity: uid.to_string(),
+                    component: name.to_string(),
+                },
+                created,
+                files,
+                warn,
+            )?;
+            apply_one(
+                world,
+                stack,
+                &Command::AddComponent {
+                    entity: uid.to_string(),
+                    component: "Script".into(),
+                    value: Some(serde_json::json!({
+                        "source": script.path,
+                        "properties": properties,
+                    })),
+                },
+                created,
+                files,
+                warn,
+            )?;
+            files.push((script.path.to_string(), script.source.to_string()));
         }
     }
     Ok(())

@@ -220,6 +220,8 @@ box-player my-game --headless --frames 120         # no window, no image: just r
 
 The player and `box run` print script output (`print`, `log.info`) and errors to the terminal. `RUST_LOG` changes what is shown (for example `RUST_LOG=warn` hides script output).
 
+Use `box playtest my-game route` to replay a saved `playtests/route.playtest.json` headlessly. The report shows each check and its frame. Playtest log checks use the same capture filter at every `RUST_LOG` setting.
+
 ## Set up your code editor
 
 Any text editor works. For completion, type checking and hover documentation, use Visual Studio Code with the **Luau Language Server** extension (luau-lsp), then run:
@@ -250,7 +252,8 @@ box render my-game --out shot.png
 - `box scene apply` applies editor commands (the same ones the editor uses, with validation and undo) and saves the scene. `--dry-run` only checks them; `box scene apply --help` lists the commands.
 - `box check` parses every scene, imports every asset and resolves every reference; it exits with an error code when something is broken.
 - `box scene show my-game` prints the scene's objects; `box registry` lists every component type with its fields.
-- `box render` draws a scene to a PNG without opening a window.
+- A new project has an `AGENTS.md`: a short guide for AI coding agents (commands, how to verify, known limits). Codex reads it; `CLAUDE.md` points Claude Code to it.
+- `box render` draws a scene to a PNG without opening a window. Choose the view without editing the scene: `--eye 12,6,14 --look-at 0,1,0` (and `--fov`), `--overview` for the whole scene from above, or `--views views.json` for several poses in one run.
 
 ## Export your game
 

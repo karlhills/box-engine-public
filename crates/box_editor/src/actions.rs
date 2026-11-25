@@ -450,6 +450,16 @@ fn builtin_actions() -> Vec<Action> {
         .shortcut(Command::UnhideAll)
         .keywords("unhide visibility eye")
         .enabled_when(editing),
+        Action::new("edit.snap_to_ground", "Edit", "Snap to Ground", |s| {
+            s.snap_selection_to_ground();
+        })
+        .shortcut(Command::SnapToGround)
+        .keywords("terrain drop floor land place height")
+        .tooltip("Move the selection onto the terrain under it: its lowest point lands on the ground (undoable)")
+        .enabled_when(|s| {
+            editing(s)?;
+            has_selection(s)
+        }),
         Action::new("edit.bake", "Edit", "Bake to Mesh", |s| {
             s.bake_selection();
         })
@@ -543,6 +553,44 @@ fn builtin_actions() -> Vec<Action> {
              warnings, and a switch to turn one off for this session",
         )
         .checked_when(EditorState::rules_panel_open),
+        Action::new("view.assistant", "View", "Assistant", |s| {
+            let open = !s.assistant_open();
+            s.set_assistant(open);
+        })
+        .keywords("ai agent claude ask chat help build describe assistant prompt")
+        .tooltip(
+            "Describe what to build or change and an AI agent (Claude Code) does it in this \
+             project; each request is one undo step",
+        )
+        .checked_when(EditorState::assistant_open),
+        Action::new("view.mixer", "View", "Mixer", |s| {
+            let open = !s.mixer_open();
+            s.set_mixer(open);
+        })
+        .keywords("audio sound volume levels solo mute bus fader meter")
+        .tooltip(
+            "Bus volumes, and during Play every playing sound with its level at the listener, \
+             distance, attenuation and pan, volume, solo and mute (until Stop)",
+        )
+        .checked_when(EditorState::mixer_open),
+        Action::new("view.audio_ranges", "View", "Audio Ranges", |s| {
+            s.viewport.view.audio = !s.viewport.view.audio
+        })
+        .keywords("sound sources spatial distance listener debug")
+        .tooltip(
+            "Draw sound sources' full-volume and silent distances, and during Play a line \
+             from each to the listener coloured by its level",
+        )
+        .checked_when(|s| s.viewport.view.audio),
+        Action::new("view.navigation", "View", "Navigation", |s| {
+            s.viewport.view.nav = !s.viewport.view.nav
+        })
+        .keywords("navmesh pathfinding enemies walkable ai paths")
+        .tooltip(
+            "Draw the navmesh: where enemies and other agents can walk. It is built from \
+             the scene's static colliders and follows your edits",
+        )
+        .checked_when(|s| s.viewport.view.nav),
         Action::new("view.reset_camera", "View", "Reset Camera", |s| {
             s.camera = EditorCamera::default()
         }),
@@ -737,6 +785,27 @@ fn add_generator_action(g: crate::procedural::GeneratorEntry) -> Action {
     a
 }
 
+/// Add ▸ `<category>` ▸ `<preset>`, as in the Add menus.
+fn add_preset_action(p: crate::presets::PresetEntry) -> Action {
+    let name = p.name.clone();
+    let mut a = Action::new(
+        format!("add.preset:{}", p.name),
+        "Add",
+        format!("{} ▸ {}", p.category, p.title),
+        move |s| {
+            s.add_preset(&name);
+        },
+    )
+    .keywords(format!(
+        "new create preset gameplay {} {} {}",
+        p.name, p.category, p.description
+    ));
+    if !p.description.is_empty() {
+        a = a.tooltip(p.description);
+    }
+    a
+}
+
 /// The actions that depend on what is open, for the palette: Add ▸ kinds
 /// and generators,
 /// Add Component ▸ (for the selection), Open Scene ▸ the project's scenes,
@@ -751,6 +820,7 @@ pub fn context_actions(state: &mut EditorState) -> Vec<Action> {
             .into_iter()
             .map(add_generator_action),
     );
+    out.extend(state.preset_entries().into_iter().map(add_preset_action));
     component_actions(state, &mut out);
     if let Some(project) = &state.project {
         match project.scene_files() {

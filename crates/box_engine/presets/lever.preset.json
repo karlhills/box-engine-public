@@ -1,0 +1,41 @@
+{
+  "name": "lever",
+  "title": "Lever",
+  "category": "Gameplay",
+  "description": "A lever that opens and closes a gate each time the player presses E next to it. Point its Toggle action at anything else to switch that instead, or add SetEnabled to start a Mover or stop a Spawner.",
+  "entities": [
+    {
+      "name": "Lever",
+      "components": {
+        "Transform": {},
+        "Primitive": { "shape": { "Cuboid": { "size": [0.6, 0.3, 0.6] } } },
+        "StandardMaterial": { "base_color": [0.4, 0.4, 0.42, 1.0], "roughness": 0.7 },
+        "Collider": { "shape": "Primitive" },
+        "Interactable": {
+          "trigger": "Press",
+          "radius": 2.0,
+          "offset": [0.0, 0.8, 0.0],
+          "prompt": "Pull",
+          "cooldown": 0.5,
+          "actions": [
+            { "Toggle": { "target": { "Entity": "$uid:Gate" }, "collide": true } },
+            { "Toggle": { "target": { "Child": "Handle Up" }, "collide": false } },
+            { "Toggle": { "target": { "Child": "Handle Down" }, "collide": false } },
+            { "Burst": { "style": "Dust", "count": 12 } }
+          ]
+        }
+      }
+    },
+    { "name": "Handle Up", "parent": "Lever", "components": { "Transform": { "translation": [0.0, 0.45, -0.12], "rotation": [-0.258819, 0.0, 0.0, 0.9659258] }, "Primitive": { "shape": { "Cylinder": { "radius": 0.05, "height": 0.7, "segments": 8 } } }, "StandardMaterial": { "base_color": [0.85, 0.15, 0.1, 1.0], "roughness": 0.5 } } },
+    { "name": "Handle Down", "parent": "Lever", "components": { "Transform": { "translation": [0.0, 0.45, 0.12], "rotation": [0.258819, 0.0, 0.0, 0.9659258] }, "Visible": false, "Primitive": { "shape": { "Cylinder": { "radius": 0.05, "height": 0.7, "segments": 8 } } }, "StandardMaterial": { "base_color": [0.15, 0.75, 0.2, 1.0], "roughness": 0.5 } } },
+    {
+      "name": "Gate",
+      "components": {
+        "Transform": { "translation": [0.0, 1.25, -4.0] },
+        "Primitive": { "shape": { "Cuboid": { "size": [3.0, 2.5, 0.25] } } },
+        "StandardMaterial": { "base_color": [0.3, 0.3, 0.34, 1.0], "metallic": 0.6, "roughness": 0.45 },
+        "Collider": { "shape": "Primitive" }
+      }
+    }
+  ]
+}

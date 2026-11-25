@@ -2,8 +2,9 @@
 //! headlessly in the stock engine game (no game code), from a project
 //! created the way `box new --template` creates it:
 //!
-//! - `third-person`: W walks the character toward the camera's forward,
-//!   into the first pickup, which the HUD counts; Space jumps.
+//! - `third-person`: W walks the character (a `PlayerController`) toward
+//!   the follow camera's forward, into the first pickup, which the built-in
+//!   HUD counts; Space jumps. No scripts.
 //! - `procedural`: the Luau rule builds the garden path's parts and the
 //!   scatter places shrubs and rocks, with no rule or script warnings.
 //!
@@ -15,7 +16,6 @@ use std::time::Duration;
 
 use box_engine::box_assets::AssetServer;
 use box_engine::box_core::derived::Derived;
-use box_engine::box_script::ScriptRuntime;
 use box_engine::box_ui::Ui;
 use box_engine::player::{PlayerOptions, build_app};
 use box_engine::prelude::*;
@@ -63,18 +63,14 @@ fn position(world: &World, name: &str) -> Vec3 {
     world.get::<Transform>(e).unwrap().translation
 }
 
-fn ui_text(world: &World, id: &str) -> String {
+/// The built-in HUD's lines, as shown.
+fn hud(world: &World) -> Vec<String> {
     let ui = world.resource::<Ui>();
-    let n = ui
-        .find(None, id)
-        .unwrap_or_else(|| panic!("no UI node `{id}`"));
-    ui.text(n).unwrap_or_default()
-}
-
-fn no_script_errors(world: &World) {
-    let stats = world.resource::<ScriptRuntime>().stats();
-    assert_eq!(stats.errors, 0, "{stats:?}");
-    assert_eq!(stats.disabled, 0, "{stats:?}");
+    let root = ui.find(None, "game_hud").expect("the built-in HUD");
+    ui.children(root)
+        .iter()
+        .map(|n| ui.text(*n).unwrap_or_default())
+        .collect()
 }
 
 #[test]
@@ -82,9 +78,14 @@ fn third_person_template_walks_collects_and_jumps() {
     let dir = new_project("third-person");
     let mut app = app(dir.clone());
     frames(&mut app, 10);
-    no_script_errors(&app.world);
-    assert_eq!(ui_text(&app.world, "score"), "Score 0");
-    assert_eq!(ui_text(&app.world, "left"), "5 left");
+    assert_eq!(
+        app.world
+            .query::<&box_engine::box_script::Script>()
+            .iter()
+            .count(),
+        0
+    );
+    assert_eq!(hud(&app.world), ["Score 0", "Pickups 0 / 5"]);
     let start = position(&app.world, "Player");
 
     // W walks forward (the camera looks down -Z) into Pickup 1, 7 m ahead.
@@ -95,9 +96,12 @@ fn third_person_template_walks_collects_and_jumps() {
     let end = position(&app.world, "Player");
     assert!(start.z - end.z > 6.0, "walked from {start} to {end}");
     assert!((end.x - start.x).abs() < 0.05, "drifted sideways: {end}");
-    assert!(app.world.find_by_name("Pickup 1").is_none(), "picked up");
-    assert_eq!(ui_text(&app.world, "score"), "Score 1");
-    assert_eq!(ui_text(&app.world, "left"), "4 left");
+    let pickup = app.world.find_by_name("Pickup 1").unwrap();
+    assert!(
+        app.world.get::<Visible>(pickup).is_some_and(|v| !v.0),
+        "picked up"
+    );
+    assert_eq!(hud(&app.world), ["Score 1", "Pickups 1 / 5"]);
 
     // Space jumps.
     app.world.resource_mut::<Input>().press_key(KeyCode::Space);
@@ -108,7 +112,6 @@ fn third_person_template_walks_collects_and_jumps() {
     frames(&mut app, 15);
     let up = position(&app.world, "Player");
     assert!(up.y > end.y + 0.8, "jumped from {end} to {up}");
-    no_script_errors(&app.world);
     let _ = std::fs::remove_dir_all(dir);
 }
 

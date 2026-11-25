@@ -81,7 +81,7 @@ Derived entities are not 1:1 with semantic ones: a room's walls may become one t
 
 ## 3. Mesh representation
 
-- **`MeshData`** is an indexed triangle list with positions, normals, tangents, up to four UV sets, vertex colours, and material groups. Generators *emit* geometry, and a triangle list is sufficient for that.
+- **`MeshData`** is an indexed triangle list with positions, normals, tangents, up to four UV sets, vertex colours, up to two custom vec4 sets (data for material shaders; `MeshBuilder::with_custom_sets`, `Vertex::custom`; part of `mesh_hash` only when present), and material groups. Generators *emit* geometry, and a triangle list is sufficient for that.
 - A half-edge or polygon mesh is only needed for topological editing of arbitrary meshes (general bevel, subdivision, loop cuts). It is **deferred**. Chamfers and bevels are done on 2D profiles before extrusion.
 - A **`MeshBuilder`** helper accumulates quads, polygons and swept sections into `MeshData`, with per-group materials. This mirrors the builders construction games already use.
 

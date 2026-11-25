@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "description": "Run to the middle gem, back south, then east to the south-east gem",
+  "steps": [
+    {
+      "input": {
+        "move": [
+          0,
+          1
+        ]
+      },
+      "frames": 70
+    },
+    {
+      "wait": 20
+    },
+    {
+      "check": "entity_gone",
+      "entity": "Gem 1"
+    },
+    {
+      "check": "event_seen",
+      "event": "PlaySound"
+    },
+    {
+      "check": "entity_near",
+      "entity": "Player",
+      "point": [
+        0,
+        0.92,
+        -1
+      ],
+      "radius": 1,
+      "horizontal": true
+    },
+    {
+      "input": {
+        "move": [
+          0,
+          -1
+        ]
+      },
+      "frames": 100
+    },
+    {
+      "input": {
+        "move": [
+          1,
+          0
+        ]
+      },
+      "frames": 95
+    },
+    {
+      "wait": 20
+    },
+    {
+      "check": "entity_gone",
+      "entity": "Gem 5"
+    },
+    {
+      "check": "entity_exists",
+      "entity": "Gem 4"
+    },
+    {
+      "check": "log_contains",
+      "text": "score 20"
+    },
+    {
+      "check": "component_equals",
+      "entity": "Gem 4",
+      "path": "Transform.translation.x",
+      "value": -9,
+      "tolerance": 0.01
+    }
+  ]
+}

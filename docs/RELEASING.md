@@ -111,6 +111,8 @@ folders and the install's `~/.local/bin`, after checking that `cargo`,
    link only macOS libraries (`otool -L`); the app's signature verifies;
 3. `box new my-game` (`BOX_TEST_TEMPLATE=<name>` uses
    `box new --template <name>` once templates exist);
+   then the no-code path: the First Game example copied from the app's
+   gallery checks with no errors or warnings, runs 120 frames and exports;
 4. the getting-started guide's first script and its `box scene apply`
    commands, **copied out of the guide shipped in the release**, so the test
    breaks when the guide does;

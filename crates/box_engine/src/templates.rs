@@ -553,6 +553,9 @@ pub fn create_data_project(
         });
     }
     copy_files(&root, &files)?;
+    for (path, bytes) in crate::project::agent_guide_files(&root) {
+        crate::project::write_atomic(&path, &bytes).map_err(io(&path))?;
+    }
     match finish_project_file(&root, name) {
         Ok(p) => Ok(p),
         Err(e) => {
@@ -685,6 +688,14 @@ mod tests {
         let mut built: serde_json::Value = serde_json::from_slice(&built).unwrap();
         without_uids(&mut committed);
         without_uids(&mut built);
+        // The ground's collider exists only with the physics module.
+        if !cfg!(feature = "physics") {
+            for e in committed["entities"].as_array_mut().unwrap() {
+                if let Some(c) = e["components"].as_object_mut() {
+                    c.remove("Collider");
+                }
+            }
+        }
         assert_eq!(committed, built, "regenerate {}", file.display());
     }
 

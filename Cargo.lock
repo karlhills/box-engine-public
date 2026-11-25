@@ -585,9 +585,11 @@ name = "box_engine"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bevy_reflect",
  "box_assets",
  "box_audio",
  "box_core",
+ "box_nav",
  "box_physics",
  "box_proc",
  "box_render",
@@ -616,6 +618,16 @@ dependencies = [
  "image",
  "serde",
  "serde_json",
+ "thiserror 2.0.21",
+ "tracing",
+]
+
+[[package]]
+name = "box_nav"
+version = "0.1.0"
+dependencies = [
+ "glam 0.33.12",
+ "rerecast",
  "thiserror 2.0.21",
  "tracing",
 ]
@@ -3786,6 +3798,19 @@ name = "renderdoc-sys"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
+
+[[package]]
+name = "rerecast"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71fb021f09acc9f578681db0a54ba16e952565fdc07ab963278d0f93a6b07b14"
+dependencies = [
+ "bitflags 2.13.2",
+ "glam 0.33.12",
+ "slotmap",
+ "thiserror 2.0.21",
+ "tracing",
+]
 
 [[package]]
 name = "rfd"

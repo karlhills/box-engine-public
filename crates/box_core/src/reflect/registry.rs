@@ -186,6 +186,14 @@ pub struct Registry {
     events: BTreeMap<&'static str, TypeId>,
     /// Stored-data migrations by type name ([`Registry::add_migration`]).
     migrations: crate::migrate::TypeMigrations,
+    /// The ground for `snap_to_ground` ([`Registry::set_ground_sampler`]).
+    ground_sampler: Option<crate::edit::GroundSampler>,
+    /// Placeable recipes by name ([`Registry::register_preset`]).
+    presets: BTreeMap<String, crate::preset::Preset>,
+    /// Script versions of behaviour components, by component name.
+    behaviour_scripts: BTreeMap<&'static str, crate::preset::BehaviourScript>,
+    /// Short names a later type may take over ([`Registry::register_yielding`]).
+    yielding: BTreeSet<&'static str>,
 }
 
 /// A tuple of component types for [`Registry::register_all`]:
@@ -253,7 +261,61 @@ impl Registry {
             schemas: BTreeMap::new(),
             events: BTreeMap::new(),
             migrations: Default::default(),
+            ground_sampler: None,
+            presets: BTreeMap::new(),
+            behaviour_scripts: BTreeMap::new(),
+            yielding: BTreeSet::new(),
         }
+    }
+
+    /// Adds a preset (or replaces the one with its name): the `add_preset`
+    /// command, the editor's Add menu and MCP place it.
+    pub fn register_preset(&mut self, preset: crate::preset::Preset) -> &mut Self {
+        self.presets.insert(preset.name.clone(), preset);
+        self
+    }
+
+    /// Adds the script version of a behaviour component (Convert to
+    /// Script; the `eject_behaviour` command).
+    pub fn register_behaviour_script(
+        &mut self,
+        script: crate::preset::BehaviourScript,
+    ) -> &mut Self {
+        self.behaviour_scripts.insert(script.component, script);
+        self
+    }
+
+    /// The script version of component `name`, if it has one.
+    pub fn behaviour_script(&self, name: &str) -> Option<&crate::preset::BehaviourScript> {
+        self.behaviour_scripts.get(name)
+    }
+
+    /// Every component with a script version.
+    pub fn behaviour_scripts(&self) -> impl Iterator<Item = &crate::preset::BehaviourScript> {
+        self.behaviour_scripts.values()
+    }
+
+    /// The preset named `name`.
+    pub fn preset(&self, name: &str) -> Option<&crate::preset::Preset> {
+        self.presets.get(name)
+    }
+
+    /// Every preset, by name.
+    pub fn presets(&self) -> impl Iterator<Item = &crate::preset::Preset> {
+        self.presets.values()
+    }
+
+    /// Sets how edits find the ground (`snap_to_ground`, the editor's Snap
+    /// to Ground). The crate that owns terrains (box_proc) installs it when
+    /// it registers its types.
+    pub fn set_ground_sampler(&mut self, sampler: crate::edit::GroundSampler) -> &mut Self {
+        self.ground_sampler = Some(sampler);
+        self
+    }
+
+    /// How edits find the ground, if a crate installed it.
+    pub fn ground_sampler(&self) -> Option<crate::edit::GroundSampler> {
+        self.ground_sampler
     }
 
     /// Adds the next migration step of the stored data of type `name` (a
@@ -309,6 +371,32 @@ impl Registry {
         T: Component + GetTypeRegistration + TypePath,
     {
         self.register_kind::<T>(Kind::Component)
+    }
+
+    /// [`register`](Self::register) for an engine type with a common name
+    /// (`PlayerController`, `Mover`): a different type registered later
+    /// with the same short name (a game's own `PlayerController`) replaces
+    /// it instead of failing, and the presets that use the replaced type are
+    /// dropped. The engine type's systems keep running; scenes and tools
+    /// then mean the game's type by that name.
+    pub fn register_yielding<T>(&mut self) -> Result<(), ReflectError>
+    where
+        T: Component + GetTypeRegistration + TypePath,
+    {
+        self.register_kind::<T>(Kind::Component)?;
+        self.yielding.insert(T::short_type_path());
+        Ok(())
+    }
+
+    /// [`register_resource`](Self::register_resource) that yields its short
+    /// name like [`register_yielding`](Self::register_yielding).
+    pub fn register_resource_yielding<T>(&mut self) -> Result<(), ReflectError>
+    where
+        T: GetTypeRegistration + TypePath + Send + Sync + 'static,
+    {
+        self.register_kind::<T>(Kind::Resource)?;
+        self.yielding.insert(T::short_type_path());
+        Ok(())
     }
 
     /// Register a resource type (it must have `#[reflect(Resource)]`). Resources
@@ -526,11 +614,33 @@ impl Registry {
                 .types
                 .get(existing.type_id)
                 .map_or("<unknown>", |r| r.type_info().type_path());
-            return Err(ReflectError::DuplicateName {
-                name: name.to_string(),
-                existing,
-                new: T::type_path(),
-            });
+            if !self.yielding.remove(name) {
+                return Err(ReflectError::DuplicateName {
+                    name: name.to_string(),
+                    existing,
+                    new: T::type_path(),
+                });
+            }
+            // An engine type gives its name to this one.
+            self.by_name.remove(name);
+            let dropped: Vec<String> = self
+                .presets
+                .values()
+                .filter(|p| p.uses(name))
+                .map(|p| p.name.clone())
+                .collect();
+            for p in &dropped {
+                self.presets.remove(p);
+            }
+            tracing::info!(
+                "`{}` replaces the engine's `{existing}` (same name){}",
+                T::type_path(),
+                if dropped.is_empty() {
+                    String::new()
+                } else {
+                    format!("; presets left out: {}", dropped.join(", "))
+                }
+            );
         }
         self.types.register::<T>();
         let ok = match kind {
@@ -625,6 +735,15 @@ impl Registry {
             }
             None => false,
         }
+    }
+
+    /// A default value of the registered type `type_id`: its
+    /// `#[reflect(Default)]`, else an empty list, map or set, or `None` for
+    /// an `Option`, so commands and scripts can build fields of container
+    /// types that have no registered default (`Vec<Vec2>`). `None` for
+    /// other types without a default and for unregistered types.
+    pub fn default_value(&self, type_id: TypeId) -> Option<Value> {
+        default_of(self.types.get(type_id)?)
     }
 
     /// The underlying bevy registry. An escape hatch: prefer the methods above.
@@ -805,9 +924,86 @@ impl Registry {
         let Some(info) = self.types.get(type_id).map(|r| r.type_info()) else {
             return Ok(());
         };
+        // Fixed-length values get a clear error here, with the field path;
+        // serde's says only "invalid length 3, expected fewer elements".
+        if let Json::Array(items) = json {
+            let expected = match info {
+                TypeInfo::Array(a) => Some((a.capacity(), String::new())),
+                _ => fixed_vector_len(type_id),
+            };
+            if let Some((n, form)) = expected
+                && items.len() != n
+            {
+                let name = info.type_path_table().short_path();
+                return Err(ReflectError::Deserialize {
+                    type_path: info.type_path().to_string(),
+                    message: format!(
+                        "`{path}`: a {name} is {n} numbers{form}, got {} items",
+                        items.len()
+                    ),
+                });
+            }
+        }
+        // Rotations given as Euler angles in degrees, or (in a Transform
+        // with a translation) as a point to look at.
+        if type_id == TypeId::of::<glam::Quat>()
+            && let Json::Object(o) = json
+        {
+            if let Some(q) = euler_deg_quat(o, path)? {
+                out.fixes.push(Fix::Replace {
+                    at: pointer.clone(),
+                    value: serde_json::json!(q.to_array()),
+                });
+                return Ok(());
+            }
+            if o.contains_key("look_at") {
+                return Err(rotation_error(
+                    path,
+                    "{\"look_at\": [x, y, z]} needs the translation: set the whole Transform \
+                     (translation and rotation) in one value",
+                ));
+            }
+        }
+        let mut looked = false;
+        if type_id == TypeId::of::<crate::transform::Transform>()
+            && let Json::Object(o) = json
+            && let Some(Json::Object(r)) = o.get("rotation")
+            && let Some(target) = r.get("look_at")
+        {
+            let eye = match o.get("translation") {
+                Some(t) => json_vec3(t),
+                None => Some(glam::Vec3::ZERO),
+            };
+            let (Some(eye), Some(target)) = (eye, json_vec3(target)) else {
+                return Err(rotation_error(
+                    path,
+                    "`look_at` and `translation` must be [x, y, z] numbers",
+                ));
+            };
+            let dir = target - eye;
+            if dir.length_squared() < 1e-8 {
+                return Err(rotation_error(path, "`look_at` is the translation itself"));
+            }
+            let up = if dir.normalize().y.abs() > 0.999 {
+                glam::Vec3::NEG_Z
+            } else {
+                glam::Vec3::Y
+            };
+            let q = crate::transform::Transform::from_translation(eye)
+                .looking_at(target, up)
+                .rotation;
+            out.fixes.push(Fix::Replace {
+                at: format!("{pointer}/rotation"),
+                value: serde_json::json!(q.to_array()),
+            });
+            looked = true;
+        }
         match (info, json) {
             (TypeInfo::Struct(s), Json::Object(o)) => {
                 for (key, value) in o {
+                    if looked && key == "rotation" {
+                        continue;
+                    }
                     if let Some(f) = s.field(key) {
                         descend(pointer, path, key, true, |pointer, path| {
                             self.complete_at(f.type_id(), value, pointer, path, out)
@@ -954,10 +1150,97 @@ fn trimmed_doc(info: &'static TypeInfo) -> Option<&'static str> {
     info.docs().map(str::trim).filter(|d| !d.is_empty())
 }
 
-fn default_of(registration: &TypeRegistration) -> Option<Value> {
-    registration
-        .data::<ReflectDefault>()
-        .map(|d| d.default().into_partial_reflect())
+/// The default of a registered type: its `#[reflect(Default)]`, else, for
+/// containers without one (`Vec<Vec2>` profile points, maps, sets,
+/// `Option`), an empty list, map or set or `None`.
+pub(crate) fn default_of(registration: &TypeRegistration) -> Option<Value> {
+    use bevy_reflect::enums::{DynamicEnum, DynamicVariant};
+    use bevy_reflect::list::DynamicList;
+    use bevy_reflect::map::DynamicMap;
+    use bevy_reflect::set::DynamicSet;
+    if let Some(d) = registration.data::<ReflectDefault>() {
+        return Some(d.default().into_partial_reflect());
+    }
+    let info = registration.type_info();
+    Some(match info {
+        TypeInfo::List(_) => {
+            let mut list = DynamicList::default();
+            list.set_represented_type(Some(info));
+            Box::new(list)
+        }
+        TypeInfo::Map(_) => {
+            let mut map = DynamicMap::default();
+            map.set_represented_type(Some(info));
+            Box::new(map)
+        }
+        TypeInfo::Set(_) => {
+            let mut set = DynamicSet::default();
+            set.set_represented_type(Some(info));
+            Box::new(set)
+        }
+        TypeInfo::Enum(e) if e.type_path().starts_with("core::option::Option") => {
+            let mut none = DynamicEnum::new("None", DynamicVariant::Unit);
+            none.set_represented_type(Some(info));
+            Box::new(none)
+        }
+        _ => return None,
+    })
+}
+
+/// A quaternion from `{"euler_deg": [x, y, z]}`: degrees about X (pitch),
+/// Y (yaw) and Z (roll), applied yaw, then pitch, then roll. `None` when
+/// the object has no `euler_deg`.
+fn euler_deg_quat(
+    o: &serde_json::Map<String, serde_json::Value>,
+    path: &str,
+) -> Result<Option<glam::Quat>, ReflectError> {
+    let Some(v) = o.get("euler_deg") else {
+        return Ok(None);
+    };
+    let Some(a) = json_vec3(v) else {
+        return Err(rotation_error(
+            path,
+            "`euler_deg` must be [x, y, z] degrees",
+        ));
+    };
+    Ok(Some(glam::Quat::from_euler(
+        glam::EulerRot::YXZ,
+        a.y.to_radians(),
+        a.x.to_radians(),
+        a.z.to_radians(),
+    )))
+}
+
+fn json_vec3(v: &serde_json::Value) -> Option<glam::Vec3> {
+    let a = v.as_array().filter(|a| a.len() == 3)?;
+    let mut out = [0.0f32; 3];
+    for (o, x) in out.iter_mut().zip(a) {
+        *o = x.as_f64().filter(|n| n.is_finite())? as f32;
+    }
+    Some(glam::Vec3::from_array(out))
+}
+
+fn rotation_error(path: &str, message: &str) -> ReflectError {
+    ReflectError::Deserialize {
+        type_path: "glam::Quat".into(),
+        message: format!("`{path}`: {message}"),
+    }
+}
+
+/// The length and form of a glam vector or quaternion written as a JSON
+/// array.
+fn fixed_vector_len(type_id: TypeId) -> Option<(usize, String)> {
+    use glam::{Quat, Vec2, Vec3, Vec3A, Vec4};
+    let (n, form) = if type_id == TypeId::of::<Vec2>() {
+        (2, "[x, y]")
+    } else if type_id == TypeId::of::<Vec3>() || type_id == TypeId::of::<Vec3A>() {
+        (3, "[x, y, z]")
+    } else if type_id == TypeId::of::<Vec4>() || type_id == TypeId::of::<Quat>() {
+        (4, "[x, y, z, w]")
+    } else {
+        return None;
+    };
+    Some((n, format!(" {form}")))
 }
 
 /// Runs `f` with `pointer` (a JSON pointer) and `path` (a field path)

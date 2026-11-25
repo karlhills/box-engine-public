@@ -63,6 +63,9 @@ pub(crate) struct MaterialEntry {
     /// Needs the prepass depth while visible: a transparent material with a
     /// depth fade, or a material shader that reads the scene depth.
     pub scene_depth: bool,
+    /// Needs the opaque scene's colour while visible: a transparent
+    /// material shader that reads it.
+    pub scene_color: bool,
     /// Culling bounds margin in metres (`ShaderMaterial::bounds_padding`).
     pub bounds_padding: f32,
     /// `WindSway::strength` of a standard material (0 without wind): the
@@ -543,6 +546,7 @@ impl MaterialCache {
             double_sided: m.double_sided,
             sort_bias: m.sort_bias,
             scene_depth: depth_fade > 0.0,
+            scene_color: false,
             bounds_padding: 0.0,
             wind_reach: if wind { m.wind.strength } else { 0.0 },
             skinned: None,
@@ -621,6 +625,7 @@ impl MaterialCache {
                 double_sided: m.double_sided,
                 sort_bias: m.sort_bias,
                 scene_depth: depth_fade > 0.0 || m.scene_depth || compiled.reads_scene_depth,
+                scene_color: alpha.is_transparent() && compiled.reads_scene_color,
                 bounds_padding: if padding.is_finite() {
                     padding.max(0.0)
                 } else {
@@ -676,6 +681,7 @@ impl MaterialCache {
             double_sided,
             sort_bias: 0,
             scene_depth: false,
+            scene_color: false,
             bounds_padding: 0.0,
             wind_reach: 0.0,
             skinned: None,

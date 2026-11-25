@@ -36,6 +36,7 @@
 
 mod core;
 mod events;
+pub(crate) mod ground;
 mod input;
 mod physics;
 mod world;
@@ -51,7 +52,7 @@ use mlua::{Function, Lua, Result as LuaResult, Table, Thread, Value};
 
 pub(crate) use core::{Step, caller_path, clock, module_env, resolve_require, spawn, step};
 pub(crate) use events::Subscription;
-pub use events::{ScriptSignals, subscribe, unsubscribe};
+pub use events::{ScriptCall, ScriptCalls, ScriptSignals, subscribe, unsubscribe};
 
 /// A group of script globals (a table such as `physics`, or functions)
 /// with its luau-lsp type declarations.
@@ -148,6 +149,7 @@ pub fn builtin_apis() -> Vec<Arc<dyn ScriptApi>> {
         Arc::new(physics::PhysicsApi),
         Arc::new(physics::CharacterApi),
         Arc::new(events::EventsApi),
+        Arc::new(ground::GroundApi),
     ]
 }
 

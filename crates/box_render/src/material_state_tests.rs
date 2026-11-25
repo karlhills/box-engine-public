@@ -11,7 +11,7 @@ use box_core::mesh::MeshData;
 use box_core::shader_material::ShaderSource;
 use box_core::transform::{Transform, propagate_transforms};
 use box_core::world::World;
-use glam::Vec3;
+use glam::{Vec3, Vec4};
 
 use crate::components::*;
 use crate::renderer::Renderer;
@@ -350,6 +350,180 @@ fn material_shaders_read_the_scene_depth() {
     let (shallow, under) = (linear(&img, px(0.9, 0.0)), linear(&plain, px(0.9, 0.0)));
     let coverage = (shallow.x - under.x) / (1.0 - under.x);
     assert!((coverage - 0.1).abs() < 0.06, "shallow: {coverage}");
+    assert_eq!(r.validation_errors(), 0);
+}
+
+const SWAP: &str = "\
+fn surface(in: SurfaceInput, p: MaterialParams) -> Surface {
+    var s = default_surface(in);
+    s.base_color = vec3f(0.0);
+    s.roughness = 1.0;
+    // The scene 0.2 of the view to the right, red and blue swapped.
+    s.emissive = scene_color_at(scene_uv(in.frag_coord) + vec2f(0.2, 0.0)).bgr;
+    s.alpha = 1.0;
+    return s;
+}
+";
+
+/// A transparent material shader reads the opaque scene's colour: a sheet
+/// shows the red cube beside it, shifted and with its channels swapped. The
+/// same shader on a masked material (opaque pass, prepass, shadow pass)
+/// builds and reads black.
+#[test]
+fn material_shaders_read_the_scene_color() {
+    let Some(mut r) = headless() else {
+        eprintln!("skipping: no GPU");
+        return;
+    };
+    let mut world = ground_world();
+    let red = standard(
+        &mut world,
+        StandardMaterial {
+            base_color: Color::linear(0.0, 0.0, 0.0),
+            emissive: Color::linear(0.8, 0.1, 0.0),
+            roughness: 1.0,
+            ..Default::default()
+        },
+    );
+    // 0.2 of the view is 0.746 m of ground: the cube at x = 0.9 shows in
+    // the sheet around x = 0.15.
+    spawn(
+        &mut world,
+        Vec3::new(0.9, 0.0, 0.0),
+        MeshData::cuboid(Vec3::splat(0.6)),
+        red,
+    );
+    let plain = capture(&mut r, &mut world);
+    let source = linear(&plain, px(0.9, 0.0));
+    assert!(source.x > 0.7 && source.z < 0.05, "the red cube: {source}");
+    let material = |alpha_mode| ShaderMaterial {
+        alpha_mode,
+        ..Default::default()
+    };
+    let sheet = shader(
+        &mut world,
+        "shaders/swap.wgsl",
+        SWAP,
+        material(AlphaMode::Blend),
+    );
+    let at = Vec3::new(-0.4, 0.5, 0.0);
+    let sheet_mesh = mesh(&mut world, MeshData::plane(1.6, 1.6));
+    let entity = world.spawn((
+        Transform::from_translation(at),
+        MeshRenderer::new(sheet_mesh, sheet),
+    ));
+    let img = capture(&mut r, &mut world);
+    // The sheet covers x -1.1..0.3 (a little more: it is nearer the camera).
+    let seen = linear(&img, px(0.15, 0.0));
+    assert!(
+        (seen.z - source.x).abs() < 0.06 && seen.x < 0.1,
+        "the cube, blue: {seen} from {source}"
+    );
+    // Beside the cube's image the sheet shows the ground, swapped too.
+    let (ground, through) = (linear(&plain, px(-0.3, 0.9)), linear(&img, px(-1.0, 0.0)));
+    assert!(
+        (through - Vec3::new(ground.z, ground.y, ground.x))
+            .abs()
+            .max_element()
+            < 0.02,
+        "the ground: {through} from {ground}"
+    );
+    // Outside the sheet nothing changed.
+    let (a, b) = (linear(&plain, px(0.9, 0.0)), linear(&img, px(0.9, 0.0)));
+    assert!((a - b).abs().max_element() < 0.01, "{a} vs {b}");
+
+    // Masked: drawn with the opaque scene, where the colour is not bound.
+    world.despawn(entity);
+    let masked = shader(
+        &mut world,
+        "shaders/swap_masked.wgsl",
+        SWAP,
+        material(AlphaMode::Mask { cutoff: 0.5 }),
+    );
+    world.spawn((
+        Transform::from_translation(at),
+        MeshRenderer::new(sheet_mesh, masked),
+    ));
+    let img = capture(&mut r, &mut world);
+    let black = linear(&img, px(0.15, 0.0));
+    assert!(black.max_element() < 0.05, "no colour to read: {black}");
+    assert_eq!(r.validation_errors(), 0);
+}
+
+const CUSTOM: &str = "\
+fn surface(in: SurfaceInput, p: MaterialParams) -> Surface {
+    var s = default_surface(in);
+    s.base_color = vec3f(0.0);
+    s.roughness = 1.0;
+    s.emissive = in.custom0.rgb;
+    return s;
+}
+fn vertex(position: vec3f, in: VertexInput, p: MaterialParams) -> vec3f {
+    return position + in.custom1.xyz;
+}
+";
+
+/// A mesh's custom data reaches material shaders: set 0 colours the surface
+/// (interpolated between vertices), set 1 moves the vertices in the
+/// `vertex` hook. A mesh without custom data reads zero.
+#[test]
+fn custom_vertex_data_reaches_material_shaders() {
+    let Some(mut r) = headless() else {
+        eprintln!("skipping: no GPU");
+        return;
+    };
+    let mut world = ground_world();
+    let material = shader(
+        &mut world,
+        "shaders/custom.wgsl",
+        CUSTOM,
+        ShaderMaterial {
+            bounds_padding: 1.0,
+            ..Default::default()
+        },
+    );
+    // A 1 m sheet at x = -1, moved 1 m to the right by set 1; set 0 is
+    // green, plus red rising from 0 at its left edge to 1 at its right.
+    let mut sheet = MeshData::plane(1.0, 1.0);
+    sheet.custom = vec![
+        sheet
+            .positions
+            .iter()
+            .map(|p| Vec4::new(p.x + 0.5, 0.8, 0.0, 0.0))
+            .collect(),
+        vec![Vec4::new(1.0, 0.0, 0.0, 0.0); sheet.positions.len()],
+    ];
+    sheet.validate().unwrap();
+    spawn(&mut world, Vec3::new(-1.0, 0.3, 0.0), sheet, material);
+    // The same material on a mesh without custom data: black, not moved.
+    spawn(
+        &mut world,
+        Vec3::new(0.0, 0.3, 1.2),
+        MeshData::plane(0.6, 0.6),
+        material,
+    );
+    let img = capture(&mut r, &mut world);
+    let was = linear(&img, px(-1.0, 0.0));
+    assert!(
+        (was.x - was.y).abs() < 0.05 && was.y < 0.6,
+        "moved away: the grey ground {was}"
+    );
+    // The sheet is 0.3 m nearer the camera: its centre still projects to
+    // x = 0, its quarter points to about x = ±0.27.
+    let (left, mid, right) = (
+        linear(&img, px(-0.27, 0.0)),
+        linear(&img, px(0.0, 0.0)),
+        linear(&img, px(0.27, 0.0)),
+    );
+    assert!((mid.x - 0.5).abs() < 0.06, "red 0.5 in the middle: {mid}");
+    assert!((left.x - 0.25).abs() < 0.06, "red 0.25: {left}");
+    assert!((right.x - 0.75).abs() < 0.06, "red 0.75: {right}");
+    assert!(
+        (mid.y - 0.8).abs() < 0.05 && mid.z < 0.05,
+        "green 0.8: {mid}"
+    );
+    let plain = linear(&img, px(0.0, 1.2 * 4.0 / 3.7));
+    assert!(plain.max_element() < 0.05, "no custom data: {plain}");
     assert_eq!(r.validation_errors(), 0);
 }
 

@@ -215,6 +215,8 @@ enum Action {
     Trash(AssetId),
     Reimport(AssetId),
     Drag(AssetDrag),
+    /// Open a `.luau` file in the user's code editor.
+    OpenExternal(AssetId),
 }
 
 pub fn assets_ui(ui: &mut Ui, state: &mut EditorState) {
@@ -326,6 +328,12 @@ fn apply(state: &mut EditorState, actions: Vec<Action>) {
                 Some(s) => s.reimport(id).map_err(Into::into),
                 None => Ok(()),
             },
+            Action::OpenExternal(id) => {
+                if let Some(path) = state.asset_server().and_then(|s| s.path_of(id)) {
+                    state.open_in_code_editor(&path, None);
+                }
+                Ok(())
+            }
             Action::Drag(d) => {
                 state.assets.drag = Some(d);
                 Ok(())
@@ -792,7 +800,21 @@ fn tile_ui(
             }
             if item.label.is_none() {
                 let id = *id;
+                let script = name.ends_with(".luau");
                 resp.context_menu(|ui| {
+                    if script {
+                        if ui.button("Edit Script").clicked() {
+                            actions.push(Action::Open(item.clone()));
+                        }
+                        if ui
+                            .button("Open in Code Editor")
+                            .on_hover_text("VS Code when installed, else your default app")
+                            .clicked()
+                        {
+                            actions.push(Action::OpenExternal(id));
+                        }
+                        ui.separator();
+                    }
                     if ui.button("Rename").clicked() {
                         actions.push(Action::StartRename(id));
                     }

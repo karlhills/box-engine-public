@@ -1,0 +1,30 @@
+{
+  "name": "pickup",
+  "title": "Pickup",
+  "category": "Gameplay",
+  "description": "A spinning coin the player collects by walking into it: adds 1 to `score`, counts toward the `pickups` group, sparkles and disappears.",
+  "entities": [
+    {
+      "name": "Pickup",
+      "components": {
+        "Transform": { "translation": [0.0, 0.8, 0.0], "rotation": [0.7071068, 0.0, 0.0, 0.7071068] },
+        "Primitive": { "shape": { "Cylinder": { "radius": 0.32, "height": 0.08, "segments": 24 } } },
+        "StandardMaterial": { "base_color": [1.0, 0.66, 0.08, 1.0], "roughness": 0.25, "metallic": 0.9, "emissive": [0.35, 0.2, 0.0, 1.0] },
+        "Spinner": { "axis": [0.0, 1.0, 0.0], "speed": 2.5 },
+        "Bobber": {},
+        "Interactable": {
+          "trigger": "Touch",
+          "radius": 0.9,
+          "offset": [0.0, 0.0, 0.0],
+          "once": true,
+          "group": "pickups",
+          "actions": [
+            { "AddVar": { "var": "score", "amount": 1.0 } },
+            { "Burst": { "style": "Sparkle", "count": 24 } },
+            { "Hide": { "target": "This", "collide": true } }
+          ]
+        }
+      }
+    }
+  ]
+}

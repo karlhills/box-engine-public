@@ -13,6 +13,8 @@
 //! - `unknown_component`, `unknown_resource`: scene data no registered type
 //!   reads (`box check`);
 //! - `value_clamped`: `scene apply` set a number outside its range (clamped);
+//! - `field_defaulted`: `scene apply` switched to an enum variant without
+//!   giving a field it needs; the field type's default (often 0) was used;
 //! - `log`: a warning or error the engine logged during the command
 //!   (`target` names its source).
 //!

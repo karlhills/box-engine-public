@@ -177,6 +177,12 @@ struct Watchdog {
     ticks: Cell<u32>,
 }
 
+/// Resource: the seed of `math.random` in a playing world's script VM
+/// (1 without it). Insert it before the first frame; playtests set it from
+/// their `seed`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ScriptSeed(pub u32);
+
 /// Resource: the world's Luau VM and its script instances. See the module
 /// docs.
 pub struct ScriptRuntime {
@@ -438,6 +444,7 @@ impl ScriptRuntime {
         #[cfg(feature = "dynamics")]
         self.dispatch_collisions();
         self.dispatch_events();
+        self.dispatch_calls();
         self.resume_tasks();
         self.flush_loads();
         let dt = self
@@ -1111,6 +1118,70 @@ impl ScriptRuntime {
         }
     }
 
+    /// Calls queued in [`ScriptCalls`](crate::ScriptCalls) since the last
+    /// Update.
+    fn dispatch_calls(&mut self) {
+        let calls = {
+            let mut w = self.host.world.borrow_mut();
+            match w.get_resource_mut::<crate::ScriptCalls>() {
+                Some(c) if !c.pending.is_empty() => std::mem::take(&mut c.pending),
+                _ => return,
+            }
+        };
+        for call in calls {
+            let Some(i) = self.instance_index(call.entity) else {
+                if call.required {
+                    tracing::warn!(
+                        target: "box_script",
+                        "cannot call {}: {} has no running script",
+                        call.function,
+                        self.entity_label(call.entity)
+                    );
+                }
+                continue;
+            };
+            if !self.instances[i].started || self.instances[i].disabled.is_some() {
+                continue;
+            }
+            let f = self.instances[i]
+                .this
+                .get::<Option<Function>>(call.function.as_str())
+                .ok()
+                .flatten();
+            let Some(f) = f else {
+                if call.required {
+                    tracing::warn!(
+                        target: "box_script",
+                        "cannot call {}: the script of {} ({}) has no function of that name",
+                        call.function,
+                        self.entity_label(call.entity),
+                        self.modules[self.instances[i].module].path
+                    );
+                }
+                continue;
+            };
+            let mut args = MultiValue::with_capacity(call.args.len());
+            for json in &call.args {
+                let value = {
+                    let w = self.world();
+                    json_to_lua_with(&self.lua, json, &|uid| {
+                        Uid::parse(uid)
+                            .and_then(|u| w.entity_by_uid(u))
+                            .map_or(Value::Nil, entity_value)
+                    })
+                };
+                match value {
+                    Ok(v) => args.push_back(v),
+                    Err(e) => {
+                        tracing::error!(target: "box_script", "call {}: {e}", call.function);
+                        args.push_back(Value::Nil);
+                    }
+                }
+            }
+            self.call(i, &call.function, &f, args);
+        }
+    }
+
     fn dispatch_events(&mut self) {
         let names: Vec<String> = {
             let subs = self.host.subscriptions.borrow();
@@ -1441,6 +1512,15 @@ fn ensure_runtime(world: &mut World) -> bool {
         .unwrap_or_default();
     match ScriptRuntime::new(&apis) {
         Ok(rt) => {
+            if let Some(ScriptSeed(seed)) = world.get_resource::<ScriptSeed>().copied()
+                && let Err(e) = rt
+                    .lua
+                    .load(format!("math.randomseed({seed})"))
+                    .set_name("=box")
+                    .exec()
+            {
+                tracing::error!(target: "box_script", "could not seed math.random: {e}");
+            }
             world.insert_resource(rt);
             true
         }

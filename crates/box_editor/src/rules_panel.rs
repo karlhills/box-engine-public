@@ -17,7 +17,7 @@
 use std::collections::BTreeSet;
 
 use box_engine::box_proc::rule::{RuleInfo, RuleRegistry};
-use egui::{Align2, Context, RichText};
+use egui::{Context, RichText};
 
 use crate::path_tool::{Closing, PathTool, PathToolConfig};
 use crate::state::EditorState;
@@ -148,7 +148,11 @@ pub(crate) fn rules_window(ctx: &Context, state: &mut EditorState, t: &Tokens) {
         .fade_out(false)
         .resizable(true)
         .default_width(560.0)
-        .anchor(Align2::RIGHT_TOP, egui::vec2(-340.0, 130.0))
+        .default_pos(crate::assistant::start_at(
+            ctx,
+            egui::Align2::RIGHT_TOP,
+            egui::vec2(-340.0 - 520.0, 130.0),
+        ))
         .show(ctx, |ui| {
             if rows.is_empty() {
                 ui.label(

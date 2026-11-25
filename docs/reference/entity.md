@@ -53,6 +53,9 @@ end
 | [`Entity:world_position`](#entityworld_position) | The position in the world (through every parent), computed now. |
 | [`Entity:world_rotation`](#entityworld_rotation) | The rotation in the world (through every parent), computed now. |
 | [`Entity:interpolated_position`](#entityinterpolated_position) | Where an `Interpolated` entity is drawn this frame: between its last two fixed-step positions. |
+| [`Entity:move_to`](#entitymove_to) | Walks this character to `position` along the navmesh, around walls, through doors and up stairs (adds a `NavAgent` if it has none; needs a `KinematicCharacter`). |
+| [`Entity:stop`](#entitystop) | Stops walking (clears the `NavAgent` destination). |
+| [`Entity:nav_status`](#entitynav_status) | Where its walk stands: "idle", "baking" (the navmesh is not ready: it walks straight), "moving", "arrived", "unreachable" (it walks as close as it can) or "off_mesh". |
 | [`Entity:get`](#entityget) | A copy of a component (`e:get("Transform")`) or of one of its fields (`e:get("Transform.translation")`), or nil when the entity does not have the component. |
 | [`Entity:set`](#entityset) | Patches a component or one field: `e:set("Transform", { translation = v })` changes only the fields given, `e:set("Transform.scale", v)` one field. |
 
@@ -307,6 +310,30 @@ function Entity:interpolated_position(): vector
 ```
 
 Where an `Interpolated` entity is drawn this frame: between its last two fixed-step positions. Use it to follow an entity moved in `on_fixed_update` smoothly (a camera).
+
+### `Entity:move_to`
+
+```luau
+function Entity:move_to(position: vector)
+```
+
+Walks this character to `position` along the navmesh, around walls, through doors and up stairs (adds a `NavAgent` if it has none; needs a `KinematicCharacter`). Call it again to change the goal: a goal that moved less than a metre does not replan.
+
+### `Entity:stop`
+
+```luau
+function Entity:stop()
+```
+
+Stops walking (clears the `NavAgent` destination).
+
+### `Entity:nav_status`
+
+```luau
+function Entity:nav_status(): string
+```
+
+Where its walk stands: "idle", "baking" (the navmesh is not ready: it walks straight), "moving", "arrived", "unreachable" (it walks as close as it can) or "off_mesh".
 
 ### `Entity:get`
 

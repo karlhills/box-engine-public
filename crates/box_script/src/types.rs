@@ -169,6 +169,8 @@ type ScriptModule = {
     on_trigger_enter: ((self: ScriptSelf, other: Entity) -> ())?,
     --- Called when an overlap reported by `on_trigger_enter` ends.
     on_trigger_exit: ((self: ScriptSelf, other: Entity) -> ())?,
+    --- Called when the player uses this entity's `Interactable` (after its built-in actions ran), with the entity that used it. Runs in the next Update.
+    on_interact: ((self: ScriptSelf, interactor: Entity) -> ())?,
     --- Called when this rigid body or character starts touching `other`; `impulse` is the contact impulse in newton-seconds. Needs the engine's `dynamics` feature (on in the prebuilt editor and player).
     on_collision_enter: ((self: ScriptSelf, other: Entity, impulse: number) -> ())?,
     --- Called when a contact reported by `on_collision_enter` ends. Needs the `dynamics` feature.
@@ -505,22 +507,22 @@ pub(crate) fn luau_type(info: &'static TypeInfo, depth: usize, patch: bool) -> S
                     VariantInfo::Unit(u) => format!("\"{}\"", u.name()),
                     VariantInfo::Tuple(t) if t.field_len() == 1 => format!(
                         "{{ {}: {} }}",
-                        t.name(),
+                        table_key(t.name()),
                         field_type(t.field_at(0).and_then(|f| f.type_info()), depth)
                     ),
-                    VariantInfo::Tuple(t) => format!("{{ {}: {{ any }} }}", t.name()),
+                    VariantInfo::Tuple(t) => format!("{{ {}: {{ any }} }}", table_key(t.name())),
                     VariantInfo::Struct(s) => {
                         let fields: Vec<String> = s
                             .iter()
                             .map(|f| {
                                 format!(
                                     "{}: {}",
-                                    f.name(),
+                                    table_key(f.name()),
                                     optional(field_type(f.type_info(), depth))
                                 )
                             })
                             .collect();
-                        format!("{{ {}: {{ {} }} }}", s.name(), fields.join(", "))
+                        format!("{{ {}: {{ {} }} }}", table_key(s.name()), fields.join(", "))
                     }
                 })
                 .collect();

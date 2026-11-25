@@ -1,12 +1,12 @@
 //! A bounded, process-wide ring buffer of log records for the control
-//! socket's `read_log` ([`crate::control`]).
+//! socket's `read_log` ([`crate::control`]) and playtest assertions.
 //!
 //! [`crate::init_logging`] installs [`CaptureLayer`] next to the terminal
-//! output, under the same filter. It records nothing until [`enable`] is
-//! called (the runner does so for `--control`, and [`crate::crash::install`]
-//! so a crash report has the recent log), otherwise a log event costs one
-//! atomic load. At most [`CAPACITY`] records are kept;
-//! sequence numbers keep increasing when old records are dropped, so a
+//! output, with a fixed [`crate::CAPTURE_LOG_FILTER`]. It records nothing
+//! until [`enable`] is called (for control, playtests, or crash reports),
+//! otherwise a log event costs one atomic load. At most [`CAPACITY`]
+//! records are kept.
+//! Sequence numbers keep increasing when old records are dropped, so a
 //! client's `since` stays valid.
 
 use std::collections::VecDeque;

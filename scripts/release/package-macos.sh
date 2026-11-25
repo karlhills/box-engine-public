@@ -28,7 +28,7 @@ windows_template="$root/target/templates/windows/box-player.exe"
 project_templates="$root/templates/projects"
 # Script-only example projects shipped in the release folder's examples/
 # (the guides refer to them as examples/<name>). Native ones need Rust.
-examples=(guide_samples script_demo collector_luau cinder_keep script_rules)
+examples=(first_game guide_samples script_demo collector_luau cinder_keep script_rules ember_bridge third_person_scripted)
 
 [[ "$(uname -s)" == Darwin ]] || { echo "error: macOS releases are built on macOS" >&2; exit 1; }
 

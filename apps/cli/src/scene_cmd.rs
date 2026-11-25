@@ -20,7 +20,7 @@ use crate::{
 
 /// The edit command format: `box scene apply --help` and the MCP
 /// `scene_apply`/`apply_commands` tools both show this text.
-pub const COMMANDS_HELP: &str = r#"Commands: one command object or an array of them, applied in order as one all-or-nothing transaction. Each has an "op":
+pub const COMMANDS_HELP: &str = r##"Commands: one command object or an array of them, applied in order as one all-or-nothing transaction. Each has an "op":
   spawn             {name, parent?, index?, uid?, components?}
   set               {entity, path, value}
   set_resource      {path, value}
@@ -30,11 +30,16 @@ pub const COMMANDS_HELP: &str = r#"Commands: one command object or an array of t
   despawn           {entity}
   rename            {entity, name}
   duplicate         {entity}
+  snap_to_ground    {entity, offset?, align?}  move its origin onto the Terrain under it, offset metres up (align: tilt its up axis to the slope)
+  add_preset        {preset, at?: [x, y, z], name?, parent?}  place a ready-made object (player, pickup, hazard, moving_platform, checkpoint, goal; `box registry` lists them) with fresh uids
+  eject_behaviour   {entity, component}  Convert to Script: replace a behaviour (Spinner, Bobber, Mover) with a Script doing the same, its values as properties; writes scripts/behaviours/<name>.luau when missing
+`set_resource` on a registered resource the scene lacks (GameRules, HudSettings) adds it with its defaults first.
 `entity` and `parent` take a uid or a unique name; `path` is Component.field.sub (e.g. "Transform.translation.y"); values use the scene-file JSON form that `box scene show` (MCP: scene_show, world_query) prints; `box registry` (MCP: registry) lists components, fields, ranges and units.
+Friendlier value forms: colours as "#rrggbb" or {"srgb": [r, g, b]} (the scene file stores linear [r, g, b, a]); rotations as {"euler_deg": [x, y, z]} (degrees: pitch, yaw, roll) or, in a whole Transform with its translation, {"look_at": [x, y, z]}; asset references as a path under assets/ ("models/tree.glb#Mesh/Trunk", "scripts/door.luau"), the id is filled in from the .meta.
 
 Example:
   [{"op": "spawn", "name": "Ball", "components": {"Primitive": {"shape": {"Sphere": {"radius": 0.5, "sectors": 32, "stacks": 16}}, "cast_shadows": true}}},
-   {"op": "set", "entity": "Ball", "path": "Transform.translation", "value": [0.0, 1.0, 0.0]}]"#;
+   {"op": "set", "entity": "Ball", "path": "Transform.translation", "value": [0.0, 1.0, 0.0]}]"##;
 
 /// Entity records as in the scene file, each with a `"children"` list of uids.
 fn records_with_children(
@@ -212,11 +217,24 @@ pub(crate) fn apply_text(
     let applied =
         apply_commands_with_warnings(&mut world, &mut stack, &commands, "box scene apply")
             .map_err(|e| CliError::command(&path, e).name_entity(&world))?;
-    // Applied differently from what was asked (a value clamped to its range).
+    // Scripts the commands need (Convert to Script), into the project.
+    let mut files_written = Vec::new();
+    if !dry_run
+        && !applied.files.is_empty()
+        && let Ok(project) = Project::open(&path)
+    {
+        files_written = box_engine::behaviours::scripts::write_missing_files(
+            &project.assets_dir(),
+            &applied.files,
+        )
+        .map_err(|e| CliError::io(&project.assets_dir(), e))?;
+    }
+    // Applied differently from what was asked (a value clamped to its
+    // range, a variant field filled with its type's default).
     let mut command_problems: Vec<Json> = applied
         .warnings
         .iter()
-        .map(|w| json!({ "severity": "warning", "code": "value_clamped", "message": w }))
+        .map(|w| json!({ "severity": "warning", "code": w.kind.code(), "message": w.message }))
         .collect();
     // Save repair: asset references written in canonical form (ids filled
     // in for path-only references, path hints current). References that
@@ -260,6 +278,9 @@ pub(crate) fn apply_text(
     command_problems.extend(problems::merge(asset_problems, collector.finish()));
     let mut problems = loaded.problems.clone();
     problems.extend(command_problems);
+    for f in &files_written {
+        text.push_str(&format!("\nWrote assets/{f}"));
+    }
     text.push_str(&problems::summary(&problems));
     let (project, file) = locate(&path);
     let json = json!({
@@ -270,6 +291,7 @@ pub(crate) fn apply_text(
         "dry_run": dry_run,
         "written": written,
         "refs_repaired": refs_repaired,
+        "files_written": files_written,
         "problems": problems,
     });
     Ok(Output::ok(json, text))

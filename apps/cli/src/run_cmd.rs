@@ -32,7 +32,7 @@ const MAX_COMPILE_PROBLEMS: usize = 20;
 /// `run` without its arguments), with cargo's JSON messages: diagnostics are
 /// printed as cargo prints them (stderr), and errors become `compile_error`
 /// problems with file, line and column. Fails with `build_failed`.
-fn build_native(native: &NativeCrate, run: &[String]) -> Result<(), CliError> {
+pub(crate) fn build_native(native: &NativeCrate, run: &[String]) -> Result<(), CliError> {
     use std::io::{BufRead, Write};
     let mut command: Vec<String> = run
         .iter()
@@ -182,7 +182,11 @@ fn flags(args: &RunArgs) -> Vec<String> {
     if let Some((w, h)) = args.size {
         out.extend(["--size".to_string(), format!("{w}x{h}")]);
     }
-    for (flag, path) in [("--capture", &args.capture), ("--report", &args.report)] {
+    for (flag, path) in [
+        ("--capture", &args.capture),
+        ("--report", &args.report),
+        ("--audio-report", &args.audio_report),
+    ] {
         if let Some(p) = path {
             out.extend([flag.to_string(), p.display().to_string()]);
         }
@@ -231,6 +235,7 @@ fn run_native(
         target: None,
         frames: args.frames,
         report: args.report.as_deref().map(absolute),
+        audio_report: args.audio_report.as_deref().map(absolute),
         capture: args.capture.as_deref().map(absolute),
         size: args.size,
         control: args.control,
@@ -296,6 +301,9 @@ fn run_native(
         });
     }
     json["captures"] = json!(args.capture.as_ref().map(|p| p.display().to_string()));
+    if let Some(p) = &args.audio_report {
+        json["audio"] = audio_summary(p);
+    }
     json["problems"] = json!(problems);
     let text = format!(
         "Ran `{}` with its own player ({line}){}",
@@ -303,6 +311,73 @@ fn run_native(
         problems::summary(&problems)
     );
     Ok(Output::ok(json, text))
+}
+
+/// The `audio` part of a run's result: the report file, the mix level and
+/// each source's RMS and peak (the whole report is in the file).
+fn audio_summary(path: &Path) -> Json {
+    let report = std::fs::read_to_string(path)
+        .ok()
+        .and_then(|t| serde_json::from_str::<Json>(&t).ok());
+    let Some(r) = report else {
+        return json!({
+            "report": path.display().to_string(),
+            "error": "the audio report was not written (see the problems)",
+        });
+    };
+    let sources: Vec<Json> = r["sources"]
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .map(|s| {
+                    json!({
+                        "name": s["name"],
+                        "bus": s["bus"],
+                        "rms_db": s["rms_db"],
+                        "peak_db": s["peak_db"],
+                        "heard_seconds": s["heard_seconds"],
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    json!({
+        "report": path.display().to_string(),
+        "output": r["output"],
+        "measured": r["measured"],
+        "mix": r["mix"],
+        "sources": sources,
+    })
+}
+
+/// Text lines of an audio summary: the mix, then each source.
+fn audio_text(a: &Json) -> String {
+    let db = |v: &Json| match v.as_f64() {
+        Some(d) => format!("{d:.1} dB"),
+        None => "silent".into(),
+    };
+    let mut text = format!("\naudio report {}", a["report"].as_str().unwrap_or(""));
+    if a["measured"] != true {
+        text.push_str(" (not measured: the output was silent)");
+        return text;
+    }
+    if a["mix"].is_object() {
+        text.push_str(&format!(
+            "\n  mix: rms {}, peak {}",
+            db(&a["mix"]["rms_db"]),
+            db(&a["mix"]["peak_db"])
+        ));
+    }
+    for s in a["sources"].as_array().into_iter().flatten() {
+        text.push_str(&format!(
+            "\n  {} ({}): rms {}, peak {}",
+            s["name"].as_str().unwrap_or("?"),
+            s["bus"].as_str().unwrap_or("?"),
+            db(&s["rms_db"]),
+            db(&s["peak_db"])
+        ));
+    }
+    text
 }
 
 fn run_error(e: anyhow::Error) -> CliError {
@@ -364,6 +439,7 @@ pub(crate) fn run(args: &RunArgs, json_output: bool) -> Result<Output, CliError>
         scene: scene.map(|s| s.display().to_string()),
         run,
         watch: !args.no_watch,
+        audio_report: args.audio_report.clone(),
         ..Default::default()
     };
     let summary = player::run_game(options, Game::new()).map_err(run_error)?;
@@ -385,6 +461,7 @@ pub(crate) fn run(args: &RunArgs, json_output: bool) -> Result<Output, CliError>
         .collect();
     let scene_rel = project.relative(&scene_path);
     let problems = collector.finish();
+    let audio = args.audio_report.as_deref().map(audio_summary);
     let json = json!({
         "project": project.root().display().to_string(),
         "scene": scene_rel,
@@ -397,6 +474,7 @@ pub(crate) fn run(args: &RunArgs, json_output: bool) -> Result<Output, CliError>
         "backend": report["backend"],
         "captures": captures,
         "report": args.report.as_ref().map(|p| p.display().to_string()),
+        "audio": audio,
         "problems": problems,
     });
     let mut text = format!(
@@ -415,6 +493,9 @@ pub(crate) fn run(args: &RunArgs, json_output: bool) -> Result<Output, CliError>
     }
     for c in &captures {
         text.push_str(&format!("\ncaptured {c}"));
+    }
+    if let Some(a) = &audio {
+        text.push_str(&audio_text(a));
     }
     text.push_str(&problems::summary(&problems));
     Ok(Output::ok(json, text))

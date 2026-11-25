@@ -22,6 +22,7 @@
 //! JSON commands for `box scene apply` are in [`command`].
 
 pub mod command;
+mod snap;
 
 use std::collections::HashSet;
 
@@ -37,9 +38,17 @@ use crate::world::{Entity, Placement, World};
 use glam::Affine3A;
 
 pub use command::{
-    Applied, Command, CommandError, CommandParseError, apply_commands,
+    Applied, Command, CommandError, CommandParseError, CommandWarning, WarningKind, apply_commands,
     apply_commands_with_warnings, parse_commands, resolve_entity,
 };
+pub use snap::Snapped;
+
+/// The ground under world `x`, `z` for edits ([`EditStack::snap_to_ground`],
+/// the `snap_to_ground` command): its height and unit normal, or `None`
+/// where there is no ground. Gets `&mut World` so it can bring derived
+/// ground data up to date first. Installed with
+/// [`Registry::set_ground_sampler`](crate::reflect::Registry::set_ground_sampler).
+pub type GroundSampler = fn(&mut World, f32, f32) -> Option<(f32, glam::Vec3)>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EditError {
@@ -115,6 +124,12 @@ pub enum Edit {
         name: String,
         old: Option<Json>,
         new: Option<Json>,
+    },
+    /// A registered resource the world did not have (a scene's
+    /// `GameRules`), inserted with `data`; undo removes it.
+    AddResource {
+        name: &'static str,
+        data: Value,
     },
 }
 
@@ -420,6 +435,18 @@ impl Edit {
                 let v = if forward { new } else { old };
                 write_raw_resource(world, name, v.as_ref());
             }
+            Edit::AddResource { name, data } => {
+                let r = world
+                    .registry()
+                    .resource(name)
+                    .map(|r| r.data.clone())
+                    .ok_or_else(|| ReflectError::UnknownType((*name).to_string()))?;
+                if forward {
+                    (r.insert)(world, data.as_ref())?;
+                } else {
+                    (r.remove)(world);
+                }
+            }
         }
         Ok(())
     }
@@ -442,6 +469,18 @@ pub struct EditStack {
     /// The redo stack as it was before the open transaction's first edit:
     /// dropped when the transaction commits, restored when it is rolled back.
     shelved_redo: Vec<Transaction>,
+    /// An open group ([`EditStack::begin_group`]).
+    group: Option<Group>,
+}
+
+/// Steps committed while a group is open whose label is `member` are merged
+/// into one step labelled `label` when it ends.
+#[derive(Debug)]
+struct Group {
+    label: String,
+    member: String,
+    /// Undo stack length when the group began.
+    start: usize,
 }
 
 impl EditStack {
@@ -530,6 +569,73 @@ impl EditStack {
         self.redo.clear();
         self.shelved_redo.clear();
         self.open = None;
+        self.group = None;
+    }
+
+    // ----- groups -----
+
+    /// Opens a group: until [`end_group`](Self::end_group), the steps
+    /// committed with the label `member` (the editor's "Agent edit") are
+    /// collected, and when it ends each run of consecutive such steps
+    /// becomes one step labelled `label`. Steps with other labels (the
+    /// user's own edits during an assistant turn) stay separate, so undo
+    /// order is kept. Ends a group that is already open.
+    pub fn begin_group(&mut self, label: impl Into<String>, member: impl Into<String>) {
+        self.end_group();
+        self.commit();
+        self.group = Some(Group {
+            label: label.into(),
+            member: member.into(),
+            start: self.undo.len(),
+        });
+    }
+
+    /// Whether a group is open.
+    pub fn group_open(&self) -> bool {
+        self.group.is_some()
+    }
+
+    /// The open group's label.
+    pub fn group_label(&self) -> Option<&str> {
+        self.group.as_ref().map(|g| g.label.as_str())
+    }
+
+    /// Ends the open group, merging its runs of member steps (see
+    /// [`begin_group`](Self::begin_group)). Returns how many steps the runs
+    /// became (0: the group recorded nothing).
+    pub fn end_group(&mut self) -> usize {
+        let Some(g) = self.group.take() else {
+            return 0;
+        };
+        self.commit();
+        let start = g.start.min(self.undo.len());
+        let tail: Vec<Transaction> = self.undo.drain(start..).collect();
+        let mut merged = 0;
+        let mut run: Option<Transaction> = None;
+        for t in tail {
+            if t.label == g.member {
+                match &mut run {
+                    Some(r) => r.edits.extend(t.edits),
+                    None => {
+                        run = Some(Transaction {
+                            label: g.label.clone(),
+                            edits: t.edits,
+                        })
+                    }
+                }
+            } else {
+                if let Some(r) = run.take() {
+                    self.undo.push(r);
+                    merged += 1;
+                }
+                self.undo.push(t);
+            }
+        }
+        if let Some(r) = run {
+            self.undo.push(r);
+            merged += 1;
+        }
+        merged
     }
 
     pub fn can_undo(&self) -> bool {
@@ -623,7 +729,7 @@ impl EditStack {
                 editable(world, snapshot.uid)?;
             }
             Edit::Spawn { snapshot } => check_parent(world, snapshot.placement.parent)?,
-            Edit::SetResource { .. } | Edit::SetRawResource { .. } => {}
+            Edit::SetResource { .. } | Edit::SetRawResource { .. } | Edit::AddResource { .. } => {}
         }
         edit.apply(world, true)?;
         if let Edit::Spawn { snapshot } = &edit
@@ -667,6 +773,26 @@ impl EditStack {
         };
         self.record(&format!("Set {path}"), edit);
         Ok(())
+    }
+
+    /// Inserts the registered resource `name` with its default value when
+    /// the world lacks it (one recorded edit; undo removes it). Returns
+    /// whether it inserted.
+    pub fn ensure_resource(&mut self, world: &mut World, name: &str) -> Result<bool, EditError> {
+        let r = world
+            .registry()
+            .resource(name)
+            .ok_or_else(|| ReflectError::UnknownType(name.to_string()))?;
+        let (name, present, value) = (r.name(), (r.data.get)(world).is_some(), r.default_value());
+        if present {
+            return Ok(false);
+        }
+        let value = value
+            .ok_or_else(|| EditError::Invalid(format!("resource `{name}` has no default value")))?;
+        let edit = Edit::AddResource { name, data: value };
+        edit.apply(world, true)?;
+        self.record(&format!("Add {name}"), edit);
+        Ok(true)
     }
 
     /// Set a resource field (or a whole resource). Nothing is recorded if the
@@ -1030,6 +1156,56 @@ impl EditStack {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_group_merges_runs_of_member_steps_and_keeps_other_steps() {
+        let mut w = World::new();
+        let u = Uid::from_u128(1);
+        w.spawn_saved(u, "E", (Transform::default(),)).unwrap();
+        let mut stack = EditStack::new();
+        let step = |stack: &mut EditStack, w: &mut World, label: &str, x: f32| {
+            stack.begin(label);
+            set(stack, w, u, "Transform.translation.x", x);
+            stack.commit();
+        };
+        step(&mut stack, &mut w, "before", 1.0);
+        stack.begin_group("Assistant: move it", "Agent edit");
+        assert_eq!(stack.group_label(), Some("Assistant: move it"));
+        step(&mut stack, &mut w, "Agent edit", 2.0);
+        step(&mut stack, &mut w, "Agent edit", 3.0);
+        step(&mut stack, &mut w, "Set x", 4.0); // the user, during the turn
+        step(&mut stack, &mut w, "Agent edit", 5.0);
+        assert_eq!(stack.end_group(), 2);
+        assert!(!stack.group_open());
+        assert_eq!(
+            stack.undo_labels().collect::<Vec<_>>(),
+            [
+                "before",
+                "Assistant: move it",
+                "Set x",
+                "Assistant: move it"
+            ]
+        );
+        let x = |w: &World| {
+            w.get::<Transform>(w.entity_by_uid(u).unwrap())
+                .unwrap()
+                .translation
+                .x
+        };
+        stack.undo(&mut w).unwrap();
+        assert_eq!(x(&w), 4.0);
+        stack.undo(&mut w).unwrap();
+        assert_eq!(x(&w), 3.0);
+        // One step undoes both agent edits of the first run.
+        stack.undo(&mut w).unwrap();
+        assert_eq!(x(&w), 1.0);
+        stack.redo(&mut w).unwrap();
+        assert_eq!(x(&w), 3.0);
+        // An empty group records nothing.
+        stack.begin_group("Assistant: nothing", "Agent edit");
+        assert_eq!(stack.end_group(), 0);
+        assert_eq!(stack.undo_len(), 2);
+    }
 
     fn open_len(stack: &EditStack) -> usize {
         stack.open.as_ref().map_or(0, |t| t.edits.len())

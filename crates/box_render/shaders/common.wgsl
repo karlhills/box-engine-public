@@ -88,7 +88,8 @@ struct Globals {
     wind: vec4<f32>,
     // x = gust speed (m/s)
     wind_gust: vec4<f32>,
-    // x = 1 when `opaque_depth` holds the prepass depth
+    // x = 1 when `opaque_depth` holds the prepass depth, y = 1 when
+    // `opaque_color` holds the opaque scene's colour (transparent pass)
     scene_depth_on: vec4<f32>,
 };
 
@@ -146,6 +147,12 @@ struct Lights {
 // Full-resolution opaque depth from the prepass (reverse-Z), for soft
 // transparency; a 1x1 placeholder unless `globals.scene_depth_on.x` is 1.
 @group(0) @binding(7) var opaque_depth: texture_depth_2d;
+// The opaque scene's resolved HDR colour (opaque surfaces, sky, scene lines;
+// fogged, before exposure), bound for the transparent draws of frames where
+// a visible material shader reads it; a 1x1 placeholder elsewhere. Sampled
+// with `scene_sampler` (linear, clamped).
+@group(0) @binding(9) var opaque_color: texture_2d<f32>;
+@group(0) @binding(10) var scene_sampler: sampler;
 // The shadowed local light's depth (one layer per view; standard depth),
 // compared with `shadow_sampler`.
 @group(0) @binding(8) var local_shadow_map: texture_depth_2d_array;

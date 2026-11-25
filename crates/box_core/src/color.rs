@@ -11,7 +11,9 @@ use crate::reflect::{Reflect, ReflectDefault, ReflectDeserialize, ReflectSeriali
 /// A colour in linear space. Use [`Color::srgb`] for values picked in sRGB.
 ///
 /// Serialized as `[r, g, b, a]` (linear). Deserialization also accepts
-/// `[r, g, b]` (alpha 1) and the object form `{ "r", "g", "b", "a"? }`.
+/// `[r, g, b]` (alpha 1), the object form `{ "r", "g", "b", "a"? }`, and
+/// sRGB as picked in a paint program: `"#rrggbb"` / `"#rrggbbaa"` or
+/// `{ "srgb": [r, g, b, a?] }` (components 0..1; alpha stays linear).
 #[derive(Clone, Copy, Debug, PartialEq, Reflect)]
 #[reflect(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[type_path = "box_engine"]
@@ -42,7 +44,17 @@ impl<'de> Deserialize<'de> for Color {
             type Value = Color;
 
             fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                f.write_str("a colour as [r, g, b], [r, g, b, a] or { r, g, b, a }")
+                f.write_str(
+                    "a colour as linear [r, g, b], [r, g, b, a] or { r, g, b, a }, \
+                     or sRGB \"#rrggbb\" or { \"srgb\": [r, g, b] }",
+                )
+            }
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Color, E> {
+                parse_hex(v).ok_or_else(|| {
+                    E::custom(format!(
+                        "`{v}` is not a colour: give \"#rrggbb\" or \"#rrggbbaa\" (sRGB)"
+                    ))
+                })
             }
 
             fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Color, A::Error> {
@@ -69,6 +81,18 @@ impl<'de> Deserialize<'de> for Color {
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Color, A::Error> {
                 let (mut r, mut g, mut b, mut a) = (None, None, None, None);
                 while let Some(key) = map.next_key::<String>()? {
+                    if key == "srgb" {
+                        let v: Vec<f32> = map.next_value()?;
+                        if !(3..=4).contains(&v.len()) {
+                            return Err(de::Error::custom(format!(
+                                "\"srgb\" takes [r, g, b] or [r, g, b, a], got {} numbers",
+                                v.len()
+                            )));
+                        }
+                        let mut c = Color::srgb(v[0], v[1], v[2]);
+                        c.a = v.get(3).copied().unwrap_or(1.0);
+                        return Ok(c);
+                    }
                     let slot = match key.as_str() {
                         "r" => &mut r,
                         "g" => &mut g,
@@ -91,6 +115,24 @@ impl<'de> Deserialize<'de> for Color {
 
         deserializer.deserialize_any(ColorVisitor)
     }
+}
+
+/// `#rrggbb` or `#rrggbbaa` (sRGB; alpha linear).
+fn parse_hex(text: &str) -> Option<Color> {
+    let digits = text.trim().strip_prefix('#')?;
+    if !(digits.len() == 6 || digits.len() == 8) || !digits.is_ascii() {
+        return None;
+    }
+    let byte = |i: usize| u8::from_str_radix(&digits[i..i + 2], 16).ok();
+    let mut c = Color::srgb(
+        f32::from(byte(0)?) / 255.0,
+        f32::from(byte(2)?) / 255.0,
+        f32::from(byte(4)?) / 255.0,
+    );
+    if digits.len() == 8 {
+        c.a = f32::from(byte(6)?) / 255.0;
+    }
+    Some(c)
 }
 
 fn srgb_to_linear(c: f32) -> f32 {

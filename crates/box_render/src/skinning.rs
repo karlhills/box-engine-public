@@ -39,8 +39,8 @@ use glam::{Affine3A, Mat4};
 use crate::components::{Hidden, MeshRenderer};
 use crate::gpu_mesh::MeshCache;
 
-/// Joints and weights of one vertex (`SkinnedVertexInput` locations 6 and
-/// 7 in skin.wgsl).
+/// Joints and weights of one vertex (`SkinnedVertexInput` locations 8 and
+/// 9 in skin.wgsl).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
 pub(crate) struct GpuSkinVertex {
@@ -49,8 +49,8 @@ pub(crate) struct GpuSkinVertex {
 }
 
 const SKIN_ATTRIBUTES: [wgpu::VertexAttribute; 2] = wgpu::vertex_attr_array![
-    6 => Uint16x4,
-    7 => Float32x4,
+    8 => Uint16x4,
+    9 => Float32x4,
 ];
 
 /// The second vertex buffer of skinned pipelines.

@@ -230,6 +230,8 @@ pub fn settle_step(world: &mut World) -> bool {
     // world transforms, and the last pass may have spawned children.
     let pass = |world: &mut World| {
         box_core::transform::propagate_transforms(world);
+        // Generators that follow the ground read it in this settle.
+        crate::terrain_glue::update_ground(world);
         box_proc::settle(world);
         crate::sync_scene_meshes(world);
         crate::scatter_glue::settle(world);

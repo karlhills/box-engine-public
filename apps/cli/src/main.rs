@@ -27,10 +27,8 @@ fn init_logging() {
             && meta.target().starts_with("box")
             && *meta.level() <= tracing::Level::WARN)
     });
-    // The capture ring feeds `problems` and `box run --control`'s `read_log`,
-    // which keeps info records like the player's own logging.
-    let capture = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(box_engine::CAPTURE_LOG_FILTER));
+    // Playtest assertions and validation read this ring independently of stderr.
+    let capture = EnvFilter::new(box_engine::CAPTURE_LOG_FILTER);
     let _ = tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()

@@ -1,5 +1,5 @@
 {
   "title": "Third-person game",
-  "description": "A skinned character on the character controller, a follow camera, platforms, pickups and a HUD, all in Luau scripts.",
+  "description": "A skinned character, a follow camera, platforms, pickups, a HUD and a win screen, built from behaviours: no scripts.",
   "order": 1
 }

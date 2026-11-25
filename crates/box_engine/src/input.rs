@@ -22,6 +22,14 @@ impl Plugin for InputPlugin {
         app.add_plugin(&ActionsPlugin);
         app.world.resource_or_default::<CursorOptions>();
         app.add_system(Stage::PostUpdate, warn_undefined_actions);
+        // Playtests: input goes in before actions are evaluated, recording
+        // reads them after (crate::playtest).
+        app.system(Stage::FixedUpdate, crate::playtest::playtest_frame_system)
+            .before("actions_fixed_step_system");
+        app.system(Stage::Update, crate::playtest::playtest_frame_system)
+            .before("actions_update_system");
+        app.system(Stage::Update, crate::playtest::playtest_record_system)
+            .after("actions_update_system");
     }
 }
 

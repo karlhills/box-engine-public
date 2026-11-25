@@ -190,7 +190,7 @@ impl Default for Mover {
 
 - `#[derive(Reflect, Clone)]` plus `#[reflect(Component, Default, Clone)]` is required, and the type needs a `Default`: the value **Add Component** inserts. Write it by hand when zero is not a sensible default, or derive it.
 - Doc comments become tooltips: the one on the type in **Add Component**, the ones on fields in the inspector.
-- `registry.register_all::<(Mover, Pickup)>()` registers several types. Scene files and the inspector address types by their short name (`Mover`), so names must be unique across the engine and your game. Errors are kept and logged once, naming the plugin, so the result can be ignored.
+- `registry.register_all::<(Mover, Pickup)>()` registers several types. Scene files and the inspector address types by their short name (`Mover`), so names must be unique across the engine and your game. The exception is the engine's gameplay behaviours with common names (`Mover`, `Spinner`, `PlayerController`, `FollowCamera`, `GameState`; see [Behaviours](behaviours.md)): your type with the same name takes the name over, and the presets that need the engine's type are left out. Errors are kept and logged once, naming the plugin, so the result can be ignored.
 
 Field attributes shape the inspector:
 

@@ -235,6 +235,12 @@ impl Editor {
                     tokens: t,
                 };
                 self.tree.ui(&mut dock, ui);
+                // A script was opened: show its tab.
+                if std::mem::take(&mut self.state.scripts.want_focus) {
+                    self.tree.make_active(|_, tile| {
+                        matches!(tile, egui_tiles::Tile::Pane(Pane::Script))
+                    });
+                }
             });
         if !self.state.viewport.shown {
             // Hidden tab: no pointer is over it.
@@ -249,6 +255,8 @@ impl Editor {
         }
         self.end_asset_frame(ui.ctx());
         crate::rules_panel::rules_window(ui.ctx(), &mut self.state, &t);
+        crate::mixer_panel::mixer_window(ui.ctx(), &mut self.state, &t);
+        crate::assistant::assistant_window(ui.ctx(), &mut self.state, &t);
         crate::export::export_window(ui.ctx(), &mut self.state, &t, self.native_dialogs);
         if let Some(focus) = crate::feedback::toasts_ui(ui.ctx(), &mut self.state, &t) {
             self.state.requests.focus_console = Some(focus);
@@ -405,7 +413,15 @@ impl Editor {
             s.requests.save_scene_as = true;
         }
         if ctx.input_mut(|i| shortcuts::consume(i, Command::Save)) {
-            s.requests.save_scene = true;
+            // The script being typed in, else the scene.
+            if s.scripts.focused && !s.scripts.tabs.is_empty() {
+                let i = s.scripts.active;
+                if let Err(e) = s.save_script(i) {
+                    tracing::warn!("{e}");
+                }
+            } else {
+                s.requests.save_scene = true;
+            }
         }
         // A focused text field owns the other keys, undo and redo included
         // (they edit its text, not the scene).
@@ -454,6 +470,9 @@ impl Editor {
         }
         if take(Command::UnhideAll) && !s.is_playing() {
             s.unhide_all();
+        }
+        if take(Command::SnapToGround) && !s.is_playing() {
+            s.snap_selection_to_ground();
         }
         let assets_focused = s.assets.active || s.assets.inspect.is_some();
         if take(Command::Duplicate) && !assets_focused {
@@ -623,11 +642,26 @@ impl Editor {
         box_engine::sync_scene_meshes(&mut state.world);
         if !state.is_playing() {
             box_core::app::EditWorldSystems::run_in(&mut state.world);
+            // View ▸ Navigation: the edit world's navmesh, kept only while
+            // the view is on.
+            if state.viewport.view.nav {
+                box_engine::nav_glue::update_edit_world(&mut state.world);
+            }
         }
         // Hidden entities (hierarchy eye, H) are not drawn; never in Play.
         state.sync_hidden_markers();
         if state.shows_game_camera() {
             state.world.insert_resource(SelectionOutline::default());
+            // View ▸ Audio Ranges and Navigation also over the game's own view.
+            if state.viewport.view.audio || state.viewport.view.nav {
+                let mut dd = state
+                    .world
+                    .remove_resource::<DebugDraw>()
+                    .unwrap_or_default();
+                crate::mixer_panel::draw_audio_ranges(state, &mut dd);
+                draw_navigation(state, &mut dd);
+                state.world.insert_resource(dd);
+            }
             return;
         }
         let a = self.tokens.accent;
@@ -680,6 +714,9 @@ impl Editor {
             markers
         };
         crate::icons::draw_helpers(state, &mut dd, accent);
+        crate::behaviour_gizmos::draw_behaviour_gizmos(state, &mut dd);
+        crate::mixer_panel::draw_audio_ranges(state, &mut dd);
+        draw_navigation(state, &mut dd);
         // Many generated meshes (a scatter's instances): one box, dimmer
         // where hidden, like the outline.
         for (b, root, color) in boxes {
@@ -906,4 +943,14 @@ fn meshes_bounds(world: &World, entities: &[Entity], to: &glam::Affine3A) -> Opt
         });
     }
     bounds
+}
+
+/// View ▸ Navigation: the navmesh of the world shown (edit or Play).
+fn draw_navigation(state: &EditorState, dd: &mut box_render::DebugDraw) {
+    if !state.viewport.view.nav {
+        return;
+    }
+    if let Some(mesh) = box_engine::nav_glue::nav_mesh(&state.world) {
+        box_engine::nav_glue::draw_navmesh(mesh, dd);
+    }
 }

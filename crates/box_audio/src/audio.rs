@@ -7,6 +7,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::io::Cursor;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use box_assets::{AssetServer, LoadState};
@@ -21,11 +22,12 @@ use kira::listener::{ListenerHandle, ListenerId};
 use kira::sound::static_sound::StaticSoundHandle;
 use kira::sound::streaming::{StreamingSoundData, StreamingSoundHandle};
 use kira::sound::{FromFileError, PlaybackState, Region};
-use kira::track::{SpatialTrackBuilder, SpatialTrackHandle, TrackHandle};
+use kira::track::{SpatialTrackBuilder, SpatialTrackHandle, TrackBuilder, TrackHandle};
 use kira::{Decibels, Easing, Tween};
 
 use crate::clip::{AudioClip, ClipData};
 use crate::components::{AudioBus, AudioListener, AudioSettings, AudioSource, PlaySound};
+use crate::meter::{MeterBuilder, MeterShared, Mix, MixTarget, Spatial, VoiceLevel, spatial};
 use crate::output::{AudioOutput, Output, OutputLevels};
 
 /// Seconds a [`PlaySound`] waits for its clip to load before it is dropped
@@ -64,9 +66,13 @@ pub enum VoiceState {
     Paused,
 }
 
-/// One sound playing now, for inspection and tests ([`Audio::voices`]).
+/// One sound playing now, for inspection, the mixer and tests
+/// ([`Audio::voices`]).
 #[derive(Clone, Debug, PartialEq)]
 pub struct VoiceInfo {
+    /// Unique per world for its lifetime (a one-shot played twice is two
+    /// voices).
+    pub id: u64,
     pub clip: AssetRef,
     pub bus: AudioBus,
     /// The [`AudioSource`] entity, or `None` for a [`PlaySound`] one-shot.
@@ -77,9 +83,31 @@ pub struct VoiceInfo {
     pub looping: bool,
     /// World position of a positional sound.
     pub position: Option<Vec3>,
+    /// Positional: full volume within this distance.
+    pub min_distance: f32,
+    /// Positional: silent beyond this distance.
+    pub max_distance: f32,
     /// The clip is streamed rather than decoded in memory.
     pub streaming: bool,
     pub state: VoiceState,
+    /// How loud it is at the listener (measured; before solo and mute).
+    /// `None` on a silent output, or before the first measurement.
+    pub level: Option<VoiceLevel>,
+    /// It matches a mute target ([`Audio::mute`]).
+    pub muted: bool,
+    /// It matches a solo target ([`Audio::solo`]).
+    pub soloed: bool,
+    /// It is heard: not muted, and nothing is soloed or it is.
+    pub audible: bool,
+}
+
+impl VoiceInfo {
+    /// Distance, attenuation and panning relative to `listener` (see
+    /// [`Audio::listener`]); `None` for a non-positional voice.
+    pub fn spatial(&self, listener: (Vec3, Quat)) -> Option<Spatial> {
+        self.position
+            .map(|p| spatial(listener, p, self.min_distance, self.max_distance))
+    }
 }
 
 enum Sound {
@@ -124,8 +152,11 @@ struct Voice {
     info: VoiceInfo,
     /// The kira sound; `None` on a silent output.
     sound: Option<Sound>,
-    /// The positional track the sound plays on.
+    /// The positional track the sound plays on (inside the strip).
     track: Option<SpatialTrackHandle>,
+    /// The voice's own sub-track of its bus: meter, solo and mute.
+    strip: Option<TrackHandle>,
+    meter: Option<Arc<MeterShared>>,
     /// Silent output: seconds until the voice ends (`None`: looping).
     silent_left: Option<f32>,
 }
@@ -191,6 +222,9 @@ pub struct Audio {
     next_voice: u64,
     frame: u64,
     levels: Option<OutputLevels>,
+    mix: Mix,
+    /// The mix changed since it was last applied to the voices.
+    mix_dirty: bool,
     cursor: EventCursor<PlaySound>,
     logged: HashSet<String>,
     started_in: Option<Duration>,
@@ -276,6 +310,8 @@ impl Audio {
             next_voice: 1,
             frame: 0,
             levels: None,
+            mix: Mix::default(),
+            mix_dirty: false,
             cursor: EventCursor::default(),
             logged: HashSet::new(),
             started_in: None,
@@ -333,6 +369,38 @@ impl Audio {
     pub fn set_paused(&mut self, paused: bool) {
         self.host_paused = paused;
         self.apply_pause(paused);
+    }
+
+    /// The solo and mute targets.
+    pub fn mix(&self) -> &Mix {
+        &self.mix
+    }
+
+    /// Mutes (`on`) or unmutes `target` (an entity with the sources below
+    /// it, a bus or a clip): its voices keep playing, silently, and keep
+    /// their measured level. Runtime only (never saved). Returns whether
+    /// anything changed.
+    pub fn mute(&mut self, target: MixTarget, on: bool) -> bool {
+        let changed = Mix::set(&mut self.mix.muted, target, on);
+        self.mix_dirty |= changed;
+        changed
+    }
+
+    /// Solos (`on`) or unsolos `target`: while anything is soloed, only
+    /// soloed voices that are not muted are heard. Runtime only. Returns
+    /// whether anything changed.
+    pub fn solo(&mut self, target: MixTarget, on: bool) -> bool {
+        let changed = Mix::set(&mut self.mix.soloed, target, on);
+        self.mix_dirty |= changed;
+        changed
+    }
+
+    /// Clears every solo and mute.
+    pub fn clear_mix(&mut self) {
+        if !self.mix.is_empty() {
+            self.mix = Mix::default();
+            self.mix_dirty = true;
+        }
     }
 
     /// Requests `clip` now so a later [`PlaySound`] of it starts without
@@ -547,6 +615,7 @@ impl Audio {
         let id = self.next_voice;
         self.next_voice += 1;
         let info = VoiceInfo {
+            id,
             clip: req.clip_ref.clone(),
             bus: req.bus,
             source: req.source,
@@ -554,16 +623,26 @@ impl Audio {
             pitch: req.pitch,
             looping: req.looping,
             position: req.position,
+            min_distance: req.min_distance,
+            max_distance: req.max_distance,
             streaming: clip.is_streaming(),
             state: VoiceState::Playing,
+            level: None,
+            muted: false,
+            soloed: false,
+            audible: true,
         };
         let mut voice = Voice {
             id,
             info,
             sound: None,
             track: None,
+            strip: None,
+            meter: None,
             silent_left: None,
         };
+        // The mix is applied to the new voice this frame.
+        self.mix_dirty |= !self.mix.is_empty();
         if self.output.is_none() {
             voice.silent_left =
                 (!req.looping).then(|| clip.duration().as_secs_f32() / req.pitch.max(0.01));
@@ -573,9 +652,11 @@ impl Audio {
         let listener = self.listener_handle.as_ref().map(|l| l.id())?;
         let bus = &mut self.buses[req.bus.index()];
         match play_on(bus, listener, clip, &req) {
-            Ok((sound, track)) => {
-                voice.sound = Some(sound);
-                voice.track = track;
+            Ok(played) => {
+                voice.sound = Some(played.sound);
+                voice.track = played.track;
+                voice.strip = Some(played.strip);
+                voice.meter = Some(played.meter);
                 self.voices.push(voice);
                 Some(id)
             }
@@ -875,18 +956,28 @@ impl Audio {
     }
 }
 
-/// Plays `clip` on `bus` (on a new positional sub-track for a positional
-/// request).
+/// Plays `clip` on `bus`: on a new strip (the voice's metered sub-track),
+/// inside it on a new positional track for a positional request.
 fn play_on(
     bus: &mut TrackHandle,
     listener: ListenerId,
     clip: &AudioClip,
     req: &Request,
-) -> Result<(Sound, Option<SpatialTrackHandle>), String> {
+) -> Result<Played, String> {
     let fade_in = (req.fade_in > 0.0).then(|| fade(req.fade_in));
     let loop_region = req.looping.then(|| Region::from(..));
     let volume = decibels(req.volume);
     let rate = f64::from(req.pitch.max(0.01));
+    let meter = Arc::new(MeterShared::default());
+    let mut strip = bus
+        .add_sub_track(
+            TrackBuilder::new()
+                .sub_track_capacity(1)
+                .sound_capacity(1)
+                .persist_until_sounds_finish(true)
+                .with_effect(MeterBuilder(meter.clone())),
+        )
+        .map_err(|e| format!("too many sounds at once on one bus ({e})"))?;
     let mut track = match req.position {
         Some(p) => {
             let min = req.min_distance.max(0.0);
@@ -894,7 +985,8 @@ fn play_on(
                 .distances((min, req.max_distance.max(min + 0.01)))
                 .persist_until_sounds_finish(true);
             Some(
-                bus.add_spatial_sub_track(listener, v3(p), builder)
+                strip
+                    .add_spatial_sub_track(listener, v3(p), builder)
                     .map_err(|e| format!("too many positional sounds at once ({e})"))?,
             )
         }
@@ -910,7 +1002,7 @@ fn play_on(
                 .fade_in_tween(fade_in);
             match &mut track {
                 Some(t) => t.play(data),
-                None => bus.play(data),
+                None => strip.play(data),
             }
             .map(Sound::Static)
             .map_err(|e| format!("{e:?}"))?
@@ -924,13 +1016,26 @@ fn play_on(
                 .fade_in_tween(fade_in);
             match &mut track {
                 Some(t) => t.play(data),
-                None => bus.play(data),
+                None => strip.play(data),
             }
             .map(Sound::Streaming)
             .map_err(|e| format!("{e:?}"))?
         }
     };
-    Ok((sound, track))
+    Ok(Played {
+        sound,
+        track,
+        strip,
+        meter,
+    })
+}
+
+/// A sound started by [`play_on`].
+struct Played {
+    sound: Sound,
+    track: Option<SpatialTrackHandle>,
+    strip: TrackHandle,
+    meter: Arc<MeterShared>,
 }
 
 fn describe(r: &AssetRef) -> String {
@@ -938,6 +1043,71 @@ fn describe(r: &AssetRef) -> String {
         (Some(p), _) => format!("`{p}`"),
         (None, Some(id)) => format!("asset {id}"),
         (None, None) => "(no clip)".to_owned(),
+    }
+}
+
+/// Linear gain of a volume setting as [`decibels`] applies it.
+fn gain(amplitude: f32) -> f32 {
+    if amplitude <= 0.001 || !amplitude.is_finite() {
+        0.0
+    } else {
+        amplitude
+    }
+}
+
+impl Audio {
+    /// Solo and mute: each voice's strip is silenced or opened when what it
+    /// matches changes. Recomputed when the mix changed or a voice started,
+    /// and every frame while an entity is a target (sources can move in the
+    /// hierarchy): one match per voice, entity targets walking up the
+    /// hierarchy. Kira is told only about changes.
+    fn apply_mix(&mut self, world: &World) {
+        let entity_targets = self
+            .mix
+            .muted
+            .iter()
+            .chain(&self.mix.soloed)
+            .any(|t| matches!(t, MixTarget::Entity(_)));
+        if !self.mix_dirty && !entity_targets {
+            return;
+        }
+        self.mix_dirty = false;
+        let any_solo = !self.mix.soloed.is_empty();
+        for v in &mut self.voices {
+            let i = &mut v.info;
+            i.muted = Mix::matches(&self.mix.muted, world, i.bus, &i.clip, i.source);
+            i.soloed = any_solo && Mix::matches(&self.mix.soloed, world, i.bus, &i.clip, i.source);
+            let audible = !i.muted && (!any_solo || i.soloed);
+            if audible != i.audible {
+                i.audible = audible;
+                if let Some(strip) = &mut v.strip {
+                    let volume = if audible {
+                        Decibels::IDENTITY
+                    } else {
+                        Decibels::SILENCE
+                    };
+                    strip.set_volume(volume, glide());
+                }
+            }
+        }
+    }
+
+    /// Takes each voice's meter (what the audio thread mixed since the last
+    /// frame) and scales it by its bus and the master volume.
+    fn read_meters(&mut self, settings: &AudioSettings) {
+        let master = gain(settings.master);
+        for v in &mut self.voices {
+            let Some(meter) = &v.meter else {
+                continue;
+            };
+            let acc = meter.take();
+            let level = acc.level(master * gain(settings.bus(v.info.bus)));
+            if level.frames > 0 {
+                v.info.level = Some(level);
+            } else if let Some(l) = &mut v.info.level {
+                l.frames = 0;
+            }
+        }
     }
 }
 
@@ -968,6 +1138,7 @@ pub fn update_audio(world: &mut World) {
     audio.update_one_shots(world, server.as_ref(), dt);
     audio.apply_settings(&settings);
     audio.poll_voices(dt);
+    audio.apply_mix(world);
     if let Some(output) = &mut audio.output {
         let mut errors = Vec::new();
         audio.levels = output.frame(f64::from(dt), &mut |e| errors.push(e));
@@ -975,5 +1146,6 @@ pub fn update_audio(world: &mut World) {
             audio.warn_once(e);
         }
     }
+    audio.read_meters(&settings);
     world.insert_resource(audio);
 }

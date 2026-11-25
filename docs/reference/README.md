@@ -4,12 +4,12 @@
 
 Every global, function, method, value type, callback and registered type a box-engine Luau script can use. Each page is generated from the declarations the editor's luau-lsp completion uses (`box script types`), so hover text in your editor and these pages say the same thing. New to scripting? Start with the scripting guide (`docs/guide/scripting.md`).
 
-643 items. Regenerate with `box script docs --out docs/reference` (engine) or `box script docs --project <dir>` (a project's own types).
+844 items. Regenerate with `box script docs --out docs/reference` (engine) or `box script docs --project <dir>` (a project's own types).
 
 ## Pages
 
 - [`core`](core.md) (44 items)
-- [`Entity`](entity.md) (34 items)
+- [`Entity`](entity.md) (37 items)
 - [`world`](world.md) (12 items)
 - [`time`](time.md) (10 items)
 - [`app`](app.md) (2 items)
@@ -17,6 +17,7 @@ Every global, function, method, value type, callback and registered type a box-e
 - [`physics`](physics.md) (48 items)
 - [`character`](character.md) (9 items)
 - [`events`](events.md) (4 items)
+- [`ground`](ground.md) (7 items)
 - [`ui`](ui.md) (53 items)
 - [`strings`](strings.md) (6 items)
 - [`scenes`](scenes.md) (9 items)
@@ -25,11 +26,14 @@ Every global, function, method, value type, callback and registered type a box-e
 - [`data`](data.md) (3 items)
 - [`particles`](particles.md) (7 items)
 - [`camera`](camera.md) (5 items)
-- [Script modules](script-modules.md) (24 items)
-- [Script rules](rules.md) (56 items)
-- [Components](components.md) (37 items)
-- [Resources](resources.md) (3 items)
-- [Event types](event-types.md) (1 items)
+- [`vars`](vars.md) (11 items)
+- [`interact`](interact.md) (4 items)
+- [`nav`](nav.md) (6 items)
+- [Script modules](script-modules.md) (25 items)
+- [Script rules](rules.md) (73 items)
+- [Components](components.md) (54 items)
+- [Resources](resources.md) (8 items)
+- [Event types](event-types.md) (2 items)
 
 ## Globals and types
 
@@ -57,6 +61,8 @@ Every global, function, method, value type, callback and registered type a box-e
 | [`physics`](physics.md#physics-1) | `physics` | Spatial queries against colliders, kinematic movement, and forces on rigid bodies. |
 | [`character`](character.md#character-1) | `character` | Kinematic characters: entities with a `KinematicCharacter` component, moved by the engine every fixed step. |
 | [`events`](events.md#events-1) | `events` | Events between scripts and the engine: registered event types and script-only signals. |
+| [`GroundHit`](ground.md#groundhit) | `ground` | The ground at a point. |
+| [`ground`](ground.md#ground-1) | `ground` | The terrain under a point: heights of the drawn and walked surface of every `Terrain` (the highest where they overlap). |
 | [`UiNode`](ui.md#uinode) | `ui` | A handle to a node of the game UI (returned by `ui.add`, `ui.find`, `ui.children`, events). |
 | [`UiTarget`](ui.md#uitarget) | `ui` | A node argument: a `UiNode`, or a node `id` string (looked up like `ui.find(id)`, failing when there is none). |
 | [`UiEventKind`](ui.md#uieventkind) | `ui` | What happened to a node: a button clicked, a slider changed, a toggle toggled, focus gained or lost, or back pressed (Escape, Backspace, gamepad East) in a modal (the event is on the modal root). |
@@ -72,6 +78,10 @@ Every global, function, method, value type, callback and registered type a box-e
 | [`data`](data.md#data-1) | `data` | Data tables: JSON files (`*.data.json`) as read-only Luau tables. |
 | [`particles`](particles.md#particles-1) | `particles` | Particle effects: one-shot bursts and control of `ParticleEmitter` entities. |
 | [`camera`](camera.md#camera-1) | `camera` | The active camera's projection: world points to screen pixels and screen points to world rays (picking). |
+| [`VarChange`](vars.md#varchange) | `vars` | A change of a game variable, as `vars.on_change` handlers receive it. |
+| [`vars`](vars.md#vars-1) | `vars` | Game variables: named numbers for puzzle and progress state (`embers`, `gate_open`), shared with `Interactable` conditions and actions, kept across scene switches and saved in save games. |
+| [`interact`](interact.md#interact-1) | `interact` | Interactables (`Interactable` components): what the player can use, and using them from scripts. |
+| [`nav`](nav.md#nav-1) | `nav` | Where characters the game moves can walk: the navmesh, built from the scene's static colliders. |
 | [`PropertyDecl`](script-modules.md#propertydecl) | Script modules | One declared script property: what each entry of a module's `properties` table takes. |
 | [`ScriptSelf`](script-modules.md#scriptself) | Script modules | The `self` table of a running script instance (one per entity with a `Script`). |
 | [`ScriptModule`](script-modules.md#scriptmodule) | Script modules | The table a gameplay script file returns. |

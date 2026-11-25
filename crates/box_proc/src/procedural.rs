@@ -52,7 +52,8 @@ impl Procedural {
 /// Register box_proc's saved types: `Procedural`, the `Spline` and
 /// `Scatter` components,
 /// the `Sweep` generator and the built-in generators (`Primitive`,
-/// `Lathe`, `Extrude`; see [`crate::builtin`]).
+/// `Lathe`, `Extrude`; see [`crate::builtin`]), and the ground edits snap to
+/// ([`crate::ground::sample_for_edit`]).
 /// `box_engine::engine_registry` calls it.
 pub fn register_proc_types(registry: &mut Registry) {
     use crate::generator::GeneratorRegistry;
@@ -62,9 +63,15 @@ pub fn register_proc_types(registry: &mut Registry) {
         registry.register::<crate::spline::Spline>(),
         registry.register::<crate::scatter::Scatter>(),
         registry.register_generator::<crate::sweep_gen::Sweep>(),
+        registry.register::<crate::terrain::Terrain>(),
+        registry.register_generator::<crate::terrain::TerrainChunk>(),
+        registry.register::<crate::terrain_path::TerrainPath>(),
+        registry.register_generator::<crate::terrain_path::TerrainPathChunk>(),
+        registry.register::<crate::ground::FollowGround>(),
     ];
     for e in results.into_iter().filter_map(Result::err) {
         tracing::error!("box_proc type registration failed: {e}");
     }
+    registry.set_ground_sampler(crate::ground::sample_for_edit);
     crate::builtin::register_builtin_generators(registry);
 }

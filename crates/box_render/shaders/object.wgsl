@@ -34,6 +34,10 @@ struct VertexInput {
     @location(4) tangent: vec4<f32>,
     // UV set 1 (zero when the mesh has none)
     @location(5) uv1: vec2<f32>,
+    // `MeshData::custom` sets 0 and 1: free data for material shaders (zero
+    // when the mesh has none)
+    @location(6) custom0: vec4<f32>,
+    @location(7) custom1: vec4<f32>,
     // index into `draw_slots` (includes the draw's first instance)
     @builtin(instance_index) instance: u32,
 };

@@ -90,6 +90,25 @@ impl Layouts {
             };
         let vf = wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT;
         let globals_size = std::mem::size_of::<GlobalsUniform>();
+        // The opaque scene's resolved HDR colour, for transparent materials
+        // that refract (`scene_color` in material_api.wgsl), and its linear
+        // clamp sampler.
+        let scene_color_entry = wgpu::BindGroupLayoutEntry {
+            binding: 9,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Texture {
+                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                view_dimension: wgpu::TextureViewDimension::D2,
+                multisampled: false,
+            },
+            count: None,
+        };
+        let scene_sampler_entry = wgpu::BindGroupLayoutEntry {
+            binding: 10,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+            count: None,
+        };
         let frame = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("frame layout"),
             entries: &[
@@ -167,6 +186,9 @@ impl Layouts {
                     },
                     count: None,
                 },
+                // The opaque scene's colour (refraction) and its sampler.
+                scene_color_entry,
+                scene_sampler_entry,
             ],
         });
         let storage = |binding, size: u64| wgpu::BindGroupLayoutEntry {
@@ -188,8 +210,9 @@ impl Layouts {
                 storage(2, 64),
             ],
         });
-        // Binding 7 holds a placeholder scene depth: material shaders that
-        // call `scene_depth` reference it in their masked shadow fragment.
+        // Bindings 7, 9 and 10 hold a placeholder scene depth and colour:
+        // material shaders that call `scene_depth` or `scene_color` reference
+        // them in their masked shadow fragment.
         let shadow_pass = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("shadow pass layout"),
             entries: &[
@@ -205,6 +228,8 @@ impl Layouts {
                     },
                     count: None,
                 },
+                scene_color_entry,
+                scene_sampler_entry,
             ],
         });
         let texture = |binding, sample_type, multisampled| wgpu::BindGroupLayoutEntry {
@@ -1098,7 +1123,8 @@ impl MaterialDepth {
 /// The vertex buffer layout.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub(crate) enum VertexLayout {
-    /// [`GpuVertex`]: position, normal, uv, colour, tangent, uv1.
+    /// [`GpuVertex`]: position, normal, uv, colour, tangent, uv1, custom 0
+    /// and 1.
     Mesh,
     /// [`GpuVertex`] plus a second buffer of joints and weights
     /// (`GpuSkinVertex`): skinned meshes, drawn by the `*_skinned` vertex

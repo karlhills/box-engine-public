@@ -7,7 +7,8 @@
 //! Scenes: textured, alpha_modes, double_sided, point_lights_night,
 //! point_lights_day, multi_material, shader_material, pipeline_state (sort
 //! bias, Multiply2x, depth write and test, ghost pre-write, a material
-//! shader reading the scene depth). Esc quits.
+//! shader reading the scene depth), refraction (a material shader reading
+//! the scene colour: refracting water). Esc quits.
 
 mod common;
 

@@ -289,6 +289,8 @@ impl EditorState {
             );
         }
         self.project = Some(project);
+        // Open scripts belong to the project that was open.
+        self.scripts = Default::default();
         self.set_scene(world, &start);
         self.frame_on_open();
         Ok(())

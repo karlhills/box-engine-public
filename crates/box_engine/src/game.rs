@@ -147,6 +147,9 @@ impl Game {
         }
         #[cfg(feature = "script")]
         crate::script_glue::add_scripts(&mut app);
+        // The behaviours' actions (`move`, `jump`, `run`, `look`, `pause`)
+        // where the game's plugins did not define them, before the file.
+        crate::behaviours::add_default_actions(&mut app.world);
         crate::settings::apply_action_file(&mut app.world);
         app
     }

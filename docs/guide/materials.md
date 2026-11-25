@@ -91,3 +91,60 @@ Its material file uses `"Blend"` and pads its bounds by the wave height:
   "bounds_padding": 0.05
 }
 ```
+
+### Custom vertex data
+
+A mesh can carry up to two sets of four free numbers per vertex for your shaders: growth stamps, flow directions, wetness, anything a generator knows and a shader needs. Fill `MeshData::custom` (one `Vec<Vec4>` per set), or in a `MeshBuilder` call `with_custom_sets(n)` and set `Vertex::custom[0]` / `custom[1]`. The engine uploads them unchanged and never reads them.
+
+- In `surface`, `in.custom0` and `in.custom1` are the values interpolated across the triangle.
+- In the `vertex` hook, `in.custom0` and `in.custom1` are the vertex's own values.
+
+A mesh without custom data reads zero in both. This shader colours a surface from set 0 and grows it out of the ground by a per-vertex delay in set 1:
+
+```wgsl
+fn surface(in: SurfaceInput, p: Sprout) -> Surface {
+    var s = default_surface(in);
+    s.base_color = in.custom0.rgb;
+    return s;
+}
+
+fn vertex(position: vec3f, in: VertexInput, p: Sprout) -> vec3f {
+    // custom1.x: seconds before this vertex starts to rise; custom1.y: how far.
+    let grown = saturate((globals.time.x - in.custom1.x) / p.duration);
+    return position - vec3f(0.0, in.custom1.y * (1.0 - grown), 0.0);
+}
+```
+
+Every vertex is 32 bytes larger for the two sets, whether a mesh uses them or not. Imported glTF models have no custom data, and Bake to Mesh does not write it.
+
+### Reading the scene colour
+
+A transparent material shader can also read the colour of the opaque scene behind it, for refraction, heat haze and frosted glass:
+
+- `scene_color(in.frag_coord)`: the colour straight behind this pixel.
+- `scene_uv(in.frag_coord)`: this pixel's position in the view, 0..1 from the top left.
+- `scene_color_at(uv)`: the filtered colour at a view position (clamped at the edges). Add an offset to `scene_uv` to bend the view.
+- `scene_depth_at(uv)`: the scene depth at a view position, to check what an offset sample landed on.
+- `scene_color_available()`: whether the colour is there.
+
+The colour is linear HDR: lit and fogged, before exposure and tone mapping. It holds opaque and masked surfaces, the sky and scene lines, never other transparent surfaces. Calling `scene_color` or `scene_color_at` is all it takes: while such a material is visible, the engine copies the opaque scene before it draws transparent surfaces (about 0.1 ms at 2560x1440 on an Apple M-series GPU). Opaque and masked materials have no colour to read and get black.
+
+To show the scene through the surface, return alpha 1 and put the colour you read into `emissive` (it is already lit); `base_color` stays the surface's own, lit colour:
+
+```wgsl
+fn surface(in: SurfaceInput, p: Glass) -> Surface {
+    var s = default_surface(in);
+    let here = fragment_view_depth(in.frag_coord);
+    var uv = scene_uv(in.frag_coord) + in.normal.xz * p.bend;
+    if scene_depth_at(uv) < here {
+        // The bent view landed on something in front of the surface.
+        uv = scene_uv(in.frag_coord);
+    }
+    s.emissive = scene_color_at(uv) * p.tint;
+    s.base_color = vec3f(0.0);
+    s.alpha = 1.0;
+    return s;
+}
+```
+
+`crates/box_engine/examples/assets/pond.wgsl` is refracting water built this way: ripples bend the view of the bottom, the water tints and absorbs the light that crosses it, and foam marks where it meets geometry (`cargo run --example materials -- --scene refraction`). Limits: an offset sample cannot see what is outside the view or hidden behind nearer opaque geometry; with MSAA the copy is the resolved colour, so a bent sample right at a silhouette can pick up a thin edge of the object in front; the engine fogs the surface's result, the refracted colour included (which was fogged once already), so far-away refracting surfaces in thick fog read slightly too foggy.

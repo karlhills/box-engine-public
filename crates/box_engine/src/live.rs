@@ -32,7 +32,7 @@ use box_core::edit::{Command, EditStack};
 use box_core::input::Input;
 use box_core::transform::propagate_transforms;
 use box_core::world::World;
-use box_render::{FrameStats, Renderer, ViewportTarget};
+use box_render::{FrameStats, Renderer, ViewCamera, ViewportTarget};
 use serde_json::{Value as Json, json};
 
 use crate::control::{
@@ -223,7 +223,11 @@ impl ControlHost for PlayerHost<'_> {
         Ok(result)
     }
 
-    fn screenshot(&mut self, size: Option<(u32, u32)>) -> Result<Screenshot, ControlError> {
+    fn screenshot(
+        &mut self,
+        size: Option<(u32, u32)>,
+        view: Option<&ViewCamera>,
+    ) -> Result<Screenshot, ControlError> {
         let Some(renderer) = self.renderer.as_deref_mut() else {
             return Err(ControlError::new(
                 code::UNSUPPORTED,
@@ -238,7 +242,7 @@ impl ControlHost for PlayerHost<'_> {
             }
             slot @ None => slot.insert(renderer.create_viewport_target(width, height)),
         };
-        renderer.render_to(&mut self.app.world, target, None);
+        renderer.render_to(&mut self.app.world, target, view);
         let image = renderer
             .read_viewport_target(target)
             .map_err(|e| ControlError::new(code::RENDER, e.to_string()))?;
@@ -273,6 +277,34 @@ impl ControlHost for PlayerHost<'_> {
         Ok(json!({ "frames": frames, "frame": self.state.frame }))
     }
 
+    fn restart_play(&mut self, scene: Option<&str>, seed: Option<u32>) -> Result<(), ControlError> {
+        let Some(restart) = self
+            .app
+            .world
+            .get_resource::<crate::player::PlayerRestart>()
+            .cloned()
+        else {
+            return Err(ControlError::new(
+                code::UNSUPPORTED,
+                "this app cannot restart its game (only players started with --control can)",
+            ));
+        };
+        let mut app = crate::player::restart_app(&restart, scene, seed).map_err(|e| {
+            ControlError::new(
+                code::COMMAND_FAILED,
+                format!("restart failed: {}", crate::player::error_text(&e)),
+            )
+        })?;
+        if let Some(size) = self.app.world.get_resource::<crate::WindowSize>().copied() {
+            app.world.insert_resource(size);
+        }
+        *self.app = app;
+        self.state.frame = 0;
+        self.state.paused = false;
+        tracing::info!(target: "box::control", "restarted the game from its scene");
+        Ok(())
+    }
+
     fn stop(&mut self) -> Result<Status, ControlError> {
         tracing::info!(target: "box::control", "stop requested: the player exits");
         self.app.world.resource_or_default::<AppExit>().0 = true;
@@ -281,6 +313,10 @@ impl ControlHost for PlayerHost<'_> {
 
     fn read_log(&mut self, since: u64, limit: usize) -> Result<LogPage, ControlError> {
         Ok(log_capture::read(since, limit))
+    }
+
+    fn play_world(&mut self, _method: &str) -> Result<&mut World, ControlError> {
+        Ok(&mut self.app.world)
     }
 
     fn frame_stats(&mut self) -> Result<Json, ControlError> {
@@ -406,7 +442,7 @@ mod tests {
         assert_eq!(step, json!({ "frames": 3, "frame": 3 }));
         assert_eq!(host.status().frame, 3);
         assert_eq!(host.play().unwrap().mode, Mode::Play);
-        assert!(host.screenshot(None).is_err());
+        assert!(host.screenshot(None, None).is_err());
         let stats = host.frame_stats().unwrap();
         assert_eq!(stats["frame"], 3);
         assert!(stats["renderer"].is_null());
@@ -430,6 +466,52 @@ mod tests {
 
         drop(live);
         assert!(!discovery_path(&root).exists());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn restart_play_loads_the_game_again() {
+        let (mut app, root) = player_app("restart");
+        let mut live = LiveControl::start(&app.world).unwrap();
+        let mut host = PlayerHost {
+            app: &mut app,
+            renderer: None,
+            state: &mut live.state,
+        };
+        let err = host.restart_play(None, None).unwrap_err();
+        assert_eq!(err.code, code::UNSUPPORTED, "{err}");
+        let options = PlayerOptions {
+            project: Some(root.clone()),
+            ..Default::default()
+        };
+        host.app
+            .world
+            .insert_resource(crate::player::PlayerRestart {
+                game: Game::new(),
+                options,
+            });
+        host.step_frames(5).unwrap();
+        host.pause().unwrap();
+        host.app
+            .world
+            .spawn((box_core::identity::Name::new("Stray"),));
+        host.restart_play(None, Some(7)).unwrap();
+        assert_eq!(host.status().frame, 0);
+        assert_eq!(host.status().mode, Mode::Play);
+        assert!(host.app.world.find_by_name("Stray").is_none());
+        assert!(
+            host.app
+                .world
+                .contains_resource::<crate::player::PlayerRestart>()
+        );
+        #[cfg(feature = "script")]
+        assert_eq!(
+            host.app.world.get_resource::<box_script::ScriptSeed>(),
+            Some(&box_script::ScriptSeed(7))
+        );
+        let err = host.restart_play(Some("nowhere"), None).unwrap_err();
+        assert!(err.message.contains("restart failed"), "{err}");
+        drop(live);
         std::fs::remove_dir_all(&root).unwrap();
     }
 
